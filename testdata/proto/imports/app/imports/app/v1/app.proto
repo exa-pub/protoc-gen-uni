@@ -1,0 +1,46 @@
+// Test: imports.
+//
+// A workspace with two modules (core, app) and several packages. Covers
+// cross-package and cross-module imports, `import public` (common.proto is
+// only reachable through reexport.proto), same-named types (Item, Status, Id)
+// in different packages, fully-qualified and relative type references, files
+// in nested directories, and a file with no package (nopackage.proto).
+syntax = "proto3";
+
+package test.imports.app.v1;
+
+import "imports/app/v1/deep/nested/dir/deep.proto";
+import "imports/other/v1/item.proto";
+import "imports/reexport/reexport.proto";
+import "nopackage.proto";
+
+// Local types sharing names with imported ones.
+message Item {
+  // Available via import public.
+  test.imports.common.v1.Item common_item = 1;
+  test.imports.other.v1.Item other_item = 2;
+  // Relative reference resolving to test.imports.common.v1.Id.
+  common.v1.Id common_id = 3;
+  other.v1.Item.Id other_nested_id = 4;
+  test.imports.common.v1.Status common_status = 5;
+  test.imports.other.v1.Status other_status = 6;
+  Status local_status = 7;
+  .Orphan orphan = 8;
+  .Orphan.Child orphan_child = 9;
+  .Loose loose = 10;
+  test.imports.reexport.Wrapper wrapper = 11;
+  deep.Deep deep = 12;
+  repeated test.imports.common.v1.Item common_items = 13;
+  map<string, test.imports.other.v1.Item> other_items = 14;
+}
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_LOCAL = 1;
+}
+
+service ItemService {
+  rpc Get(test.imports.common.v1.Id) returns (test.imports.other.v1.Item);
+  rpc Wrap(.Orphan) returns (test.imports.reexport.Wrapper);
+  rpc Local(Item) returns (deep.Deep);
+}

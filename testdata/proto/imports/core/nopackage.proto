@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+// This file intentionally has no package statement.
+
+message Orphan {
+  string name = 1;
+  Loose loose = 2;
+
+  message Child {
+    int32 n = 1;
+  }
+}
+
+enum Loose {
+  LOOSE_UNSPECIFIED = 0;
+  LOOSE_ONE = 1;
+}

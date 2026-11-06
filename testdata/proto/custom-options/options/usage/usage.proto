@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package test.options.usage;
+
+import "options/v1/options.proto";
+
+option (test.options.v1.file_string) = "file-level";
+option (test.options.v1.file_level) = LEVEL_HIGH;
+option (test.options.v1.file_meta) = {
+  owner: "team"
+  version: 3
+  tags: ["a", "b"]
+  tags: "c"
+  level: LEVEL_LOW
+  child: { owner: "child" child { version: 9 } }
+  labels: [{ key: "k1", value: "v1" }, { key: "k2", value: "v2" }]
+  blob: "\x00\x01bin"
+  [test.options.v1.meta_ext]: "in-aggregate extension"
+};
+option (test.options.v1.file_tags) = "t1";
+option (test.options.v1.file_tags) = "t2";
+option (test.options.v1.file_source_only) = true;
+
+message Annotated {
+  option (test.options.v1.msg_bool) = true;
+  option (test.options.v1.msg_int64) = -9000000000;
+  option (test.options.v1.msg_meta).owner = "field-path syntax";
+  option (test.options.v1.msg_meta).child.version = 2;
+  option (test.options.v1.msg_levels) = LEVEL_LOW;
+  option (test.options.v1.msg_levels) = LEVEL_HIGH;
+  option (test.options.v1.msg_source_only) = "dropped from runtime descriptors";
+  option (test.options.v1.msg_double) = inf;
+  option (test.options.v1.msg_metas) = { owner: "first" };
+  option (test.options.v1.msg_metas) = { owner: "second" };
+  option deprecated = true;
+
+  string name = 1 [
+    (test.options.v1.field_string) = "name",
+    (test.options.v1.field_uint32) = 4294967295,
+    (test.options.v1.field_sint64) = -1,
+    (test.options.v1.field_float) = -0.5,
+    (test.options.v1.field_bytes) = "\xde\xad\xbe\xef",
+    (test.options.v1.field_level) = LEVEL_HIGH,
+    (test.options.v1.field_meta) = { owner: "f" tags: "x" },
+    (test.options.v1.field_ints) = 1,
+    (test.options.v1.field_ints) = 2,
+    (test.options.v1.field_targeted) = "only on fields",
+    (test.options.v1.field_source_only) = true,
+    (test.options.v1.field_fixed64) = 18446744073709551615,
+    json_name = "NAME",
+    deprecated = true
+  ];
+
+  repeated int32 values = 2 [packed = false, (test.options.v1.field_string) = "values"];
+
+  oneof choice {
+    option (test.options.v1.oneof_string) = "choice";
+    option (test.options.v1.oneof_meta) = { level: LEVEL_LOW };
+
+    string a = 3 [(test.options.v1.field_level) = LEVEL_LOW];
+    int32 b = 4;
+  }
+
+  map<string, int32> counts = 5 [(test.options.v1.field_meta).labels = { key: "m" value: "n" }];
+
+  enum Inner {
+    option (test.options.v1.enum_string) = "inner";
+    INNER_UNSPECIFIED = 0 [(test.options.v1.value_string) = "zero"];
+  }
+}
+
+enum Kind {
+  option (test.options.v1.enum_string) = "kind";
+  option (test.options.v1.enum_level) = LEVEL_LOW;
+  option (test.options.v1.enum_source_only) = true;
+  option allow_alias = true;
+
+  KIND_UNSPECIFIED = 0 [
+    (test.options.v1.value_string) = "unspecified",
+    (test.options.v1.value_int32) = -7
+  ];
+  KIND_A = 1 [
+    (test.options.v1.value_meta) = { owner: "a" version: 1 },
+    (test.options.v1.value_tags) = "x",
+    (test.options.v1.value_tags) = "y"
+  ];
+  KIND_ALIAS = 1 [deprecated = true, (test.options.v1.value_string) = "alias"];
+}
+
+service AnnotatedService {
+  option (test.options.v1.service_string) = "svc";
+  option (test.options.v1.service_meta) = { owner: "svc-owner" tags: ["s"] };
+  option (test.options.v1.service_source_only) = true;
+  option deprecated = true;
+
+  rpc Call(Annotated) returns (Annotated) {
+    option (test.options.v1.method_string) = "call";
+    option (test.options.v1.method_level) = LEVEL_HIGH;
+    option (test.options.v1.method_meta) = { version: 5 };
+    option (test.options.v1.method_scopes) = "read";
+    option (test.options.v1.method_scopes) = "write";
+    option (test.options.v1.method_source_only) = true;
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  rpc Plain(Annotated) returns (Annotated);
+}

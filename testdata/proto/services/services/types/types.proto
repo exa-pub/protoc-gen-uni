@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+// Request/response types that live in a different package than the services.
+package test.services.types;
+
+message GetRequest {
+  string id = 1;
+}
+
+message GetResponse {
+  string id = 1;
+  bytes payload = 2;
+}
+
+message Chunk {
+  int64 offset = 1;
+  bytes data = 2;
+}
+
+message Summary {
+  int64 total_bytes = 1;
+  int32 chunk_count = 2;
+}

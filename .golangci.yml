@@ -5,6 +5,7 @@ linters:
   default: standard # errcheck, govet, ineffassign, staticcheck, unused
   enable:
     - bodyclose
+    - depguard
     - errorlint
     - gocritic
     - misspell
@@ -13,6 +14,28 @@ linters:
     - unconvert
     - unparam
   settings:
+    depguard:
+      rules:
+        # Key idea of the project: a compact binary without extra dependencies.
+        main:
+          list-mode: strict
+          files:
+            - $all
+            - "!**/internal/goldentest/*.go"
+          allow:
+            - $gostd
+            - google.golang.org/protobuf
+            - github.com/exa-pub/protoc-gen-uni
+        # The golden test harness (imported only by tests, never by the binary) reads .tar.xz archives.
+        goldentest:
+          list-mode: strict
+          files:
+            - "**/internal/goldentest/*.go"
+          allow:
+            - $gostd
+            - google.golang.org/protobuf
+            - github.com/exa-pub/protoc-gen-uni
+            - github.com/ulikunitz/xz
     revive:
       rules:
         - name: exported

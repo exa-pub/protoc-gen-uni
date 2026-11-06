@@ -1,0 +1,44 @@
+# Golden config for bufbuild/es v2.17.0: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# No managed mode: it changes file options, which es embeds into the generated descriptors.
+# Regenerate: scripts/gen-testdata.sh bufbuild/es v2.17.0
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/go-features
+  - directory: testdata/proto/es-validate
+plugins:
+  - remote: buf.build/bufbuild/es:v2.17.0
+    out: ts
+    opt: [target=ts]
+  - remote: buf.build/bufbuild/es:v2.17.0
+    out: js-dts
+    opt: [target=js+dts]
+  - remote: buf.build/bufbuild/es:v2.17.0
+    out: ts-import-ext
+    opt: [target=ts, import_extension=js]
+  - remote: buf.build/bufbuild/es:v2.17.0
+    out: cjs
+    opt: [target=js+dts, js_import_style=legacy_commonjs]
+  - remote: buf.build/bufbuild/es:v2.17.0
+    out: json-types
+    opt: [target=ts, json_types=true]
+  - remote: buf.build/bufbuild/es:v2.17.0
+    out: valid-types
+    opt: [target=ts, valid_types=protovalidate_required+legacy_required]
+  - remote: buf.build/bufbuild/es:v2.17.0
+    out: erasable
+    opt: [target=ts, erasable_syntax=true]
+  - remote: buf.build/bufbuild/es:v2.17.0
+    out: misc
+    opt: [target=ts, keep_empty_files=true, ts_nocheck=true, elide_plugin_version=true]

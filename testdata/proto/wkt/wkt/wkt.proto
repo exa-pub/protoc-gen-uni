@@ -1,0 +1,83 @@
+// Test: well-known types.
+//
+// Imports and uses google/protobuf any, timestamp, duration, struct
+// (Struct/Value/ListValue/NullValue), all wrappers, empty, field_mask and the
+// descriptor-free type/api/source_context WKTs as singular, repeated, map,
+// oneof and optional fields, plus as RPC input/output types.
+syntax = "proto3";
+
+package test.wkt;
+
+import "google/protobuf/any.proto";
+import "google/protobuf/api.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/source_context.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/type.proto";
+import "google/protobuf/wrappers.proto";
+
+message WellKnown {
+  google.protobuf.Any any = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  google.protobuf.Duration duration = 3;
+  google.protobuf.Struct struct = 4;
+  google.protobuf.Value value = 5;
+  google.protobuf.ListValue list_value = 6;
+  google.protobuf.NullValue null_value = 7;
+  google.protobuf.Empty empty = 8;
+  google.protobuf.FieldMask field_mask = 9;
+  google.protobuf.Api api = 10;
+  google.protobuf.Type type = 11;
+  google.protobuf.SourceContext source_context = 12;
+  google.protobuf.Syntax syntax = 13;
+  google.protobuf.Method method = 14;
+  google.protobuf.Field.Kind field_kind = 15;
+}
+
+message Wrappers {
+  google.protobuf.DoubleValue double_value = 1;
+  google.protobuf.FloatValue float_value = 2;
+  google.protobuf.Int64Value int64_value = 3;
+  google.protobuf.UInt64Value uint64_value = 4;
+  google.protobuf.Int32Value int32_value = 5;
+  google.protobuf.UInt32Value uint32_value = 6;
+  google.protobuf.BoolValue bool_value = 7;
+  google.protobuf.StringValue string_value = 8;
+  google.protobuf.BytesValue bytes_value = 9;
+}
+
+message Collections {
+  repeated google.protobuf.Any anys = 1;
+  repeated google.protobuf.Timestamp timestamps = 2;
+  repeated google.protobuf.Value values = 3;
+  repeated google.protobuf.Int32Value wrapped_ints = 4;
+  repeated google.protobuf.NullValue nulls = 5;
+  map<string, google.protobuf.Duration> durations = 6;
+  map<int32, google.protobuf.Struct> structs = 7;
+  map<string, google.protobuf.Value> values_by_key = 8;
+  map<string, google.protobuf.StringValue> wrapped_strings = 9;
+  map<string, google.protobuf.NullValue> null_map = 10;
+}
+
+message Choices {
+  oneof kind {
+    google.protobuf.Timestamp at = 1;
+    google.protobuf.Duration after = 2;
+    google.protobuf.NullValue none = 3;
+    google.protobuf.Value dynamic = 4;
+    google.protobuf.BoolValue flag = 5;
+    google.protobuf.Empty nothing = 6;
+  }
+  optional google.protobuf.NullValue optional_null = 7;
+}
+
+service WellKnownService {
+  rpc Ping(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc Now(google.protobuf.Empty) returns (google.protobuf.Timestamp);
+  rpc Echo(google.protobuf.Any) returns (google.protobuf.Any);
+  rpc Patch(google.protobuf.FieldMask) returns (WellKnown);
+  rpc Watch(google.protobuf.Duration) returns (stream google.protobuf.Value);
+}

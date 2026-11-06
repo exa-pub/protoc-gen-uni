@@ -1,6 +1,6 @@
 VERSION ?= dev
 
-.PHONY: all build test lint tidy clean
+.PHONY: all build test lint tidy clean testdata
 
 all: lint test build
 
@@ -18,3 +18,7 @@ tidy:
 
 clean:
 	rm -rf protoc-gen-uni dist
+
+# make testdata NAME=bufbuild/es VERSION_GEN=v2.17.0  (needs BUF_TOKEN, xz)
+testdata:
+	scripts/gen-testdata.sh $(NAME) $(VERSION_GEN)

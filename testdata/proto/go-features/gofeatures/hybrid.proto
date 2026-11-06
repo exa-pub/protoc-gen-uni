@@ -1,0 +1,26 @@
+edition = "2023";
+
+package test.gofeatures;
+
+import "google/protobuf/go_features.proto";
+import "gofeatures/open.proto";
+
+option features.(pb.go).api_level = API_HYBRID;
+
+message HybridMessage {
+  int32 id = 1;
+  string name = 2;
+  repeated string tags = 3;
+  map<int32, OpenMessage> by_id = 4;
+  oneof choice {
+    OpenEnum kind = 5;
+    HybridMessage self = 6;
+  }
+  HybridMessage delimited = 7 [features.message_encoding = DELIMITED];
+  int32 required = 8 [features.field_presence = LEGACY_REQUIRED];
+}
+
+message OpenInHybrid {
+  option features.(pb.go).api_level = API_OPEN;
+  int32 id = 1;
+}

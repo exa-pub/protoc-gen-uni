@@ -1,0 +1,78 @@
+// Test: edition 2024.
+//
+// Covers edition 2024 defaults (STYLE2024 naming, default_symbol_visibility =
+// EXPORT_TOP_LEVEL, and for Go: api_level = API_OPAQUE by default), the
+// `export` / `local` symbol visibility keywords on top-level and nested
+// messages and enums, `import option` (an option-only dependency), and the
+// features carried over from 2023 (presence, closed enums, delimited, ...).
+edition = "2024";
+
+package test.editions2024;
+
+import "editions2024/types/types.proto";
+import option "editions2024/opts/options.proto";
+
+// Exported by default (top-level).
+message Visible {
+  option (test.editions2024.opts.label) = "visible";
+
+  int32 id = 1 [(test.editions2024.opts.weight) = 10];
+  string name = 2;
+  types.Shared shared = 3;
+  Status status = 4;
+
+  // Nested symbols are local by default in 2024; export one explicitly.
+  export message ExportedChild {
+    int32 value = 1;
+  }
+
+  local message LocalChild {
+    int32 value = 1;
+  }
+
+  export enum ExportedKind {
+    EXPORTED_KIND_UNSPECIFIED = 0;
+    EXPORTED_KIND_ONE = 1;
+  }
+
+  ExportedChild exported_child = 5;
+  LocalChild local_child = 6;
+  ExportedKind kind = 7;
+}
+
+// Explicitly local top-level message: may only be used in this file.
+local message Hidden {
+  int32 secret = 1;
+}
+
+local enum HiddenEnum {
+  HIDDEN_ENUM_UNSPECIFIED = 0;
+  HIDDEN_ENUM_ON = 1;
+}
+
+export message UsesHidden {
+  Hidden hidden = 1;
+  HiddenEnum hidden_enum = 2;
+  repeated Visible.ExportedChild children = 3;
+}
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_OK = 1;
+  STATUS_ERROR = 2;
+}
+
+message Presence {
+  int32 explicit_default = 1;
+  int32 implicit = 2 [features.field_presence = IMPLICIT];
+  int32 required = 3 [features.field_presence = LEGACY_REQUIRED];
+  repeated int32 packed = 4;
+  repeated int32 expanded = 5 [features.repeated_field_encoding = EXPANDED];
+  Visible delimited = 6 [features.message_encoding = DELIMITED];
+  map<string, Visible> by_name = 7;
+  oneof choice {
+    string text = 8;
+    Visible message = 9;
+  }
+  bytes data = 10 [default = "\x00\xff"];
+}

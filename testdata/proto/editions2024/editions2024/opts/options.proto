@@ -1,0 +1,14 @@
+edition = "2024";
+
+package test.editions2024.opts;
+
+import "google/protobuf/descriptor.proto";
+
+// Custom options, imported by visibility.proto only via `import option`.
+extend google.protobuf.MessageOptions {
+  string label = 51001;
+}
+
+extend google.protobuf.FieldOptions {
+  int32 weight = 51002;
+}

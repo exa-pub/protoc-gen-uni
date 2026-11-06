@@ -1,0 +1,37 @@
+edition = "2023";
+
+package test.gofeatures;
+
+import "google/protobuf/go_features.proto";
+import "gofeatures/open.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+
+message OpaqueMessage {
+  int32 id = 1;
+  int32 implicit_id = 2 [features.field_presence = IMPLICIT];
+  string name = 3;
+  bytes data = 4;
+  OpenEnum kind = 5;
+  repeated int32 values = 6;
+  repeated OpaqueMessage children = 7;
+  map<string, string> labels = 8;
+  oneof choice {
+    string text = 9;
+    OpaqueMessage nested = 10;
+    OpenEnum choice_kind = 11;
+  }
+  OpaqueMessage lazy = 12 [lazy = true];
+  string with_default = 13 [default = "dflt"];
+  float score = 14 [default = 1.5];
+}
+
+message HybridInOpaque {
+  option features.(pb.go).api_level = API_HYBRID;
+  int32 id = 1;
+}
+
+message OpenInOpaque {
+  option features.(pb.go).api_level = API_OPEN;
+  int32 id = 1;
+}

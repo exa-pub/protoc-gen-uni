@@ -1,0 +1,110 @@
+// Test: custom options.
+//
+// options.proto declares custom options extending FileOptions,
+// MessageOptions, FieldOptions, OneofOptions, EnumOptions, EnumValueOptions,
+// ServiceOptions, MethodOptions and ExtensionRangeOptions with scalar, enum,
+// message (incl. nested/repeated) and repeated values, options restricted with
+// `targets`, and options with `retention = RETENTION_SOURCE` /
+// RETENTION_RUNTIME. usage.proto applies all of them, including aggregate
+// (text-format) message values and options set inside aggregates.
+syntax = "proto2";
+
+package test.options.v1;
+
+import "google/protobuf/descriptor.proto";
+
+enum Level {
+  LEVEL_UNSPECIFIED = 0;
+  LEVEL_LOW = 1;
+  LEVEL_HIGH = 2;
+}
+
+message Meta {
+  optional string owner = 1;
+  optional int32 version = 2;
+  repeated string tags = 3;
+  optional Level level = 4;
+  optional Meta child = 5;
+  map<string, string> labels = 6;
+  optional bytes blob = 7;
+  extensions 100 to 199;
+}
+
+extend Meta {
+  optional string meta_ext = 100;
+}
+
+extend google.protobuf.FileOptions {
+  optional string file_string = 50000;
+  optional Level file_level = 50001;
+  optional Meta file_meta = 50002;
+  repeated string file_tags = 50003;
+  optional bool file_source_only = 50004 [retention = RETENTION_SOURCE];
+}
+
+extend google.protobuf.MessageOptions {
+  optional bool msg_bool = 50100;
+  optional int64 msg_int64 = 50101;
+  optional Meta msg_meta = 50102;
+  repeated Level msg_levels = 50103;
+  optional string msg_source_only = 50104 [retention = RETENTION_SOURCE];
+  optional double msg_double = 50105 [retention = RETENTION_RUNTIME];
+  repeated Meta msg_metas = 50106;
+}
+
+extend google.protobuf.FieldOptions {
+  optional string field_string = 50200;
+  optional uint32 field_uint32 = 50201;
+  optional sint64 field_sint64 = 50202;
+  optional float field_float = 50203;
+  optional bytes field_bytes = 50204;
+  optional Level field_level = 50205;
+  optional Meta field_meta = 50206;
+  repeated int32 field_ints = 50207;
+  // Restricted to fields only.
+  optional string field_targeted = 50208 [targets = TARGET_TYPE_FIELD];
+  optional bool field_source_only = 50209 [
+    retention = RETENTION_SOURCE,
+    targets = TARGET_TYPE_FIELD
+  ];
+  optional fixed64 field_fixed64 = 50210;
+}
+
+extend google.protobuf.OneofOptions {
+  optional string oneof_string = 50300;
+  optional Meta oneof_meta = 50301;
+}
+
+extend google.protobuf.EnumOptions {
+  optional string enum_string = 50400;
+  optional Level enum_level = 50401;
+  optional bool enum_source_only = 50402 [retention = RETENTION_SOURCE];
+}
+
+extend google.protobuf.EnumValueOptions {
+  optional string value_string = 50500;
+  optional int32 value_int32 = 50501;
+  optional Meta value_meta = 50502;
+  repeated string value_tags = 50503;
+}
+
+extend google.protobuf.ServiceOptions {
+  optional string service_string = 50600;
+  optional Meta service_meta = 50601;
+  optional bool service_source_only = 50602 [retention = RETENTION_SOURCE];
+}
+
+extend google.protobuf.MethodOptions {
+  optional string method_string = 50700;
+  optional Level method_level = 50701;
+  optional Meta method_meta = 50702;
+  repeated string method_scopes = 50703;
+  optional bool method_source_only = 50704 [
+    retention = RETENTION_SOURCE,
+    targets = TARGET_TYPE_METHOD
+  ];
+}
+
+extend google.protobuf.ExtensionRangeOptions {
+  optional string range_string = 50800;
+}

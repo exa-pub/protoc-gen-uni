@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+// Package (and Go package path element) named like a Go/TS keyword.
+package test.naming.type;
+
+message type {
+  string type = 1;
+}

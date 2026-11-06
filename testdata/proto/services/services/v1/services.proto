@@ -1,0 +1,72 @@
+// Test: services.
+//
+// Covers several services in one file and one in another file, all four
+// streaming kinds (unary, client, server, bidi), method options (deprecated,
+// idempotency_level NO_SIDE_EFFECTS / IDEMPOTENT / IDEMPOTENCY_UNKNOWN),
+// deprecated services, leading/trailing comments on services and methods,
+// and request/response types from another package and from this package.
+syntax = "proto3";
+
+package test.services.v1;
+
+import "google/protobuf/empty.proto";
+import "services/types/types.proto";
+
+message PingRequest {
+  string message = 1;
+}
+
+message PingResponse {
+  string message = 1;
+  int64 server_time_unix = 2;
+}
+
+// Storage manages blobs.
+//
+// It has multiple paragraphs of documentation.
+service Storage {
+  // Get fetches a blob by id.
+  rpc Get(test.services.types.GetRequest) returns (test.services.types.GetResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Upload streams chunks from the client.
+  rpc Upload(stream test.services.types.Chunk) returns (test.services.types.Summary); // trailing comment on Upload
+
+  // Download streams chunks to the client.
+  rpc Download(test.services.types.GetRequest) returns (stream test.services.types.Chunk) {
+    option idempotency_level = IDEMPOTENT;
+  }
+
+  // Sync is a bidirectional stream.
+  rpc Sync(stream test.services.types.Chunk) returns (stream test.services.types.Chunk);
+
+  // Delete removes a blob. Deprecated: use Purge.
+  rpc Delete(test.services.types.GetRequest) returns (google.protobuf.Empty) {
+    option deprecated = true;
+    option idempotency_level = IDEMPOTENCY_UNKNOWN;
+  }
+
+  rpc Purge(test.services.types.GetRequest) returns (google.protobuf.Empty) {
+    option idempotency_level = IDEMPOTENT;
+    option deprecated = false;
+  }
+}
+
+// Health is a minimal service using local message types.
+service Health {
+  rpc Ping(PingRequest) returns (PingResponse);
+  // Same message used as input and output.
+  rpc Echo(PingRequest) returns (PingRequest);
+  rpc PingStream(stream PingRequest) returns (stream PingResponse);
+}
+
+// LegacyService is deprecated as a whole.
+service LegacyService {
+  option deprecated = true;
+
+  rpc OldCall(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+
+// A service with no methods.
+service EmptyService {}

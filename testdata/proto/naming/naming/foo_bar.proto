@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package test.naming;
+
+// Message named like its file (foo_bar.proto -> FooBar).
+message FooBar {
+  string foo_bar = 1;
+}
+
+message foo_bar_proto {}

@@ -1,0 +1,49 @@
+// Test: edition 2023.
+//
+// defaults.proto uses edition 2023 with no feature overrides (explicit
+// presence, open enums, packed repeated, verified UTF-8, length-prefixed
+// messages, JSON ALLOW). features.proto overrides every feature at file,
+// message, enum, oneof and field level: field_presence EXPLICIT/IMPLICIT/
+// LEGACY_REQUIRED, enum_type OPEN/CLOSED, repeated_field_encoding
+// PACKED/EXPANDED, utf8_validation NONE/VERIFY, message_encoding DELIMITED
+// (group-like encoding) and json_format LEGACY_BEST_EFFORT.
+edition = "2023";
+
+package test.editions2023;
+
+enum OpenEnum {
+  OPEN_ENUM_UNSPECIFIED = 0;
+  OPEN_ENUM_A = 1;
+  OPEN_ENUM_B = 2;
+}
+
+message Defaults {
+  int32 f_int32 = 1;
+  string f_string = 2;
+  bytes f_bytes = 3;
+  OpenEnum f_enum = 4;
+  Defaults f_message = 5;
+  repeated int32 r_int32 = 6;
+  repeated OpenEnum r_enum = 7;
+  repeated string r_string = 8;
+  map<string, Defaults> m_message = 9;
+  map<int32, OpenEnum> m_enum = 10;
+  oneof choice {
+    int32 c_int32 = 11;
+    Defaults c_message = 12;
+  }
+  double f_double = 13 [default = 1.5];
+  string f_string_default = 14 [default = "edition"];
+  OpenEnum f_enum_default = 15 [default = OPEN_ENUM_B];
+  bool f_bool_default = 16 [default = true];
+  bytes f_bytes_default = 17 [default = "\x01\x02"];
+  float f_float_nan = 18 [default = nan];
+
+  extensions 100 to 199;
+}
+
+extend Defaults {
+  int32 ext_int32 = 100;
+  repeated int32 ext_repeated = 101;
+  Defaults ext_message = 102;
+}

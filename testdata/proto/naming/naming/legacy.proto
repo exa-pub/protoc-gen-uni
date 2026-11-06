@@ -1,0 +1,57 @@
+syntax = "proto2";
+
+package test.naming;
+
+// Fields that differ only by underscores or case. proto2 is used because
+// proto3 rejects JSON name conflicts.
+message SimilarNames {
+  optional int32 foo_bar = 1;
+  optional int32 fooBar = 2;
+  optional int32 FooBar = 3;
+  optional int32 foo__bar = 4;
+  optional int32 _foo_bar = 5;
+  optional int32 foo_bar_ = 6;
+  optional int32 FOO_BAR = 7;
+  optional int32 foobar = 8;
+  optional int32 foo_1 = 9;
+  optional int32 foo1 = 10;
+  optional int32 foo_1_ = 11;
+}
+
+// Group whose generated field name differs from its type name.
+message Groups {
+  optional group MyGroup = 1 {
+    optional int32 a = 2;
+  }
+  optional group XGroup = 3 {
+    optional int32 class = 4;
+  }
+}
+
+message Extendable {
+  extensions 100 to 200;
+}
+
+// Extensions named like JS builtins and Go methods, scoped in a message so
+// they do not clash with the same-named top-level messages in naming.proto.
+message ExtScope {
+  extend Extendable {
+    optional int32 toString = 100;
+    optional int32 constructor = 101;
+    optional int32 Reset = 102;
+    optional int32 class = 103;
+  }
+}
+
+extend Extendable {
+  optional int32 ProtoMessage = 104;
+  optional int32 __proto__ext = 105;
+}
+
+// Prefix stripping would produce duplicate names (only allowed outside
+// proto3/open enums).
+enum Dupe {
+  DUPE_UNSPECIFIED = 0;
+  DUPE_A = 1;
+  DUPE__A = 2;
+}

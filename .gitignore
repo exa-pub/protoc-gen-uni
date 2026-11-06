@@ -32,6 +32,11 @@ go.work.sum
 # .idea/
 # .vscode/
 
+*.tmp/
+
+# Upstream output for golden diffs (scripts/gen-testdata.sh), see CONTRIBUTING.md.
+/testdata/checksums/*/*/gen/
+
 # Build output
 /protoc-gen-uni
 /dist/
