@@ -17,6 +17,7 @@ inputs:
   - directory: testdata/proto/empty
   - directory: testdata/proto/go-features
   - directory: testdata/proto/es-validate
+  - directory: testdata/proto/es-bootstrap
 plugins:
   - remote: buf.build/bufbuild/es:v2.17.0
     out: ts
@@ -42,3 +43,6 @@ plugins:
   - remote: buf.build/bufbuild/es:v2.17.0
     out: misc
     opt: [target=ts, keep_empty_files=true, ts_nocheck=true, elide_plugin_version=true]
+  - remote: buf.build/bufbuild/es:v2.17.0
+    out: bootstrap
+    opt: [target=ts+js+dts, bootstrap_wkt=true]

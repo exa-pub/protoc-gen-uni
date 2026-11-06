@@ -1,0 +1,21 @@
+// es-bootstrap: generating google/protobuf/descriptor.proto itself, as the protobuf-es repository
+// does for @bufbuild/protobuf with `bootstrap_wkt=true`. With that option es embeds descriptor.proto
+// as a plain object (`boot({...})`) instead of `fileDesc("<base64>")`, and imports WKTs by relative
+// path instead of from @bufbuild/protobuf. descriptor.proto is a verbatim copy of the one bundled
+// with buf v1.75.0 (github.com/bufbuild/protocompile wellknownimports).
+syntax = "proto2";
+
+package test.bootstrap;
+
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.MessageOptions {
+  optional string bootstrap_label = 51001;
+}
+
+message Uses {
+  option (bootstrap_label) = "uses";
+
+  optional google.protobuf.FileDescriptorProto file = 1;
+  optional google.protobuf.FieldDescriptorProto.Type type = 2;
+}
