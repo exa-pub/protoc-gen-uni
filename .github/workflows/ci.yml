@@ -1,0 +1,147 @@
+# CI: version → lint + test (build) → release (push to main only).
+#
+# Version = latest vX.Y.Z tag + bump based on conventional commits since that tag:
+#   `type!:` / `BREAKING CHANGE:` → major (minor before 1.0), `feat:` → minor, anything else → patch.
+# No tags yet → v0.1.0. Pull requests get a -g<sha> suffix.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # full history and tags
+          persist-credentials: false
+      - id: version
+        shell: bash
+        env:
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          semver_re='^v([0-9]+)\.([0-9]+)\.([0-9]+)$'
+          glob='v[0-9]*.[0-9]*.[0-9]*'
+
+          # Re-run of an already released commit: keep its version.
+          version="$(git tag --points-at HEAD --list "$glob" | grep -E "$semver_re" | sort -V | tail -n1 || true)"
+
+          if [ -z "$version" ]; then
+            base="$(git describe --tags --abbrev=0 --match "$glob" --exclude '*-*' HEAD 2>/dev/null || true)"
+            if [[ "$base" =~ $semver_re ]]; then
+              major="${BASH_REMATCH[1]}" minor="${BASH_REMATCH[2]}" patch="${BASH_REMATCH[3]}"
+              subjects="$(git log --format=%s "$base..HEAD")"
+              bodies="$(git log --format=%b "$base..HEAD")"
+              if grep -qiE '^[a-z]+(\([^)]*\))?!:' <<<"$subjects" || grep -qE '^BREAKING[ -]CHANGE:' <<<"$bodies"; then
+                if [ "$major" -eq 0 ]; then version="v0.$((minor + 1)).0"; else version="v$((major + 1)).0.0"; fi
+              elif grep -qiE '^feat(\([^)]*\))?:' <<<"$subjects"; then
+                version="v$major.$((minor + 1)).0"
+              else
+                version="v$major.$minor.$((patch + 1))"
+              fi
+            else
+              version="v0.1.0"
+            fi
+          fi
+
+          if [ -n "$PR_SHA" ]; then
+            version="$version-g${PR_SHA:0:7}"
+          fi
+
+          echo "version=$version" >>"$GITHUB_OUTPUT"
+          echo "### Version: \`$version\`" >>"$GITHUB_STEP_SUMMARY"
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.mod
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.15
+
+  test:
+    needs: version
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.mod
+      - name: go mod tidy
+        run: go mod tidy -diff
+      - name: build
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          go build -ldflags "-X main.version=$VERSION" -o protoc-gen-uni .
+          ./protoc-gen-uni --version
+      - name: test
+        run: go test -race ./...
+
+  release:
+    needs: [version, lint, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # tag and GitHub Release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.mod
+      - name: build binaries
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          CGO_ENABLED: "0"
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
+            os="${target%/*}" arch="${target#*/}"
+            ext=""; [ "$os" != windows ] || ext=".exe"
+            GOOS="$os" GOARCH="$arch" go build -trimpath -ldflags "-s -w -X main.version=$VERSION" \
+              -o "dist/protoc-gen-uni_${VERSION#v}_${os}_${arch}${ext}" .
+          done
+          (cd dist && sha256sum -- * >checksums.txt)
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          if gh release view "$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $VERSION already exists, skipping."
+            exit 0
+          fi
+          gh release create "$VERSION" dist/* --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --title "$VERSION" --generate-notes --latest
+          echo "### 🚀 Released \`$VERSION\`" >>"$GITHUB_STEP_SUMMARY"
