@@ -1,0 +1,33 @@
+// Test: flat package, a single file with a preamble, and lenses on.
+syntax = "proto3";
+
+package test.scalaopts.flat;
+
+import "scalapb/scalapb.proto";
+
+option (scalapb.options) = {
+  flat_package: true
+  single_file: true
+  package_name: "com.example.flat"
+  preamble: "sealed trait FlatBase"
+  preamble: "object FlatBase"
+  lenses: true
+};
+
+enum Mode {
+  MODE_UNSPECIFIED = 0;
+  MODE_ON = 1;
+}
+
+message Flat {
+  Mode mode = 1;
+  repeated string names = 2;
+  message Nested {
+    int32 n = 1;
+  }
+  Nested nested = 3;
+}
+
+service FlatService {
+  rpc Get(Flat) returns (Flat);
+}

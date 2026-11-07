@@ -1,6 +1,9 @@
 # Golden config for community/neoeinstein-prost-crate v0.5.0: inputs = tests (testdata/proto/<test>),
 # one plugin entry = one option group (out: <group>).
-# Inputs left out: without no_features upstream reads a Cargo.toml template from its own file system.
+# Inputs left out: imports (a file without package: upstream panics), editions (not supported),
+# es-validate (needs network). Every group sets no_features: the features go to the insertion point
+# `features` of Cargo.toml, which only exists with include_file=Cargo.toml and a package `features`.
+# Real-project inputs left out: real-protovalidate-editions (no editions).
 # Regenerate: scripts/gen-testdata.sh community/neoeinstein-prost-crate v0.5.0
 version: v2
 inputs:
@@ -11,6 +14,15 @@ inputs:
   - directory: testdata/proto/comments
   - directory: testdata/proto/custom-options
   - directory: testdata/proto/empty
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/es-bootstrap
+  - directory: testdata/proto/scala-options
+  - directory: testdata/proto/swift-features
+  - directory: testdata/proto/rust-prost
+  - directory: testdata/proto/rust-crate
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
 plugins:
   - remote: buf.build/community/neoeinstein-prost-crate:v0.5.0
     out: custom
@@ -18,3 +30,9 @@ plugins:
   - remote: buf.build/community/neoeinstein-prost-crate:v0.5.0
     out: nopkg
     opt: [no_features, default_package_filename=root.rs]
+  - remote: buf.build/community/neoeinstein-prost-crate:v0.5.0
+    out: flags
+    opt: [no_features=true, flat_output_dir=true, flat_output_dir=false, package_separator=+, default_package_filename=x.rs, default_package_filename]
+  - remote: buf.build/community/neoeinstein-prost-crate:v0.5.0
+    out: limit
+    opt: [no_features, flat_output_dir, include_file=src/gen/mod.rs, only_include=.test.crate.a, only_include=.test.crate.Zeta, only_include=.test.naming, only_include=.test.services]

@@ -1,6 +1,7 @@
 # Golden config for protocolbuffers/php v36.2: inputs = tests (testdata/proto/<test>),
 # one plugin entry = one option group (out: <group>).
 # Inputs left out: upstream rejects required fields and closed enums (proto2, editions, custom-options); naming: see cpp.
+# Real-project inputs left out: real-protovalidate (closed enums), real-protovalidate-editions (groups).
 # Regenerate: scripts/gen-testdata.sh protocolbuffers/php v36.2
 version: v2
 inputs:
@@ -10,6 +11,8 @@ inputs:
   - directory: testdata/proto/imports
   - directory: testdata/proto/comments
   - directory: testdata/proto/empty
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
 plugins:
   - remote: buf.build/protocolbuffers/php:v36.2
     out: default

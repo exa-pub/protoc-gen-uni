@@ -14,6 +14,10 @@ inputs:
   - directory: testdata/proto/naming
   - directory: testdata/proto/custom-options
   - directory: testdata/proto/empty
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
 plugins:
   - remote: buf.build/community/stephenh-ts-proto:v2.18.1
     out: default

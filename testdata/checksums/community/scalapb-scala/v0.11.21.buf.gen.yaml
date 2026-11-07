@@ -1,6 +1,9 @@
 # Golden config for community/scalapb-scala v0.11.21: inputs = tests (testdata/proto/<test>),
 # one plugin entry = one option group (out: <group>).
+# scala-proto2 and scala-options are ScalaPB-specific inputs (proto2 without extension groups;
+# ScalaPB options with a vendored scalapb.proto).
 # Inputs left out: upstream fails on proto2 extensions and naming, no editions support; flat_package is not a group because upstream writes an absolute path (/Loose.scala) for files without a package.
+# Real-project inputs left out: real-protovalidate-editions (no editions).
 # Regenerate: scripts/gen-testdata.sh community/scalapb-scala v0.11.21
 version: v2
 inputs:
@@ -11,6 +14,11 @@ inputs:
   - directory: testdata/proto/comments
   - directory: testdata/proto/custom-options
   - directory: testdata/proto/empty
+  - directory: testdata/proto/scala-proto2
+  - directory: testdata/proto/scala-options
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
 plugins:
   - remote: buf.build/community/scalapb-scala:v0.11.21
     out: default
@@ -23,3 +31,6 @@ plugins:
   - remote: buf.build/community/scalapb-scala:v0.11.21
     out: scala3
     opt: [scala3_sources, grpc]
+  - remote: buf.build/community/scalapb-scala:v0.11.21
+    out: source
+    opt: [retain_source_code_info, ascii_format_to_string]

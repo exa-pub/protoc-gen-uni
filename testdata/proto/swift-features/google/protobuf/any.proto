@@ -1,0 +1,10 @@
+// Test: a bundled file (google/protobuf/any.proto, package google.protobuf): the
+// SwiftProtobuf import is suppressed and Any uses its own storage.
+syntax = "proto3";
+
+package google.protobuf;
+
+message Any {
+  string type_url = 1;
+  bytes value = 2;
+}

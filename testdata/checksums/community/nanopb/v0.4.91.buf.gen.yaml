@@ -1,6 +1,7 @@
 # Golden config for community/nanopb v0.4.91: inputs = tests (testdata/proto/<test>),
 # one plugin entry = one option group (out: <group>).
 # Inputs left out: upstream fails on proto2 (circular dependency) and naming (traceback); no editions support.
+# Real-project inputs left out: real-protovalidate (groups not supported), real-protovalidate-editions (no editions).
 # Regenerate: scripts/gen-testdata.sh community/nanopb v0.4.91
 version: v2
 inputs:
@@ -11,6 +12,8 @@ inputs:
   - directory: testdata/proto/comments
   - directory: testdata/proto/custom-options
   - directory: testdata/proto/empty
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
 plugins:
   - remote: buf.build/community/nanopb:v0.4.91
     out: default

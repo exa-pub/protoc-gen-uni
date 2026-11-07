@@ -1,0 +1,88 @@
+// Test: python-mypy, mypy-protobuf options and Python names.
+//
+// Covers (mypy_protobuf.options).casttype/keytype/valuetype and the legacy
+// (mypy_protobuf.casttype/keytype/valuetype) extensions, Python keywords as
+// message, enum, field and enum value names, fields named like imported modules
+// (self, property, builtins, typing, collections), enum value names that clash
+// with EnumTypeWrapper methods, and oneofs.
+syntax = "proto3";
+
+package mypytest;
+
+import "mypy_protobuf/extensions.proto";
+import "mypytest/a/v1/common.proto";
+import "mypytest/b/v1/common.proto";
+
+message Casts {
+  string user_id = 1 [(mypy_protobuf.options).casttype = "mypytest/types.UserId"];
+  int64 legacy_id = 2 [(mypy_protobuf.casttype) = "mypytest/types.LegacyId"];
+  repeated string ids = 3 [(mypy_protobuf.options).casttype = "mypytest/types.UserId"];
+  map<string, int64> scores = 4 [
+    (mypy_protobuf.options).keytype = "mypytest/types.UserId",
+    (mypy_protobuf.options).valuetype = "mypytest/types.Score"
+  ];
+  map<int32, string> legacy_map = 5 [
+    (mypy_protobuf.keytype) = "mypytest/types.Key",
+    (mypy_protobuf.valuetype) = "mypytest/types.Value"
+  ];
+  map<string, mypytest.a.v1.Common> by_name = 6 [(mypy_protobuf.options).keytype = "typing.Text"];
+  optional bytes blob = 7 [(mypy_protobuf.options).casttype = "builtins.bytearray"];
+  // Both styles: the options message wins.
+  string both = 8 [
+    (mypy_protobuf.options).casttype = "mypytest/types.New",
+    (mypy_protobuf.casttype) = "mypytest/types.Old"
+  ];
+  map<string, mypytest.b.v1.Common> messages = 9;
+  repeated mypytest.a.v1.Color colors = 10;
+}
+
+// Python keywords and names that the stubs rename or skip.
+message Names {
+  string self = 1;
+  string def = 2; // skipped as an attribute
+  int32 property = 3;
+  repeated string builtins = 4;
+  mypytest.a.v1.Common typing = 5;
+  mypytest.b.v1.Common collections = 6;
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    Name = 1;
+    Value = 2;
+    keys = 3;
+    values = 4;
+    items = 5;
+    None = 6;
+    KIND_OTHER = 7;
+  }
+  Kind kind = 7;
+  oneof choice {
+    string first = 8;
+    mypytest.a.v1.Common second = 9;
+    Kind third = 10;
+  }
+  oneof other {
+    int32 fourth = 11;
+  }
+  optional int32 maybe = 12;
+  class nested_class = 13;
+  class.def nested_def = 14;
+}
+
+message class {
+  message def {
+    int32 x = 1;
+  }
+  def d = 1;
+  global g = 2;
+  enum lambda {
+    LAMBDA_UNSPECIFIED = 0;
+  }
+  lambda l = 3;
+}
+
+enum global {
+  GLOBAL_UNSPECIFIED = 0;
+  True = 1;
+}
+
+message Empty {}

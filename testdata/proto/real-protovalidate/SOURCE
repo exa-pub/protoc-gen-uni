@@ -1,0 +1,2 @@
+https://github.com/bufbuild/protovalidate 4d7e5a20b2997e63a3106046a897f1130b86e2bb
+proto/protovalidate/buf/validate/validate.proto and the other cases of proto/protovalidate-testing/buf/validate/conformance/cases/, unmodified (editions cases: real-protovalidate-editions).

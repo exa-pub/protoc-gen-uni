@@ -15,6 +15,11 @@ inputs:
   - directory: testdata/proto/custom-options
   - directory: testdata/proto/empty
   - directory: testdata/proto/go-features
+  - directory: testdata/proto/python-mypy
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
 plugins:
   - remote: buf.build/community/nipunn1313-mypy:v5.1.0
     out: default
@@ -24,3 +29,9 @@ plugins:
   - remote: buf.build/community/nipunn1313-mypy:v5.1.0
     out: relax
     opt: [relax_strict_optional_primitives, quiet]
+  - remote: buf.build/community/nipunn1313-mypy:v5.1.0
+    out: deprecation
+    opt: [use_default_deprecation_warnings]
+  - remote: buf.build/community/nipunn1313-mypy:v5.1.0
+    out: all
+    opt: [readable_stubs, relax_strict_optional_primitives, use_default_deprecation_warnings, generate_concrete_servicer_stubs, only_sync]

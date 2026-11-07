@@ -1,0 +1,22 @@
+// Test: python-mypy, editions presence.
+//
+// Field presence comes only from explicit features on the file and the field.
+edition = "2023";
+
+package mypytest.editions;
+
+option features.field_presence = IMPLICIT;
+
+message Presence {
+  int32 implicit = 1;
+  int32 explicit = 2 [features.field_presence = EXPLICIT];
+  int32 required = 3 [features.field_presence = LEGACY_REQUIRED];
+  repeated int32 list = 4;
+  Presence child = 5 [features.field_presence = EXPLICIT];
+  oneof choice {
+    string a = 6;
+  }
+  message Nested {
+    int32 n = 1;
+  }
+}

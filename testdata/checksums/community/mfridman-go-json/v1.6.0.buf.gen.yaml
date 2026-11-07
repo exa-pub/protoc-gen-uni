@@ -20,6 +20,10 @@ inputs:
   - directory: testdata/proto/custom-options
   - directory: testdata/proto/empty
   - directory: testdata/proto/go-features
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
 plugins:
   - remote: buf.build/community/mfridman-go-json:v1.6.0
     out: source-relative
@@ -29,3 +33,6 @@ plugins:
   - remote: buf.build/community/mfridman-go-json:v1.6.0
     out: marshal
     opt: [paths=source_relative, enums_as_ints=true, emit_defaults=true, orig_name=true, allow_unknown=true]
+  - remote: buf.build/community/mfridman-go-json:v1.6.0
+    out: scanner
+    opt: [module=example.com/gen, emit_scanner_valuer=true, emit_defaults_without_null=true, unknown_key=1]

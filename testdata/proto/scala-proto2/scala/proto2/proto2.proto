@@ -1,0 +1,243 @@
+// Test: proto2 for ScalaPB (the shared proto2 input has an extension group, which ScalaPB
+// rejects).
+//
+// Covers default values of every scalar kind with Java number formatting edge cases
+// (Double.toString / Float.toString thresholds, subnormals, integer bases), required fields,
+// groups inside messages, extensions at top level and inside messages, extension ranges, and
+// field names that ScalaPB renames (serialized_size, number/value/empty in oneofs, Scala keywords).
+syntax = "proto2";
+
+package test.sproto2;
+
+enum Color {
+  COLOR_RED = 1;
+  COLOR_GREEN = 2;
+  COLOR_BLUE = 3;
+}
+
+// Enum whose first value is not zero.
+enum Sparse {
+  SPARSE_NEG = -1;
+  SPARSE_TEN = 10;
+  SPARSE_MAX = 2147483647;
+}
+
+// Name clashes with Scala's Option.
+enum Option {
+  OPTION_NONE = 0;
+  OPTION_SOME = 1;
+}
+
+message Scalars {
+  optional double f_double = 1;
+  optional float f_float = 2;
+  optional int32 f_int32 = 3;
+  optional int64 f_int64 = 4;
+  optional uint32 f_uint32 = 5;
+  optional uint64 f_uint64 = 6;
+  optional sint32 f_sint32 = 7;
+  optional sint64 f_sint64 = 8;
+  optional fixed32 f_fixed32 = 9;
+  optional fixed64 f_fixed64 = 10;
+  optional sfixed32 f_sfixed32 = 11;
+  optional sfixed64 f_sfixed64 = 12;
+  optional bool f_bool = 13;
+  optional string f_string = 14;
+  optional bytes f_bytes = 15;
+  optional Color f_enum = 16;
+  optional Scalars f_message = 17;
+}
+
+message Required {
+  required int32 r_int32 = 1;
+  required string r_string = 2;
+  required bytes r_bytes = 3;
+  required Color r_enum = 4;
+  required Scalars r_message = 5;
+  optional int32 o_int32 = 6;
+  repeated int32 rep_int32 = 7;
+}
+
+message Defaults {
+  optional double d_double = 1 [default = 3.14159];
+  optional double d_double_exp = 2 [default = -1.5e-300];
+  optional double d_double_inf = 3 [default = inf];
+  optional double d_double_neginf = 4 [default = -inf];
+  optional double d_double_nan = 5 [default = nan];
+  optional float d_float = 6 [default = 2.5];
+  optional float d_float_inf = 7 [default = inf];
+  optional float d_float_neginf = 8 [default = -inf];
+  optional float d_float_nan = 9 [default = nan];
+  optional int32 d_int32 = 10 [default = -42];
+  optional int64 d_int64 = 11 [default = -9223372036854775808];
+  optional uint32 d_uint32 = 12 [default = 4294967295];
+  optional uint64 d_uint64 = 13 [default = 18446744073709551615];
+  optional sint32 d_sint32 = 14 [default = -2147483648];
+  optional sint64 d_sint64 = 15 [default = 9223372036854775807];
+  optional fixed32 d_fixed32 = 16 [default = 123];
+  optional fixed64 d_fixed64 = 17 [default = 456];
+  optional sfixed32 d_sfixed32 = 18 [default = -789];
+  optional sfixed64 d_sfixed64 = 19 [default = -1011];
+  optional bool d_bool_true = 20 [default = true];
+  optional bool d_bool_false = 21 [default = false];
+  optional string d_string = 22 [default = "hello \"world\"\n\t\\ caf\u00e9 \x01 \U0001F600 'q'"];
+  optional string d_string_empty = 23 [default = ""];
+  optional bytes d_bytes = 24 [default = "\000\001\x7f\xff\n\r\t\"\'\\abc\?"];
+  optional bytes d_bytes_empty = 25 [default = ""];
+  optional Color d_enum = 26 [default = COLOR_GREEN];
+  optional Sparse d_enum_sparse = 27 [default = SPARSE_NEG];
+  optional int64 d_int64_hex = 28 [default = 0x7fffffff];
+  optional int32 d_int32_oct = 29 [default = 017];
+  optional double d_double_int = 30 [default = 1];
+  optional float d_float_small = 31 [default = 1e-10];
+  optional double d_double_1e7 = 32 [default = 1e7];
+  optional double d_double_below_1e7 = 33 [default = 9999999.5];
+  optional double d_double_milli = 34 [default = 0.001];
+  optional double d_double_below_milli = 35 [default = 0.000999];
+  optional double d_double_big = 36 [default = 1e23];
+  optional double d_double_max = 37 [default = 1.7976931348623157e308];
+  optional double d_double_min = 38 [default = 4.9e-324];
+  optional double d_double_neg_zero = 39 [default = -0];
+  optional float d_float_max = 40 [default = 3.4028235e38];
+  optional float d_float_min = 41 [default = 1.4e-45];
+  optional float d_float_third = 42 [default = 0.33333334];
+  optional float d_float_1e7 = 43 [default = 12345678];
+  optional double d_double_third = 44 [default = 0.3333333333333333];
+  optional Option d_option = 45 [default = OPTION_SOME];
+  optional int32 d_int32_neg_hex = 46 [default = -0x80000000];
+  optional uint64 d_uint64_hex = 47 [default = 0xFFFFFFFFFFFFFFFF];
+}
+
+message Repeated {
+  repeated int32 unpacked_int32 = 1;
+  repeated int32 packed_int32 = 2 [packed = true];
+  repeated sint64 packed_sint64 = 3 [packed = true];
+  repeated double packed_double = 4 [packed = true];
+  repeated bool packed_bool = 5 [packed = true];
+  repeated Color packed_enum = 6 [packed = true];
+  repeated Color unpacked_enum = 7;
+  repeated string strings = 8;
+  repeated bytes bytes_list = 9;
+  repeated Scalars messages = 10;
+  repeated fixed32 packed_fixed32 = 11 [packed = true];
+}
+
+message Groups {
+  optional group OptGroup = 1 {
+    optional int32 a = 1;
+    optional string b = 2;
+  }
+  repeated group RepGroup = 2 {
+    required int32 id = 3;
+  }
+  oneof choice {
+    int32 plain = 6;
+    group OneofGroup = 7 {
+      optional string text = 8;
+    }
+  }
+}
+
+message Renamed {
+  optional int32 serialized_size = 1;
+  optional string type = 2;
+  optional bool val = 3;
+  optional int32 instance_of = 4;
+  oneof value_type {
+    int32 number = 5;
+    string value = 6;
+    bool empty = 7;
+  }
+  enum ValueType {
+    VALUE_TYPE_A = 0;
+  }
+  optional ValueType kind = 8;
+  optional Option option = 9;
+  optional int32 field_1_name = 10;
+}
+
+message Outer {
+  enum Kind {
+    KIND_A = 0;
+    KIND_B = 1;
+  }
+
+  message Middle {
+    enum Kind {
+      KIND_X = 5;
+      KIND_Y = 6;
+    }
+
+    message Inner {
+      optional Kind kind = 1 [default = KIND_Y];
+      optional Outer.Kind outer_kind = 2 [default = KIND_B];
+      optional Outer outer = 3;
+    }
+
+    optional Inner inner = 1;
+    repeated Inner inners = 2;
+  }
+
+  optional Middle middle = 1;
+  optional Middle.Inner deep = 2;
+  optional Kind kind = 3;
+
+  oneof value {
+    string str = 4;
+    Middle.Kind middle_kind = 5;
+    Middle msg = 6;
+    bytes raw = 7 [default = "x"];
+  }
+}
+
+// A message that can be extended.
+message Extendable {
+  optional int32 base = 1;
+
+  extensions 100 to 199;
+  extensions 1000 to max;
+  extensions 500, 502, 504 to 520;
+}
+
+// Top-level extensions.
+extend Extendable {
+  optional int32 ext_int32 = 100;
+  optional string ext_string = 101 [default = "ext-default"];
+  repeated int64 ext_rep_int64 = 102;
+  repeated sint32 ext_packed = 103 [packed = true];
+  optional Color ext_enum = 104 [default = COLOR_BLUE];
+  optional Scalars ext_message = 105;
+  optional bytes ext_bytes = 106 [default = "\x00\xab"];
+  optional double ext_double = 1000 [default = -inf];
+  optional float ext_float = 1001 [default = 0.1];
+  optional bool ext_bool = 1002;
+  optional uint32 ext_uint32 = 1003;
+  optional uint64 ext_uint64 = 1004;
+  optional sint64 ext_sint64 = 1005;
+  optional fixed32 ext_fixed32 = 1006;
+  optional fixed64 ext_fixed64 = 1007;
+  optional sfixed32 ext_sfixed32 = 1008;
+  optional sfixed64 ext_sfixed64 = 1009;
+  repeated string ext_strings = 1010;
+  repeated Scalars ext_messages = 1011;
+  repeated double ext_doubles = 1012;
+  repeated float ext_floats = 1013 [packed = true];
+  repeated Color ext_colors = 1014;
+}
+
+// Extensions declared inside a message scope.
+message Scope {
+  extend Extendable {
+    optional bool nested_bool = 500;
+    repeated Scope nested_scopes = 502;
+    optional Outer.Middle.Kind nested_enum = 504 [default = KIND_X];
+  }
+
+  message Deeper {
+    extend Extendable {
+      optional uint64 deeper_uint64 = 505;
+    }
+  }
+
+  optional int32 x = 1;
+}

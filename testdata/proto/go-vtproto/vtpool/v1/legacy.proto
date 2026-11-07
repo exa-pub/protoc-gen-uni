@@ -1,0 +1,37 @@
+// proto2 with the vtproto.mempool option: required fields, groups, extension ranges and
+// unpacked repeated scalars.
+syntax = "proto2";
+
+package vtpool.v1;
+
+import "vtproto/ext.proto";
+
+message Legacy {
+  option (vtproto.mempool) = true;
+
+  required string id = 1;
+  optional int32 count = 2 [default = 7];
+  repeated int32 values = 3;
+  repeated int32 packed_values = 4 [packed = true];
+  optional bytes payload = 5;
+  repeated group Item = 6 {
+    optional string key = 7;
+    repeated bytes blobs = 8;
+  }
+  optional group Meta = 9 {
+    required int64 stamp = 10;
+  }
+  required Legacy child = 11;
+  repeated Legacy children = 12;
+  map<string, Legacy> named = 13;
+  oneof pick {
+    Legacy picked = 14;
+    float score = 15;
+  }
+
+  extensions 100 to 199;
+}
+
+extend Legacy {
+  optional string note = 100;
+}

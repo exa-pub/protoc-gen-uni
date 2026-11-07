@@ -1,0 +1,14 @@
+// Test: python-mypy, messages of package google.protobuf named like the well-known types
+// that get an extra base class (WKTBASES), also when nested.
+syntax = "proto3";
+
+package google.protobuf;
+
+message Duration {
+  message Any {}
+  int64 seconds = 1;
+}
+
+message Timestamps {
+  message Struct {}
+}

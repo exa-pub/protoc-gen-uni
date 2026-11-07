@@ -1,0 +1,27 @@
+// Copied unchanged from mypy-protobuf v5.1.0 (proto/mypy_protobuf/extensions.proto, Apache-2.0,
+// Copyright (c) 2022 Nipunn Koorapati).
+syntax = "proto3";
+
+package mypy_protobuf;
+
+import "google/protobuf/descriptor.proto";
+
+message FieldOptions {
+    // Tells mypy-protobuf to use a specific newtype rather than the normal type for this field.
+    string casttype = 1;
+    // Tells mypy-protobuf to use a specific type for keys; only makes sense on map fields
+    string keytype = 2;
+    // Tells mypy-protobuf to use a specific type for values; only makes sense on map fields
+    string valuetype = 3;
+
+}
+
+extend google.protobuf.FieldOptions {
+    // Custom field options from mypy-protobuf
+    FieldOptions options = 1154;
+
+    // Legacy fields. Prefer to use ones within `options` instead.
+    string casttype = 1151 [deprecated = true];
+    string keytype = 1152 [deprecated = true];
+    string valuetype = 1153 [deprecated = true];
+}

@@ -18,6 +18,10 @@ inputs:
   - directory: testdata/proto/go-features
   - directory: testdata/proto/es-validate
   - directory: testdata/proto/es-bootstrap
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
 plugins:
   - remote: buf.build/bufbuild/es:v2.17.0
     out: ts

@@ -15,6 +15,10 @@ inputs:
   - directory: testdata/proto/custom-options
   - directory: testdata/proto/empty
   - directory: testdata/proto/go-features
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
 plugins:
   - remote: buf.build/protocolbuffers/dart:v25.1.0
     out: default
@@ -24,3 +28,8 @@ plugins:
   - remote: buf.build/protocolbuffers/dart:v25.1.0
     out: noargs
     opt: [disable_constructor_args]
+  # generate_kythe_info: .pb.dart and .pbenum.dart are not formatted (plain generator output,
+  # the input of the dart_style port in pkg/languages/dart), plus .meta files.
+  - remote: buf.build/protocolbuffers/dart:v25.1.0
+    out: kythe
+    opt: [generate_kythe_info]

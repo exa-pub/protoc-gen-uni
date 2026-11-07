@@ -1,0 +1,74 @@
+// Messages with the vtproto.mempool option (pool feature, pooled allocation in unmarshal, clone
+// and gRPC handlers), mixed with messages without it.
+syntax = "proto3";
+
+package vtpool.v1;
+
+import "google/protobuf/timestamp.proto";
+import "vtproto/ext.proto";
+
+message Pooled {
+  option (vtproto.mempool) = true;
+
+  message Inner {
+    option (vtproto.mempool) = true;
+    string name = 1;
+    repeated int64 values = 2;
+  }
+
+  message Plain {
+    int32 id = 1;
+  }
+
+  string name = 1;
+  bytes data = 2;
+  repeated bytes chunks = 3;
+  repeated int32 numbers = 4;
+  repeated sint64 zigzag = 5;
+  repeated double ratios = 6;
+  repeated bool flags = 7;
+  Inner inner = 8;
+  repeated Inner inners = 9;
+  Plain plain = 10;
+  repeated Plain plains = 11;
+  map<string, Inner> by_name = 12;
+  map<int32, bytes> blobs = 13;
+  optional uint32 maybe = 14;
+  google.protobuf.Timestamp created = 15;
+  repeated google.protobuf.Timestamp history = 16;
+  oneof choice {
+    Inner chosen = 17;
+    Plain other = 18;
+    string label = 19;
+    bytes raw = 20;
+  }
+  repeated string tags = 21;
+  repeated fixed32 fixed = 22 [packed = false];
+}
+
+// Not pooled itself, refers to pooled messages.
+message Holder {
+  Pooled pooled = 1;
+  repeated Pooled all = 2;
+  oneof kind {
+    Pooled one = 3;
+    Pooled.Inner inner = 4;
+  }
+}
+
+message Empty {
+  option (vtproto.mempool) = true;
+}
+
+// mempool = false explicitly
+message NotPooled {
+  option (vtproto.mempool) = false;
+  repeated Pooled items = 1;
+}
+
+service PoolService {
+  rpc Get(Holder) returns (Pooled);
+  rpc List(Holder) returns (stream Pooled);
+  rpc Put(stream Pooled) returns (Empty);
+  rpc Chat(stream Pooled) returns (stream Pooled);
+}

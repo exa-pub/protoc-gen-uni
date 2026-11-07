@@ -1,6 +1,7 @@
 # Golden config for community/danielgtaylor-betterproto v1.2.5: inputs = tests (testdata/proto/<test>),
 # one plugin entry = one option group (out: <group>).
 # Inputs left out: upstream fails on proto2, services, comments, naming (traceback) and has no editions support.
+# Real-project inputs left out: real-googleapis (client streaming not supported), real-protovalidate (groups not supported), real-protovalidate-editions (no editions).
 # Regenerate: scripts/gen-testdata.sh community/danielgtaylor-betterproto v1.2.5
 version: v2
 inputs:
@@ -9,6 +10,7 @@ inputs:
   - directory: testdata/proto/imports
   - directory: testdata/proto/custom-options
   - directory: testdata/proto/empty
+  - directory: testdata/proto/real-otel
 plugins:
   - remote: buf.build/community/danielgtaylor-betterproto:v1.2.5
     out: default

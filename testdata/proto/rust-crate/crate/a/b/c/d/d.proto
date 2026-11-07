@@ -1,0 +1,6 @@
+// A package nested three levels below the closest other package.
+syntax = "proto3";
+
+package test.crate.a.b.c.d;
+
+message D {}

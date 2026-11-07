@@ -1,0 +1,58 @@
+// Test: python-mypy, a deprecated file.
+//
+// Every message, enum, enum value and field of a file with
+// `option deprecated = true` is deprecated, with the "within a file" messages.
+syntax = "proto2";
+
+package mypytest.deprecated;
+
+import "mypytest/a/v1/common.proto";
+
+option deprecated = true;
+
+// A deprecated enum (through the file).
+enum Level {
+  LEVEL_UNSPECIFIED = 0;
+  // Leading comment on a value.
+  LEVEL_LOW = 1;
+  LEVEL_HIGH = 2 [deprecated = true]; // Trailing comment on a value.
+}
+
+// Leading detached comment one.
+
+// Leading detached comment two.
+
+// The message.
+message Record {
+  optional string name = 1; // Trailing on name.
+  // Leading on count.
+  required int32 count = 2;
+  repeated int64 values = 3;
+  optional mypytest.a.v1.Common common = 4;
+  map<string, string> labels = 5;
+  optional Level level = 6 [default = LEVEL_LOW];
+  oneof pick {
+    string a = 7;
+    int32 b = 8;
+  }
+  optional group Item = 9 {
+    optional int32 id = 10;
+  }
+  extensions 100 to 199;
+  enum Inner {
+    INNER_UNSPECIFIED = 0;
+  }
+  message Nested {
+    optional Inner inner = 1;
+  }
+}
+
+extend Record {
+  optional string note = 100;
+  // Leading on an extension.
+  repeated Level levels = 101;
+}
+
+service Old {
+  rpc Get(Record) returns (Record);
+}

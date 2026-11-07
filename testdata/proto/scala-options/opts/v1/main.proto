@@ -1,0 +1,160 @@
+// Test: ScalaPB file, message, field, enum, enum value and oneof options, auxiliary options,
+// sealed oneofs, value classes, Java conversions and the embedded source code info.
+syntax = "proto3";
+
+package test.scalaopts.v1;
+
+import "google/protobuf/wrappers.proto";
+import "scalapb/scalapb.proto";
+
+option java_multiple_files = true;
+option (scalapb.options) = {
+  java_conversions: true
+  retain_source_code_info: true
+  getters: false
+  map_type: "_root_.scala.collection.immutable.ListMap"
+  bytes_type: "com.example.Blob"
+  preserve_unknown_fields: false
+  import: "com.example.Implicits._"
+  aux_message_options: [
+    {
+      target: "test.scalaopts.v1.Point"
+      options: {
+        extends: "com.example.Shape"
+        companion_extends: "com.example.ShapeCompanion"
+      }
+    },
+    {
+      target: "*"
+      options: {annotations: "@com.example.All"}
+    }
+  ]
+  aux_field_options: [
+    {
+      target: "test.scalaopts.v1.Point.y"
+      options: {scala_name: "yCoord"}
+    }
+  ]
+  aux_enum_options: [
+    {
+      target: "test.scalaopts.v1.Color"
+      options: {extends: "com.example.Colorful"}
+    }
+  ]
+  aux_enum_value_options: [
+    {
+      target: "test.scalaopts.v1.Color.COLOR_BLUE"
+      options: {scala_name: "Azure"}
+    }
+  ]
+};
+
+// Colors with a stripped prefix and camel case names.
+enum Color {
+  option (scalapb.enum_options) = {
+    companion_extends: "com.example.ColorCompanion"
+    base_annotations: "@com.example.Base"
+    recognized_annotations: "@com.example.Recognized"
+    unrecognized_annotations: "@com.example.Unrecognized"
+  };
+  COLOR_UNSPECIFIED = 0;
+  COLOR_LIGHT_RED = 1 [(scalapb.enum_value) = {
+    scala_name: "Crimson"
+    extends: "com.example.Warm"
+    annotations: "@com.example.Hot"
+  }];
+  COLOR_BLUE = 2;
+}
+
+// A point.
+message Point {
+  option (scalapb.message) = {
+    annotations: "@com.example.Point"
+    companion_annotations: "@com.example.Companion"
+    unknown_fields_annotations: "@com.example.Unknown"
+    derives: "com.example.Show"
+  };
+  // The x coordinate.
+  int32 x = 1 [(scalapb.field).scala_name = "xCoord"];
+  int32 y = 2 [(scalapb.field).annotations = "@transient"];
+  repeated int32 values = 3 [(scalapb.field).collection_type = "_root_.scala.collection.immutable.Vector"];
+  map<string, int32> by_name = 4 [(scalapb.field) = {
+    key_type: "com.example.Key"
+    value_type: "com.example.Value"
+  }];
+  bytes data = 5;
+  Point required_point = 6 [(scalapb.field).required = true];
+  string typed = 7 [(scalapb.field).type = "com.example.Name"];
+  Point unboxed = 8 [(scalapb.field).no_box = true];
+  repeated string tags = 9 [(scalapb.field).collection = {
+    type: "com.example.Tags"
+    adapter: "com.example.TagsAdapter"
+    non_empty: true
+  }];
+  Color color = 10;
+  google.protobuf.Int32Value wrapped = 11;
+  oneof choice {
+    option (scalapb.oneof) = {
+      extends: "com.example.Choice"
+      scala_name: "pick"
+    };
+    string label = 12;
+    Point other = 13;
+  }
+  repeated Color colors = 14;
+  map<int32, Point> points = 15;
+  optional string maybe = 16 [(scalapb.field).no_default_value_in_constructor = true];
+  repeated Wrapper wrappers = 17;
+}
+
+// A value class.
+message Wrapper {
+  option (scalapb.message).extends = "AnyVal";
+  int32 value = 1;
+}
+
+// A sealed oneof.
+message Shape {
+  option (scalapb.message).sealed_oneof_extends = "com.example.Drawable";
+  oneof sealed_value {
+    Circle circle = 1;
+    Square square = 2;
+  }
+}
+
+message Circle {
+  double radius = 1;
+}
+
+message Square {
+  double side = 1;
+  repeated Shape inner = 2;
+}
+
+// An optional sealed oneof.
+message MaybeShape {
+  oneof sealed_value_optional {
+    Triangle triangle = 1;
+    Hexagon hexagon = 2;
+  }
+}
+
+message Triangle {
+  double a = 1;
+}
+
+message Hexagon {
+  double b = 1;
+}
+
+message Canvas {
+  Shape shape = 1;
+  MaybeShape maybe = 2;
+  repeated Shape shapes = 3;
+}
+
+service Painter {
+  rpc Draw(Shape) returns (Canvas);
+  rpc Wrap(google.protobuf.Int32Value) returns (Wrapper);
+  rpc Stream(stream Point) returns (stream MaybeShape);
+}

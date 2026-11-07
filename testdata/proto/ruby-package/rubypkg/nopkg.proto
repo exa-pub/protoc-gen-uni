@@ -1,0 +1,13 @@
+// No package and no ruby_package: no modules.
+syntax = "proto3";
+
+import "rubypkg/dots.proto";
+
+message TopLevel {
+  ruby_pkg.v1.dots.Defaults d = 1;
+  oneof choice {
+    string a = 2;
+    int32 b = 3;
+  }
+  optional int64 c = 4;
+}

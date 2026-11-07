@@ -1,0 +1,6 @@
+// Two packages that map to the same Rust module.
+syntax = "proto3";
+
+package test.crate.Upper;
+
+message Upper {}

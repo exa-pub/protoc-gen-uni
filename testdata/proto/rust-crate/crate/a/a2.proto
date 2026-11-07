@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package test.crate.a;
+
+import "crate/a/b/c/d/d.proto";
+
+message A2 {
+  // Only the fields of top-level messages count as dependencies.
+  message Nested {
+    test.crate.a.b.c.d.D d = 1;
+  }
+  Nested nested = 1;
+}

@@ -1,0 +1,2 @@
+https://github.com/googleapis/googleapis bf54c1031efddde9cdfee0f89254315d0116a5f9
+Import closure of google/{pubsub/v1,storage/v2,longrunning,iam/v1/iam_policy,cloud/location,type,rpc} without google/rpc/http.proto (same base name as google/api/http.proto, which upstream plugins with flat file naming reject), unmodified.

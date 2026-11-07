@@ -13,6 +13,10 @@ inputs:
   - directory: testdata/proto/comments
   - directory: testdata/proto/custom-options
   - directory: testdata/proto/empty
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
 plugins:
   - remote: buf.build/anthropics/buffa:v0.9.2
     out: default

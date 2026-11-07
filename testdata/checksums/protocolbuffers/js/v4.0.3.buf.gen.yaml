@@ -15,6 +15,10 @@ inputs:
   - directory: testdata/proto/custom-options
   - directory: testdata/proto/empty
   - directory: testdata/proto/go-features
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
 plugins:
   - remote: buf.build/protocolbuffers/js:v4.0.3
     out: commonjs

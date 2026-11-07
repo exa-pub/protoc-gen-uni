@@ -1,0 +1,156 @@
+// Test: python-mypy, deprecation messages from comments.
+//
+// mypy-protobuf uses the comments of `option deprecated = true;` as the
+// message of @deprecated when '"""' + text + '"""' parses as Python (ast.parse),
+// else a default message.
+syntax = "proto3";
+
+package mypytest.literals;
+
+message Plain {
+  // A plain deprecation message.
+  option deprecated = true;
+  int32 x = 1;
+}
+
+message TwoLines {
+  // First line.
+  // Second line.
+  option deprecated = true;
+  int32 x = 1;
+}
+
+message TripleQuotes {
+  // Uses """triple""" quotes.
+  option deprecated = true;
+  int32 x = 1;
+}
+
+message Concatenated {
+  // Ends early""" """and continues.
+  option deprecated = true;
+  int32 x = 1;
+}
+
+message EndsWithQuote {
+  // Ends with a quote"
+  option deprecated = true;
+  int32 x = 1;
+}
+
+message EndsWithTwoQuotes {
+  // Ends with two quotes""
+  option deprecated = true;
+  int32 x = 1;
+}
+
+message EndsWithBackslash {
+  // Ends with a backslash \
+  option deprecated = true;
+  int32 x = 1;
+}
+
+message EvenBackslashes {
+  // Two backslashes \\
+  option deprecated = true;
+  int32 x = 1;
+}
+
+message BadHexEscape {
+  // A bad escape \x4 here.
+  option deprecated = true;
+  int32 x = 1;
+}
+
+message GoodEscapes {
+  // Good escapes \x41 \u00e9 \U0001F600 \N{BULLET} \d.
+  option deprecated = true;
+  int32 x = 1;
+}
+
+message BadUnicodeEscape {
+  // Too large \U00110000.
+  option deprecated = true;
+  int32 x = 1;
+}
+
+message EmptyName {
+  // Empty name \N{}.
+  option deprecated = true;
+  int32 x = 1;
+}
+
+message Comment {
+  // Closed""" # and a comment
+  option deprecated = true;
+  int32 x = 1;
+}
+
+message Bytes {
+  // Mixed""" b"""bytes
+  option deprecated = true;
+  int32 x = 1;
+}
+
+message Raw {
+  // Raw""" r"""\q
+  option deprecated = true;
+  int32 x = 1;
+}
+
+message Unicode {
+  // Unicode: é  café
+  option deprecated = true;
+  int32 x = 1;
+}
+
+message TrailingSpace {
+  // Trailing whitespace　 
+  option deprecated = true;
+  int32 x = 1;
+}
+
+message Semicolon {
+  // A""";"""b
+  option deprecated = true;
+  int32 x = 1;
+}
+
+message Name {
+  // A""" name """b
+  option deprecated = true;
+  int32 x = 1;
+}
+
+message Trailing {
+  option deprecated = true; // Trailing "quoted"
+  int32 x = 1;
+}
+
+enum Status {
+  // Enum deprecation """with""" quotes.
+  option deprecated = true;
+  STATUS_UNSPECIFIED = 0;
+}
+
+enum Other {
+  option deprecated = true; // A valid \x41 message.
+  OTHER_UNSPECIFIED = 0;
+}
+
+// Comment docstrings: "quotes", backslashes \ and """triple quotes""".
+message Docs {
+  // Ends with a quote"
+  int32 a = 1;
+  // Ends with a backslash \
+  int32 b = 2;
+  //	Tab-indented comment.
+  //
+  //   Indented line after an empty line.
+  int32 c = 3;
+  // Trailing whitespace is stripped　  
+  int32 d = 4;
+  int32 e = 5; //
+  // """
+  int32 f = 6;
+}

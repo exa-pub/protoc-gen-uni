@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package test.crate.alpha;
+
+import "crate/a/a.proto";
+import "crate/self/self.proto";
+import "crate/zeta/zeta.proto";
+
+service Alpha {
+  rpc Get(test.crate.a.A) returns (test.crate.Zeta.Z);
+  rpc Put(test.crate.self.Self) returns (test.crate.a.A);
+}

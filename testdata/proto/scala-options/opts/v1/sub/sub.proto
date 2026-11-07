@@ -1,0 +1,34 @@
+// Test: options inherited from the parent package, a file object name and Scala 3 sources.
+syntax = "proto2";
+
+package test.scalaopts.v1.sub;
+
+import "opts/v1/main.proto";
+import "scalapb/scalapb.proto";
+
+option (scalapb.options) = {
+  object_name: "SubFile"
+  scala3_sources: true
+  no_primitive_wrappers: true
+  no_default_values_in_constructor: true
+  public_constructor_parameters: true
+};
+
+enum SubKind {
+  SUB_KIND_FIRST = 1;
+  SUB_KIND_SECOND = 2;
+}
+
+message Sub {
+  optional test.scalaopts.v1.Point point = 1;
+  optional SubKind kind = 2 [default = SUB_KIND_SECOND];
+  required string name = 3 [(scalapb.field).type = "com.example.Name"];
+  repeated test.scalaopts.v1.Color colors = 4;
+  optional bytes payload = 5;
+
+  extensions 100 to 200;
+}
+
+extend Sub {
+  optional string sub_ext = 100 [(scalapb.field).type = "com.example.Name"];
+}
