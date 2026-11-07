@@ -6,7 +6,7 @@
 *.a
 
 # Upstream output for golden diffs (scripts/gen-testdata.sh), see CONTRIBUTING.md.
-/testdata/checksums/*/*/gen/
+/testdata/gen/
 
 # Scratch directories
 *.tmp/

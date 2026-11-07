@@ -15,7 +15,7 @@
 # Env: BUF (default: scripts/get-buf.sh), UNI_E2E_WORK (scratch dir, default: temporary),
 # UNI_DIFF_LINES (diff lines shown per file, default 60).
 #
-# On a mismatch, if testdata/checksums/<name>/gen/<version>/ exists (the upstream output written by
+# On a mismatch, if testdata/gen/<name>/<version>/ exists (the upstream output written by
 # scripts/gen-testdata.sh), differing files are diffed against it.
 #
 # Exit status: 0 ok, 1 failure, 77 the binary does not contain NAME VERSION (`BIN --list`), 2 usage.
@@ -39,7 +39,7 @@ cd "$root"
 d=testdata/checksums/$name
 template=$d/$version.buf.gen.yaml
 sums=$d/$version.sha256
-gen=$d/gen/$version
+gen=testdata/gen/$name/$version
 lines=${UNI_DIFF_LINES:-60}
 for f in "$template" "$sums"; do [ -f "$f" ] || { echo "$f: not found" >&2; exit 1; }; done
 [ -x "$bin" ] || [ -f "$bin" ] || { echo "$bin: not found" >&2; exit 1; }

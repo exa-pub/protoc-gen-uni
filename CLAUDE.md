@@ -23,7 +23,7 @@ C11/POSIX libc headers in `#include <...>`.
 ## Rules
 
 - **Upstream is the reference.** `testdata/checksums/<owner>/<plugin>/<version>.sha256` (and the
-  optional, uncommitted upstream output in `testdata/checksums/*/*/gen/`) are produced only by the
+  optional, uncommitted upstream output in `testdata/gen/`) are produced only by the
   upstream plugin (`scripts/gen-testdata.sh`, buf.build remote plugins). Never edit them or write
   them from our output; when a golden test fails, fix the port.
 - **Output must match byte for byte**, including headers with the upstream version, option parsing,
@@ -69,7 +69,7 @@ C11/POSIX libc headers in `#include <...>`.
   (`- directory: testdata/proto/<test>`), one `- remote: buf.build/<owner>/<plugin>:<version>` entry
   per option group (`out: <group>`, `opt:` as a one-line list).
 - `…/<version>.sha256` (committed, written by `scripts/gen-testdata.sh`) — `<sha256>  <group>/<test>/<path>`.
-- `…/gen/<version>/<group>/<test>/` — upstream output, **not committed**; diffs on failures.
+- `testdata/gen/<owner>/<plugin>/<version>/<group>/<test>/` — upstream output, **not committed**; diffs on failures.
 - `CMakePresets.json`, `cmake/` (flags, toolchains, golden tests), `docker/toolchain.Dockerfile`.
 
 See CONTRIBUTING.md for workflows.

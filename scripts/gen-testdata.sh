@@ -9,7 +9,7 @@
 #                               entry per group with `out: <group>`; no `strategy:` (not allowed for remote).
 #   $d/<version>.sha256         committed, output: `<sha256>  <group>/<test>/<path>` of the upstream output,
 #                               sorted by path; checked by the e2e tests (tests/e2e/golden.sh).
-#   $d/gen/<version>/<group>/<test>/
+#   testdata/gen/<owner>/<plugin>/<version>/<group>/<test>/
 #                               NOT committed (.gitignore): the upstream output; tests show diffs against
 #                               it when it exists.
 #
@@ -27,7 +27,7 @@ root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$root"
 d=testdata/checksums/$name
 template=$d/$version.buf.gen.yaml
-gen=$d/gen/$version
+gen=testdata/gen/$name/$version
 [ -f "$template" ] || { echo "$template: not found" >&2; exit 1; }
 
 die() {

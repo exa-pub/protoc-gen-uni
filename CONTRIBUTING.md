@@ -84,7 +84,7 @@ prepends `uni-name=<name>, uni-version=<version>` to its `opt:`. buf then runs i
 `testdata/proto/<test>`, and the sha256 of every output file is compared with the
 `<sha>  <group>/<test>/<path>` lines of `<version>.sha256` (missing, extra and differing files).
 
-On a mismatch, if `testdata/checksums/<name>/gen/<version>/` exists (written by
+On a mismatch, if `testdata/gen/<name>/<version>/` exists (written by
 `scripts/gen-testdata.sh`, not committed), differing files are diffed against it
 (`UNI_DIFF_LINES`, default 60 lines per file); if that directory does not match the checksums, the
 test says it is stale. Without it you only get "differs" — run the script to get diffs.
@@ -116,7 +116,7 @@ BUF_TOKEN=... scripts/gen-testdata.sh <owner>/<plugin> <version>
 
 [`scripts/gen-testdata.sh`](scripts/gen-testdata.sh) runs `buf generate testdata/proto/<test>`
 with the template for every input — the upstream remote plugins produce the output — writes it to
-`testdata/checksums/<owner>/<plugin>/gen/<version>/<group>/<test>/` and its checksums to
+`testdata/gen/<owner>/<plugin>/<version>/<group>/<test>/` and its checksums to
 `<version>.sha256`. Commit only the template and `<version>.sha256`. Never edit checksums by hand or
 produce them from our output.
 
