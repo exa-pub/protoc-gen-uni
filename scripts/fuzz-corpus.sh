@@ -54,10 +54,10 @@ while IFS= read -r g; do groups+=("$g"); done < <(awk '
 	END { if (inplugins) flush() }
 ' "$template")
 if [ "$name" = protocolbuffers/go ]; then
-	groups+=("annotate=paths=source_relative,annotate_code,default_api_level=API_HYBRID"
-		"module=module=example.com/gen,annotate_code=true"
-		"strip=experimental_strip_nonfunctional_codegen=true,default_api_level=API_OPAQUE"
-		"apilevel=apilevelMgofeatures/open.proto=API_HYBRID,Mproto3/proto3.proto=example.com/x;xpb")
+	groups+=("x-annotate=paths=source_relative,annotate_code,default_api_level=API_HYBRID"
+		"x-module=module=example.com/gen,annotate_code=true"
+		"x-strip=experimental_strip_nonfunctional_codegen=true,default_api_level=API_OPAQUE"
+		"x-apilevel=apilevelMgofeatures/open.proto=API_HYBRID,Mproto3/proto3.proto=example.com/x;xpb")
 fi
 [ "${#groups[@]}" -gt 0 ] || { echo "$template: no plugin entries" >&2; exit 1; }
 
