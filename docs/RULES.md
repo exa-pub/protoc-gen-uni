@@ -7,6 +7,9 @@ They apply to every change.
   golden test fails, fix the port.
 - **Byte for byte**: headers with the upstream version, option parsing, error texts,
   `supported_features`, editions.
+- **Unsupported means an error.** If a port does not implement something upstream accepts (an
+  option, a feature, an input), generation fails with a `CodeGeneratorResponse.error` that names it.
+  It never produces a silently different output. The generator README lists it.
 - **Versions are frozen**: `generators/<owner>/<plugin>/<version>/` is exactly that upstream
   version. `pkg/` has no version directories: a component implements the newest upstream version in
   use, and only a part that differs for an older one is versioned (`strconv_go1.21.6.c`, or a

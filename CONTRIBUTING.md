@@ -51,6 +51,8 @@ exists. Run `scripts/gen-testdata.sh` to create it. `UNI_E2E_WORK=<dir>` keeps o
 - **New input:** create `testdata/proto/<test>/`, a buf v2 workspace.
   - Prefix language-specific tests with the language, e.g. `go-features`.
   - Don't set `go_package`.
+  - A real project is `testdata/proto/real-<name>/`: an unmodified copy with its `LICENSE` and a
+    `SOURCE` file (repository, commit, what was taken).
   - Add `- directory: testdata/proto/<test>` to the templates that should cover it.
 - **New option group:** add a `- remote:` entry with its own `out:` and `opt:` to the template.
 - **Regenerate:** `BUF_TOKEN=… scripts/gen-testdata.sh <owner>/<plugin> <version>`. This needs
