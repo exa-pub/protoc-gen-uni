@@ -1,11 +1,12 @@
 # bufbuild/es
 
 Port of `protoc-gen-es`, the TypeScript/JavaScript generator of
-[Protobuf-ES](https://github.com/bufbuild/protobuf-es), rewritten in Go: no Node.js required.
+[Protobuf-ES](https://github.com/bufbuild/protobuf-es), rewritten in C: no Node.js required.
 
 - buf.build: <https://buf.build/bufbuild/es>
 - Upstream: <https://github.com/bufbuild/protobuf-es>
-- License: Apache-2.0; ported files reference the upstream source they were ported from.
+- License: Apache-2.0; ported files keep the upstream copyright header and name the upstream
+  source they were ported from.
 
 ```yaml
 plugins:
@@ -22,26 +23,38 @@ Generated code needs the `@bufbuild/protobuf` runtime of the same version at run
 |---------|------------------|
 | v2.17.0 | [`packages/protoc-gen-es/src`](https://github.com/bufbuild/protobuf-es/tree/v2.17.0/packages/protoc-gen-es/src), [`packages/protoplugin/src`](https://github.com/bufbuild/protobuf-es/tree/v2.17.0/packages/protoplugin/src), parts of [`packages/protobuf/src`](https://github.com/bufbuild/protobuf-es/tree/v2.17.0/packages/protobuf/src) |
 
-The protoplugin framework and the needed parts of `@bufbuild/protobuf` (descriptors, naming,
-editions features, descriptor embedding) are ported into `pkg/languages/ecmascript/`.
+## Where the code lives
+
+- `<version>/` is a unity build: `generator.c` includes `valid_types.c`, `util.c` and `plugin.c`
+  (ports of the files of `packages/protoc-gen-es/src`) and exports only `gen_bufbuild_es_v2_17_0`.
+- `pkg/languages/ecmascript/protoplugin` — `@bufbuild/protoplugin` (parameter parsing, schema,
+  generated files with automatic imports, file preambles, JSDoc); one `.c` file per upstream file.
+- `pkg/languages/ecmascript/protobuf` — the needed parts of `@bufbuild/protobuf`: descriptors,
+  naming, editions features, descriptor embedding.
+- `pkg/pb` — the wire format and the `descriptor.proto`/`plugin.proto` schemas.
 
 ## Port notes
 
-- Embedded descriptors (`fileDesc("<base64>")`) are serialized with Go's `proto.Marshal`, which
-  writes known fields in field number order followed by unknown fields, as protobuf-es does; both
-  runtimes ship the same `descriptor.proto` schema except `FeatureSet.enforce_proto_limits` (9),
-  which Go keeps as an unknown field (in input order, so the bytes still match). protobuf-es parses
-  descriptors without an extension registry, while Go parses extensions that are linked into the
-  binary (e.g. `pb.go` features) and writes them *before* the known fields, so they are converted
-  back to unknown fields first (`protobuf.ExtensionsToUnknown`), merged by field number.
-- Imported names are sorted with `localeCompare` upstream; `protoplugin.LocaleCompare` emulates
-  the ICU root collation for identifier characters (`_` < `$` < digits < letters, case-insensitive
-  first, lowercase before uppercase).
+- Requests are parsed like `fromBinary` of protobuf-es (`pkg/pb`): the schema is the
+  `descriptor.proto` that `@bufbuild/protobuf` v2.17.0 ships (`FeatureSet.enforce_proto_limits` is a
+  known field), there is no extension registry (extensions stay unknown fields), unknown values of
+  closed enums become unknown fields (`int32`, sign-extended), required fields
+  (`UninterpretedOption.NamePart`) are not checked, and nesting is limited to 100 messages
+  (`recursionLimit`). Embedded descriptors (`fileDesc("<base64>")`) are serialized like
+  `toBinary`: known fields in field number order, then unknown fields in wire order.
+- Imported names are sorted with `localeCompare` upstream; `protoplugin/collate.c` emulates the ICU
+  root collation for identifier characters (`_` < `$` < digits < letters, case-insensitive first,
+  lowercase before uppercase).
+- On inputs that protoc and buf do not produce, the port still follows upstream: U+2028/U+2029 in
+  values echoed into the preamble are escaped (`\u2028`) like `escapeValue`, and names in
+  "invalid ... name" errors are quoted like `JSON.stringify`.
 
 ## Known differences
 
 - Errors are returned in `CodeGeneratorResponse.error` as `protoc-gen-es: <error>`; upstream
   prints the same text to stderr and exits with status 1.
+- File and package names are handled as C strings: a NUL byte ends them (protoc and buf never
+  produce one). NUL bytes in comments, default values, JSON names and the parameter are kept.
 - The transpilation fallback of `@bufbuild/protoplugin` is not ported; protoc-gen-es never uses it.
 
 ## Options

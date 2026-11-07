@@ -1,2 +1,1 @@
-*.tar.xz binary
-testdata/checksums/**/*.tar.xz linguist-generated=true
+testdata/checksums/**/*.sha256 linguist-generated=true

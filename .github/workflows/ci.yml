@@ -1,4 +1,6 @@
-# CI: version → lint + test (build) → release (push to main only).
+# CI: version → toolchain image → build (static Linux x86_64/aarch64 and Windows in the image,
+# macOS natively) → tests (e2e golden tests natively on every OS, ASan/UBSan, fuzzing) → release
+# of the tested binaries (push to main only).
 #
 # Version = latest vX.Y.Z tag + bump based on conventional commits since that tag:
 #   `type!:` / `BREAKING CHANGE:` → major (minor before 1.0), `feat:` → minor, anything else → patch.
@@ -65,6 +67,37 @@ jobs:
           echo "version=$version" >>"$GITHUB_OUTPUT"
           echo "### Version: \`$version\`" >>"$GITHUB_STEP_SUMMARY"
 
+  # Toolchain image (docker/toolchain.Dockerfile), tagged with the hash of the Dockerfile: pulled
+  # from ghcr.io if it exists, otherwise built (~10 minutes) and pushed (not from forks).
+  toolchain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: image
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORK: ${{ github.event.pull_request.head.repo.fork }}
+        run: |
+          set -euo pipefail
+          owner=$(tr '[:upper:]' '[:lower:]' <<<"$GITHUB_REPOSITORY_OWNER")
+          image=ghcr.io/$owner/protoc-gen-uni-toolchain:$(sha256sum docker/toolchain.Dockerfile | cut -c1-12)
+          echo "image=$image" >>"$GITHUB_OUTPUT"
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          if docker manifest inspect "$image" >/dev/null 2>&1; then
+            echo "$image exists"
+            exit 0
+          fi
+          docker build -t "$image" -f docker/toolchain.Dockerfile docker
+          if [ "$FORK" != true ]; then docker push "$image"; fi
+
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -72,66 +105,189 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: go.mod
-      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
-        with:
-          version: v2.15
+      - name: no third-party includes
+        run: scripts/check-includes.sh
 
-  test:
-    needs: version
+  build:
+    needs: [version, toolchain]
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [linux-x86_64, linux-aarch64, windows-x86_64]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: go.mod
-      - name: go mod tidy
-        run: go mod tidy -diff
-      - name: build
+      - name: build (twice, must be byte-identical)
         env:
+          IMAGE: ${{ needs.toolchain.outputs.image }}
+          PRESET: ${{ matrix.preset }}
           VERSION: ${{ needs.version.outputs.version }}
         run: |
-          go build -ldflags "-X main.version=$VERSION" -o protoc-gen-uni .
-          ./protoc-gen-uni --version
-      - name: test
-        run: go test -race ./...
+          set -euo pipefail
+          for dir in build/$PRESET build/$PRESET-again; do
+            UNI_TOOLCHAIN_IMAGE=$IMAGE scripts/docker.sh bash -c \
+              "cmake --preset $PRESET -B $dir -DUNI_VERSION=$VERSION -DUNI_WERROR=ON && cmake --build $dir"
+          done
+          bin=protoc-gen-uni; [ "$PRESET" != windows-x86_64 ] || bin=protoc-gen-uni.exe
+          cmp "build/$PRESET/$bin" "build/$PRESET-again/$bin"
+          # unit tests, registry check and golden tests (aarch64 under qemu; no Wine for Windows)
+          if [ "$PRESET" != windows-x86_64 ]; then
+            UNI_TOOLCHAIN_IMAGE=$IMAGE scripts/docker.sh ctest --test-dir "build/$PRESET" --output-on-failure
+          fi
+          mkdir -p out && cp "build/$PRESET/$bin" out/
+          ls -l out/ | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ matrix.preset }}
+          path: out/
+          if-no-files-found: error
+
+  build-darwin:
+    needs: version
+    runs-on: macos-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64, x86_64]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: build
+        env:
+          ARCH: ${{ matrix.arch }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          command -v ninja >/dev/null || brew install ninja
+          cmake --preset darwin -B build/darwin-$ARCH -DCMAKE_OSX_ARCHITECTURES=$ARCH -DUNI_VERSION=$VERSION -DUNI_WERROR=ON
+          cmake --build build/darwin-$ARCH
+          mkdir -p out && cp build/darwin-$ARCH/protoc-gen-uni out/
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: darwin-${{ matrix.arch }}
+          path: out/
+          if-no-files-found: error
+
+  # E2E golden tests: buf runs the binary as a local plugin on testdata/proto (tests/e2e/all.sh),
+  # natively on each platform.
+  test-linux:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {preset: linux-x86_64, runner: ubuntu-latest}
+          - {preset: linux-aarch64, runner: ubuntu-24.04-arm}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ matrix.preset }}
+          path: out
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/buf
+          key: buf-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('testdata/proto/*/buf.lock') }}
+      - run: chmod +x out/protoc-gen-uni && out/protoc-gen-uni --version && tests/e2e/all.sh out/protoc-gen-uni
+
+  test-darwin:
+    needs: build-darwin
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: darwin-arm64
+          path: out
+      - run: chmod +x out/protoc-gen-uni && tests/e2e/all.sh out/protoc-gen-uni
+
+  test-windows:
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: windows-x86_64
+          path: out
+      - run: tests/e2e/all.sh out/protoc-gen-uni.exe
+
+  # Unit and e2e tests under AddressSanitizer + UndefinedBehaviorSanitizer (clang, glibc).
+  asan:
+    needs: toolchain
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - env:
+          IMAGE: ${{ needs.toolchain.outputs.image }}
+        run: UNI_TOOLCHAIN_IMAGE=$IMAGE scripts/docker.sh cmake --workflow --preset asan
+
+  # Two minutes of libFuzzer (+ASan/UBSan) on fuzz/fuzz_request.c, seeded with the requests of the
+  # golden tests (recorded via buf by scripts/fuzz-corpus.sh).
+  fuzz:
+    needs: toolchain
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - env:
+          IMAGE: ${{ needs.toolchain.outputs.image }}
+        run: |
+          UNI_TOOLCHAIN_IMAGE=$IMAGE scripts/docker.sh bash -c '
+            set -euo pipefail
+            cmake --preset fuzz && cmake --build --preset fuzz
+            scripts/fuzz-corpus.sh
+            build/fuzz/fuzz/fuzz_request -max_total_time=120 -timeout=10 -rss_limit_mb=2048 \
+              -dict=fuzz/params.dict build/fuzz/corpus'
 
   release:
-    needs: [version, lint, test]
+    needs: [version, lint, build, build-darwin, test-linux, test-darwin, test-windows, asan, fuzz]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: write # tag and GitHub Release
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          persist-credentials: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: go.mod
-      - name: build binaries
+          path: artifacts # one directory per artifact (build preset)
+      - name: collect binaries
         env:
           VERSION: ${{ needs.version.outputs.version }}
-          CGO_ENABLED: "0"
         run: |
           set -euo pipefail
           mkdir -p dist
-          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
-            os="${target%/*}" arch="${target#*/}"
-            ext=""; [ "$os" != windows ] || ext=".exe"
-            GOOS="$os" GOARCH="$arch" go build -trimpath -ldflags "-s -w -X main.version=$VERSION" \
-              -o "dist/protoc-gen-uni_${VERSION#v}_${os}_${arch}${ext}" .
+          for m in linux-x86_64:linux_amd64 linux-aarch64:linux_arm64 darwin-x86_64:darwin_amd64 \
+                   darwin-arm64:darwin_arm64 windows-x86_64:windows_amd64; do
+            preset=${m%%:*} target=${m#*:}
+            ext=""; [ "${target%%_*}" != windows ] || ext=".exe"
+            install -m 755 "artifacts/$preset/protoc-gen-uni$ext" "dist/protoc-gen-uni_${VERSION#v}_${target}${ext}"
           done
           (cd dist && sha256sum -- * >checksums.txt)
+          ls -l dist | tee -a "$GITHUB_STEP_SUMMARY"
       - name: GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
