@@ -23,7 +23,9 @@ runtime, Go's formatter) is ported by hand into `pkg/` or the generator.
 - **Byte for byte**: headers with the upstream version, option parsing, error texts,
   `supported_features`, editions.
 - **Versions are frozen**: `generators/<owner>/<plugin>/<version>/` is exactly that upstream
-  version. Changes in `pkg/` must keep the golden tests of *all* versions green.
+  version. `pkg/` has no version directories: a component implements the newest upstream version in
+  use, and only a part that differs for an older one is versioned (`strconv_go1.21.6.c`, or a
+  `<version>/` directory). Changes in `pkg/` must keep the golden tests of *all* versions green.
 - **No third-party code**: only the libc headers allowed by `scripts/check-includes.sh`.
 - Ported code keeps upstream license headers and names the upstream file it ports. Write code and
   docs in English.
@@ -37,34 +39,10 @@ runtime, Go's formatter) is ported by hand into `pkg/` or the generator.
 - Errors: `fail()` longjmps to the nearest `try_run()`, which works like panic/recover.
 - Mark code that runs once per request or declaration with `COLD`; size matters.
 
-## Layout
+## Structure
 
-```
-.
-├── main.c                      entry: --version, --list, request → pkg/uni
-├── pkg/
-│   ├── core/                   libc helpers: arena, buffers, strings, fail/try_run
-│   ├── pb/                     protobuf wire format, descriptor/plugin schemas
-│   ├── uni/                    uni-name/uni-version parsing, dispatch
-│   └── languages/<language>/   shared by the generators of one language (runtime ports,
-│                               plugin frameworks, stdlib/<toolchain>/ ports for exact formatting)
-├── generators/
-│   ├── CMakeLists.txt          discovers generators, generates the sorted registry
-│   └── <owner>/<plugin>/
-│       ├── README.md           upstream, versions table, options, differences
-│       └── <version>/          CMakeLists.txt: uni_generator(LIBRARIES ...);
-│                               generator.c (unity build, #includes the rest)
-├── tests/
-│   ├── unit/                   unit tests
-│   └── e2e/                    golden.sh, all.sh, check-registry.sh
-├── fuzz/                       libFuzzer harness
-└── testdata/
-    ├── proto/<test>/           input buf workspaces
-    ├── checksums/<owner>/<plugin>/
-    │   ├── <version>.buf.gen.yaml   tests + option groups
-    │   └── <version>.sha256         upstream checksums
-    └── gen/                    upstream output for diffs (not committed)
-```
+A port mirrors upstream library by library; the only deviations are formatters fed with nodes instead
+of text and truly shared code in `pkg/`. Layout and how to apply it: [docs/LAYOUT.md](docs/LAYOUT.md).
 
 ## Commands
 

@@ -72,9 +72,9 @@ exists. Run `scripts/gen-testdata.sh` to create it. `UNI_E2E_WORK=<dir>` keeps o
 
 Go generators format code with the `go/printer` of the Go release they were built with. Check the
 Go version in `plugins/<owner>/<plugin>/<version>/Dockerfile` of
-[bufbuild/plugins](https://github.com/bufbuild/plugins). If it changed, port that standard library
-to `pkg/languages/go/stdlib/go<version>/`
-([README](pkg/languages/go/stdlib/go1.26.5/README.md)).
+[bufbuild/plugins](https://github.com/bufbuild/plugins). If the output differs from the Go standard
+library port in `pkg/languages/go/`, version the differing files; check the release notes for
+Unicode, strconv and sort changes.
 
 ## New generator
 
@@ -84,7 +84,8 @@ to `pkg/languages/go/stdlib/go<version>/`
    - The other `.c` files of the directory are `#include`d into it and stay `static`.
    - Add `<version>/CMakeLists.txt` with `uni_generator(LIBRARIES <libraries it uses>)`.
 3. Write the template and run `scripts/gen-testdata.sh`.
-4. Port. Shared code goes to `pkg/languages/<lang>/` or `pkg/`.
+4. Port, following [docs/LAYOUT.md](docs/LAYOUT.md): upstream libraries to `pkg/languages/<language>/<library>/`,
+   formatters to `pkg/languages/<language>/formatters/<name>/`, code shared by versions to `common/`.
 
 ## Checks
 
