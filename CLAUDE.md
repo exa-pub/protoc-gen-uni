@@ -11,38 +11,13 @@ plugins:
     opt: [uni-name=bufbuild/es, uni-version=v2.17.0, target=ts]
 ```
 
-The point is **one small binary without dependencies**: only the C library, static musl on Linux
-(≈350 KB with all generators). Whatever an upstream plugin needs (plugin framework, protobuf
-runtime, Go's formatter) is ported by hand into `pkg/` or the generator.
+## Goals, rules and layout
 
-## Rules
+@docs/GOALS.md
 
-- **Upstream is the reference.** Checksums and upstream output in `testdata/` come only from the
-  upstream plugin (`scripts/gen-testdata.sh`). Never edit them or produce them from our output. If a
-  golden test fails, fix the port.
-- **Byte for byte**: headers with the upstream version, option parsing, error texts,
-  `supported_features`, editions.
-- **Versions are frozen**: `generators/<owner>/<plugin>/<version>/` is exactly that upstream
-  version. `pkg/` has no version directories: a component implements the newest upstream version in
-  use, and only a part that differs for an older one is versioned (`strconv_go1.21.6.c`, or a
-  `<version>/` directory). Changes in `pkg/` must keep the golden tests of *all* versions green.
-- **No third-party code**: only the libc headers allowed by `scripts/check-includes.sh`.
-- Ported code keeps upstream license headers and names the upstream file it ports. Write code and
-  docs in English.
-- Input is untrusted: reads are bounds-checked and recursion is limited. Bad input must give an
-  error, never a crash or hang. Builds stay clean with `-Werror`, ASan/UBSan and the fuzzer.
+@docs/RULES.md
 
-## C conventions
-
-- Arena: one request per process, so memory comes from `xalloc` (`pkg/core/util.h`) and is never
-  freed.
-- Errors: `fail()` longjmps to the nearest `try_run()`, which works like panic/recover.
-- Mark code that runs once per request or declaration with `COLD`; size matters.
-
-## Structure
-
-A port mirrors upstream library by library; the only deviations are formatters fed with nodes instead
-of text and truly shared code in `pkg/`. Layout and how to apply it: [docs/LAYOUT.md](docs/LAYOUT.md).
+@docs/LAYOUT.md
 
 ## Commands
 

@@ -1,6 +1,7 @@
 # Contributing
 
-Read [CLAUDE.md](CLAUDE.md) first: its rules apply to every change. The details are in the script
+Read [docs/GOALS.md](docs/GOALS.md) and [docs/RULES.md](docs/RULES.md) first: the rules apply to
+every change. The layout is in [docs/LAYOUT.md](docs/LAYOUT.md); the details are in the script
 headers this guide links to.
 
 ## Setup
@@ -60,10 +61,12 @@ exists. Run `scripts/gen-testdata.sh` to create it. `UNI_E2E_WORK=<dir>` keeps o
 
 ## New version of a generator
 
-1. Copy `generators/<owner>/<plugin>/<old>/` to `<new>/`.
-   - In `generator.c`, rename the exported symbol: it is the directory path as a C identifier,
-     `gen_<owner>_<plugin>_<version>` (CMake discovers the directory and generates the registry).
-   - Update the version strings (`grep -rn <old>`).
+1. Create `generators/<owner>/<plugin>/<new>/` with `CMakeLists.txt` and `generator.c`. Its
+   exported symbol is the directory path as a C identifier, `gen_<owner>_<plugin>_<version>` (CMake
+   discovers the directory and generates the registry).
+   - A version costs its difference, not a copy: code the versions share lives in
+     `generators/<owner>/<plugin>/common/` (move it there when the second version appears), and
+     `<new>/` holds only what differs.
 2. Add a `| <new> | … |` row to the README version table.
 3. Copy `<old>.buf.gen.yaml` to `<new>.buf.gen.yaml`, change the version and run
    `scripts/gen-testdata.sh`.
