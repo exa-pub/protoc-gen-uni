@@ -10,7 +10,7 @@ headers this guide links to.
   ([`docker/toolchain.Dockerfile`](docker/toolchain.Dockerfile)). The image has the musl cross GCC
   for x86_64 and aarch64, mingw-w64, clang, CMake and qemu-user. It is built on first use and takes
   a while.
-- **Native:** CMake ≥ 3.25, Ninja, GCC or clang, bash and curl are enough for the `dev`, `asan`,
+- **Native:** CMake ≥ 3.28, Ninja, GCC or clang, bash and curl are enough for the `dev`, `asan`,
   `fuzz` and `darwin` presets.
 - Tests download a pinned buf ([`scripts/get-buf.sh`](scripts/get-buf.sh)). The `es-validate`
   input needs network access for its buf dependencies.
@@ -28,7 +28,8 @@ tests/e2e/golden.sh build/linux-x86_64/protoc-gen-uni bufbuild/es v2.17.0 proto3
   `linux-{x86_64,aarch64}[-clang]`, `windows-x86_64`, `darwin`, `dev`, `asan`, `fuzz`.
 - **Options** are in [`cmake/flags.cmake`](cmake/flags.cmake), for example `UNI_OPT` and
   `UNI_WERROR`. `-DUNI_GENERATORS=bufbuild/es,protocolbuffers/go/v1.36.12` builds a binary with
-  only those generators (golden tests of the others are skipped).
+  only those generators; golden tests of the others are skipped, and unit tests of libraries they
+  do not use are neither built nor run.
 - **`make test|asan|fuzz|lint`** are shortcuts that run in the image.
 
 ctest runs three kinds of tests:
@@ -92,6 +93,9 @@ Unicode, strconv and sort changes.
 2. Create `<version>/generator.c` exporting a `UniGenerator` ([`pkg/uni/uni.h`](pkg/uni/uni.h)).
    - The other `.c` files of the directory are `#include`d into it and stay `static`.
    - Add `<version>/CMakeLists.txt` with `uni_generator(LIBRARIES <libraries it uses>)`.
+   - Set `parses_raw` when the generator parses the raw request itself (protobuf-go: 10000
+     levels of nesting) and reads only the parameter from `req`: requests nested deeper than the
+     100 levels of `pkg/pb` then reach it instead of failing in `uni_main`.
 3. Write the template and run `scripts/gen-testdata.sh`.
 4. Port, following [docs/LAYOUT.md](docs/LAYOUT.md): upstream libraries to `pkg/languages/<language>/<library>/`,
    formatters to `pkg/languages/<language>/formatters/<name>/`, code shared by versions to `common/`.

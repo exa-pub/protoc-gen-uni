@@ -1,0 +1,59 @@
+// Custom options whose values contain map fields (proto2). The plugin re-serializes them through
+// the definitions of the request when it strips source-retention options: every map entry keeps
+// its order and is written with both key and value, also when they are zero or empty.
+syntax = "proto2";
+
+package mapopt.p2;
+
+import "google/protobuf/descriptor.proto";
+
+enum Color {
+  COLOR_UNSPECIFIED = 0;
+  COLOR_RED = 1;
+}
+
+message Inner {
+  optional string s = 1;
+  repeated int32 r = 2;
+  optional int32 dropped = 3 [retention = RETENTION_SOURCE];
+}
+
+message Rules {
+  map<string, int32> by_name = 1;
+  map<int32, Inner> inner = 2;
+  map<string, Color> colors = 3;
+  map<bool, bytes> flags = 4;
+  optional int32 tail = 5;
+}
+
+extend google.protobuf.MessageOptions {
+  optional Rules rules = 50101;
+}
+
+extend google.protobuf.FieldOptions {
+  repeated Rules field_rules = 50102;
+}
+
+message Annotated {
+  option (rules) = {
+    by_name: [
+      {key: "zeta" value: 1},
+      {key: "" value: 0},
+      {key: "alpha" value: -2},
+      {key: "zeta" value: 9}
+    ]
+    inner: [
+      {key: 7 value: {s: "x" dropped: 5}},
+      {key: 0},
+      {key: -3 value: {r: [1, 0, 2]}}
+    ]
+    colors: [{key: "none" value: COLOR_UNSPECIFIED}, {key: "red" value: COLOR_RED}, {key: ""}]
+    flags: [{key: false value: ""}, {key: true value: "\x00\xff"}]
+    tail: 4
+  };
+
+  optional int32 f = 1 [
+    (field_rules) = {by_name: [{key: "q" value: 1}, {key: "a"}]},
+    (field_rules) = {tail: 1}
+  ];
+}

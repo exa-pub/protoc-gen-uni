@@ -63,7 +63,7 @@ message BadHexEscape {
 }
 
 message GoodEscapes {
-  // Good escapes \x41 \u00e9 \U0001F600 \N{BULLET} \d.
+  // Good escapes \x41 \u00e9 \U0001F600 \d.
   option deprecated = true;
   int32 x = 1;
 }

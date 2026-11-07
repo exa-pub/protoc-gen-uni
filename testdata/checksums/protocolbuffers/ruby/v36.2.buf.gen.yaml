@@ -16,6 +16,7 @@ inputs:
   - directory: testdata/proto/empty
   - directory: testdata/proto/go-features
   - directory: testdata/proto/ruby-package
+  - directory: testdata/proto/map-options
   - directory: testdata/proto/real-googleapis
   - directory: testdata/proto/real-otel
   - directory: testdata/proto/real-protovalidate

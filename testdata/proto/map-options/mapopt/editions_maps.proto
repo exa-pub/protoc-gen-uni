@@ -1,0 +1,26 @@
+// Custom options whose values contain map fields (edition 2023, implicit presence by default).
+edition = "2023";
+
+package mapopt.ed;
+
+import "google/protobuf/descriptor.proto";
+
+option features.field_presence = IMPLICIT;
+
+message Rules {
+  map<string, int32> counts = 1;
+  map<int32, Rules> children = 2;
+}
+
+extend google.protobuf.EnumOptions {
+  Rules enum_rules = 50105;
+}
+
+enum Kind {
+  option (enum_rules) = {
+    counts: [{key: "" value: 0}, {key: "b" value: 0}, {key: "a" value: 3}]
+    children: [{key: 0 value: {counts: {key: "" value: 0}}}, {key: 1}]
+  };
+
+  KIND_UNSPECIFIED = 0;
+}

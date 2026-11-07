@@ -16,7 +16,9 @@ set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_C_FLAGS_RELEASE "-${UNI_OPT} -DNDEBUG")
 
 add_compile_definitions(_DEFAULT_SOURCE VERSION="${UNI_VERSION}")
-add_compile_options(-Wall -Wextra -Wno-unused-parameter)
+# -Wno-missing-field-initializers: struct initializers leave trailing fields zero, e.g. the
+# optional UniGenerator.parses_raw.
+add_compile_options(-Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers)
 if(UNI_WERROR)
   add_compile_options(-Werror)
 endif()

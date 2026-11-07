@@ -1,7 +1,10 @@
 /* pkg/languages/ecmascript/protoplugin: localeCompare, import paths and patterns, generated
- * files, JSDoc blocks; cases of protoplugin_test.go of the Go port. */
+ * files, JSDoc blocks (cases of protoplugin_test.go of the Go port); decode_utf8 of
+ * pkg/languages/ecmascript/protobuf. */
 #include "test.h"
 #include "internal.h"
+
+#include <string.h>
 
 static void test_locale_compare(void)
 {
@@ -75,6 +78,13 @@ static void test_patterns(void)
 		{"c/**/x.proto", "c/d/e/x.proto", true, true},
 		{"c/**/x.proto", "c//x.proto", true, false},
 		{"other", "other.proto", true, false},
+		/* "." of a regular expression matches no line terminator: \n, \r, U+2028, U+2029 */
+		{"b/**", "b/x\ry", true, false},
+		{"b/**", "b/x\xe2\x80\xa8y", true, false},
+		{"b/**", "b/x\xe2\x80\xa9", true, false},
+		{"b/**", "b/x\xe2\x80\xaay", true, true},
+		{"google/rpc/", "google/rpc/x\ry", true, false},
+		{"b/*", "b/x\ry", true, true},
 		/* rewrite_imports (star): "**" without "/" is two stars */
 		{"./foo/**/*_pb.js", "./foo/a/b/c_pb.js", false, true},
 		{"./foo/**", "./foo/a/b", false, false},
@@ -152,6 +162,34 @@ static void test_generated_file(void)
 	CHECK_MEM(c.p, c.n, want_cjs, sizeof want_cjs - 1);
 }
 
+/* TextDecoder without fatal (WHATWG Encoding): one U+FFFD per maximal subpart. */
+static void test_decode_utf8(void)
+{
+	static const struct {
+		const char *in, *want;
+	} tests[] = {
+		{"abc", "abc"},
+		{"\xef\xbb\xbf\xf0\x9f\x98\x80", "\xef\xbb\xbf\xf0\x9f\x98\x80"},
+		{"\x80", "\xef\xbf\xbd"},
+		{"\xe2\x82", "\xef\xbf\xbd"},
+		{"\xe2\x82" "A", "\xef\xbf\xbd" "A"},
+		{"\xf0\x9f\x98", "\xef\xbf\xbd"},
+		{"\xc0\xaf", "\xef\xbf\xbd\xef\xbf\xbd"},
+		{"\xe0\x80", "\xef\xbf\xbd\xef\xbf\xbd"},
+		{"\xed\xa0\x80", "\xef\xbf\xbd\xef\xbf\xbd\xef\xbf\xbd"},
+		{"\xf4\x90\x80\x80", "\xef\xbf\xbd\xef\xbf\xbd\xef\xbf\xbd\xef\xbf\xbd"},
+		{"\xf5" "a\xff", "\xef\xbf\xbd" "a\xef\xbf\xbd"},
+	};
+	for (size_t i = 0; i < sizeof tests / sizeof *tests; i++) {
+		Str got = decode_utf8(str_c(tests[i].in));
+		CHECK_MEM(got.p, got.n, tests[i].want, strlen(tests[i].want));
+	}
+	Str nul = decode_utf8(STR_LIT("a\0\xff"));
+	CHECK_MEM(nul.p, nul.n, "a\0\xef\xbf\xbd", 5);
+	Str same = STR_LIT("valid");
+	CHECK(decode_utf8(same).p == same.p);
+}
+
 static void test_jsdoc_block(void)
 {
 	Str got = format_jsdoc_block(STR_LIT(" \n "), "");
@@ -162,4 +200,4 @@ static void test_jsdoc_block(void)
 }
 
 TESTS(TEST(test_locale_compare), TEST(test_import_paths), TEST(test_patterns), TEST(test_generated_file),
-      TEST(test_jsdoc_block))
+      TEST(test_decode_utf8), TEST(test_jsdoc_block))

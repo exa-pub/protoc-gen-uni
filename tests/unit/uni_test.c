@@ -118,6 +118,49 @@ static void test_main(void)
 	static const char req[] = "\x12\x1funi-name=a/b,uni-version=v1.1.0";
 	CHECK(uni_main((const uint8_t *)req, sizeof req - 1, gens, 4, &out) == NULL);
 	CHECK_STR(buf_str(&out), "ok");
+	/* a FileDescriptorProto with 120 nested messages: valid, but deeper than PB_MAX_DEPTH */
+	Buf msg = {0};
+	for (int i = 0; i < 120; i++) {
+		Buf b = {0};
+		pb_put_bytes(&b, i ? 3 : 1, i ? buf_view(&msg) : str_c("M")); /* nested_type, name */
+		msg = b;
+	}
+	Buf file = {0}, deep = {0};
+	pb_put_bytes(&file, 4, buf_view(&msg)); /* message_type */
+	pb_put_bytes(&deep, 15, buf_view(&file)); /* proto_file */
+	pb_put_bytes(&deep, 2, STR_LIT("x,uni-name=a/b,uni-version=v1.1.0"));
+	/* a generator without parses_raw: a parse error */
+	out = (Buf){0};
+	CHECK_STR(uni_main((const uint8_t *)deep.p, deep.n, gens, 4, &out),
+		  "protoc-gen-uni: parse request: messages nested deeper than 100 levels are not supported");
+	CHECK(out.n == 0);
+	/* a generator with parses_raw gets the parameter (the last one, after groups nested deeper
+	 * than PB_MAX_DEPTH) and the raw request */
+	static const UniGenerator raw_ab = {"a/b", "v1.1.0", gen_ab, true};
+	static const UniGenerator *const raw_gens[] = {&g1, &raw_ab};
+	Buf group = {0};
+	for (int i = 0; i < 150; i++)
+		pb_put_tag(&group, 7, WT_SGROUP);
+	for (int i = 0; i < 150; i++)
+		pb_put_tag(&group, 7, WT_EGROUP);
+	Buf deep2 = {0};
+	buf_add(&deep2, deep.p, deep.n);
+	buf_add(&deep2, group.p, group.n);
+	pb_put_bytes(&deep2, 2, STR_LIT("uni-version=v1.1.0,y,uni-name=a/b"));
+	out = (Buf){0};
+	CHECK(uni_main((const uint8_t *)deep2.p, deep2.n, raw_gens, 2, &out) == NULL);
+	CHECK_STR(buf_str(&out), "ok");
+	CHECK(got_param_set && str_eqc(got_param, "y"));
+	/* no uni-name: the error response */
+	out = (Buf){0};
+	CHECK(uni_main((const uint8_t *)deep.p, deep.n - 35, raw_gens, 2, &out) == NULL);
+	CHECK_STR(response_error(&out), "protoc-gen-uni: parameters uni-name=<owner>/<plugin> and "
+					"uni-version=<version> are required, e.g. uni-name=bufbuild/es,uni-version=v2.17.0");
+	/* malformed top level (an unterminated group) after the deep part */
+	buf_add(&deep2, group.p, group.n - 1);
+	out = (Buf){0};
+	CHECK_STR(uni_main((const uint8_t *)deep2.p, deep2.n, raw_gens, 2, &out),
+		  "protoc-gen-uni: parse request: messages nested deeper than 100 levels are not supported");
 }
 
 TESTS(TEST(test_split_parameter), TEST(test_run), TEST(test_main))
