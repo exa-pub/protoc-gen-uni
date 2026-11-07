@@ -1,0 +1,26 @@
+# Golden config for community/nipunn1313-mypy v5.1.0: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Regenerate: scripts/gen-testdata.sh community/nipunn1313-mypy v5.1.0
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/go-features
+plugins:
+  - remote: buf.build/community/nipunn1313-mypy:v5.1.0
+    out: default
+  - remote: buf.build/community/nipunn1313-mypy:v5.1.0
+    out: readable
+    opt: [readable_stubs]
+  - remote: buf.build/community/nipunn1313-mypy:v5.1.0
+    out: relax
+    opt: [relax_strict_optional_primitives, quiet]

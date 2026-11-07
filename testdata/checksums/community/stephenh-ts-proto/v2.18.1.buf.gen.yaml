@@ -1,0 +1,28 @@
+# Golden config for community/stephenh-ts-proto v2.18.1: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Regenerate: scripts/gen-testdata.sh community/stephenh-ts-proto v2.18.1
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+plugins:
+  - remote: buf.build/community/stephenh-ts-proto:v2.18.1
+    out: default
+  - remote: buf.build/community/stephenh-ts-proto:v2.18.1
+    out: long
+    opt: [esModuleInterop=true, forceLong=long, useOptionals=messages]
+  - remote: buf.build/community/stephenh-ts-proto:v2.18.1
+    out: grpc
+    opt: [outputServices=grpc-js, env=node]
+  - remote: buf.build/community/stephenh-ts-proto:v2.18.1
+    out: variants
+    opt: [snakeToCamel=false, oneof=unions-value, useDate=string, stringEnums=true]

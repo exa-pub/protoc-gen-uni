@@ -1,0 +1,23 @@
+# Golden config for community/neoeinstein-prost v0.5.0: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Inputs left out: upstream panics on editions and naming.
+# Regenerate: scripts/gen-testdata.sh community/neoeinstein-prost v0.5.0
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+plugins:
+  - remote: buf.build/community/neoeinstein-prost:v0.5.0
+    out: default
+  - remote: buf.build/community/neoeinstein-prost:v0.5.0
+    out: bsr
+    opt: [file_descriptor_set, bytes=., flat_output_dir]
+  - remote: buf.build/community/neoeinstein-prost:v0.5.0
+    out: config
+    opt: [enable_type_names, retain_enum_prefix, btree_map=., compile_well_known_types]

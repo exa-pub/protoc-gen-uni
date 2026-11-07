@@ -1,0 +1,30 @@
+# Golden config for protocolbuffers/js v4.0.3: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Inputs left out: naming: see cpp.
+# Regenerate: scripts/gen-testdata.sh protocolbuffers/js v4.0.3
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/go-features
+plugins:
+  - remote: buf.build/protocolbuffers/js:v4.0.3
+    out: commonjs
+    opt: [import_style=commonjs, binary]
+  - remote: buf.build/protocolbuffers/js:v4.0.3
+    out: commonjs-strict
+    opt: [import_style=commonjs_strict, binary]
+  - remote: buf.build/protocolbuffers/js:v4.0.3
+    out: es6
+    opt: [import_style=es6, binary]
+  - remote: buf.build/protocolbuffers/js:v4.0.3
+    out: closure
+    opt: [import_style=closure, binary]

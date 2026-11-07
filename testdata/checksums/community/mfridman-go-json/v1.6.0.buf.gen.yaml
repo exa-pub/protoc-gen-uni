@@ -1,0 +1,31 @@
+# Golden config for community/mfridman-go-json v1.6.0: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Regenerate: scripts/gen-testdata.sh community/mfridman-go-json v1.6.0
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: example.com/gen
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/go-features
+plugins:
+  - remote: buf.build/community/mfridman-go-json:v1.6.0
+    out: source-relative
+    opt: [paths=source_relative]
+  - remote: buf.build/community/mfridman-go-json:v1.6.0
+    out: import
+  - remote: buf.build/community/mfridman-go-json:v1.6.0
+    out: marshal
+    opt: [paths=source_relative, enums_as_ints=true, emit_defaults=true, orig_name=true, allow_unknown=true]

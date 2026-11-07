@@ -1,0 +1,19 @@
+# Golden config for community/protobuf-c v1.5.2: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Inputs left out: upstream crashes (SIGSEGV) on proto2 and naming; protobuf 3.21 rejects editions.
+# Regenerate: scripts/gen-testdata.sh community/protobuf-c v1.5.2
+version: v2
+inputs:
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+plugins:
+  - remote: buf.build/community/protobuf-c:v1.5.2
+    out: default
+  - remote: buf.build/community/protobuf-c:v1.5.2
+    out: dllexport
+    opt: [dllexport_decl=MY_EXPORT]

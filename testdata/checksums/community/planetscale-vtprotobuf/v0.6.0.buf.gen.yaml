@@ -1,0 +1,30 @@
+# Golden config for community/planetscale-vtprotobuf v0.6.0: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Inputs left out: upstream (protobuf-go v1.31) rejects editions.
+# Regenerate: scripts/gen-testdata.sh community/planetscale-vtprotobuf v0.6.0
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: example.com/gen
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+plugins:
+  - remote: buf.build/community/planetscale-vtprotobuf:v0.6.0
+    out: default
+    opt: [paths=source_relative]
+  - remote: buf.build/community/planetscale-vtprotobuf:v0.6.0
+    out: core
+    opt: [paths=source_relative, features=marshal+unmarshal+size]
+  - remote: buf.build/community/planetscale-vtprotobuf:v0.6.0
+    out: strict
+    opt: [paths=source_relative, features=marshal_strict+unmarshal_unsafe+size+equal+clone]

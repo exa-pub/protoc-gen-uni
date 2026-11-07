@@ -1,0 +1,27 @@
+# Golden config for anthropics/buffa v0.9.2: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Regenerate: scripts/gen-testdata.sh anthropics/buffa v0.9.2
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+plugins:
+  - remote: buf.build/anthropics/buffa:v0.9.2
+    out: default
+  - remote: buf.build/anthropics/buffa:v0.9.2
+    out: bsr
+    opt: [json=true, text=true, views=true, file_per_package=true]
+  - remote: buf.build/anthropics/buffa:v0.9.2
+    out: lean
+    opt: [views=false, unknown_fields=false, with_setters=false, register_types=false]
+  - remote: buf.build/anthropics/buffa:v0.9.2
+    out: reflect
+    opt: [reflect_mode=vtable, file_per_package=true, idiomatic_imports=true, idiomatic_field_names=true, unbox_oneof=true]

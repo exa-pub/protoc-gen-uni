@@ -1,0 +1,25 @@
+# Golden config for community/scalapb-scala v0.11.21: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Inputs left out: upstream fails on proto2 extensions and naming, no editions support; flat_package is not a group because upstream writes an absolute path (/Loose.scala) for files without a package.
+# Regenerate: scripts/gen-testdata.sh community/scalapb-scala v0.11.21
+version: v2
+inputs:
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+plugins:
+  - remote: buf.build/community/scalapb-scala:v0.11.21
+    out: default
+  - remote: buf.build/community/scalapb-scala:v0.11.21
+    out: grpc
+    opt: [grpc]
+  - remote: buf.build/community/scalapb-scala:v0.11.21
+    out: options
+    opt: [single_line_to_proto_string, ascii_format_to_string, no_lenses]
+  - remote: buf.build/community/scalapb-scala:v0.11.21
+    out: scala3
+    opt: [scala3_sources, grpc]
