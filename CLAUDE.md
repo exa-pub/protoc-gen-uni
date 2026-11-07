@@ -49,10 +49,11 @@ runtime, Go's formatter) is ported by hand into `pkg/` or the generator.
 │   └── languages/<language>/   shared by the generators of one language (runtime ports,
 │                               plugin frameworks, stdlib/<toolchain>/ ports for exact formatting)
 ├── generators/
-│   ├── registry.c              all generators, sorted
+│   ├── CMakeLists.txt          discovers generators, generates the sorted registry
 │   └── <owner>/<plugin>/
 │       ├── README.md           upstream, versions table, options, differences
-│       └── <version>/          unity build: generator.c #includes the rest
+│       └── <version>/          CMakeLists.txt: uni_generator(LIBRARIES ...);
+│                               generator.c (unity build, #includes the rest)
 ├── tests/
 │   ├── unit/                   unit tests
 │   └── e2e/                    golden.sh, all.sh, check-registry.sh

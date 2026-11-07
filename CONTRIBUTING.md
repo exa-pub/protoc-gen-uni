@@ -26,7 +26,8 @@ tests/e2e/golden.sh build/linux-x86_64/protoc-gen-uni bufbuild/es v2.17.0 proto3
 - **Presets** ([`CMakePresets.json`](CMakePresets.json), output in `build/<preset>/`):
   `linux-{x86_64,aarch64}[-clang]`, `windows-x86_64`, `darwin`, `dev`, `asan`, `fuzz`.
 - **Options** are in [`cmake/flags.cmake`](cmake/flags.cmake), for example `UNI_OPT` and
-  `UNI_WERROR`.
+  `UNI_WERROR`. `-DUNI_GENERATORS=bufbuild/es,protocolbuffers/go/v1.36.12` builds a binary with
+  only those generators (golden tests of the others are skipped).
 - **`make test|asan|fuzz|lint`** are shortcuts that run in the image.
 
 ctest runs three kinds of tests:
@@ -60,11 +61,10 @@ exists. Run `scripts/gen-testdata.sh` to create it. `UNI_E2E_WORK=<dir>` keeps o
 ## New version of a generator
 
 1. Copy `generators/<owner>/<plugin>/<old>/` to `<new>/`.
-   - In `generator.c`, rename the exported `gen_<owner>_<plugin>_<version>` symbol.
+   - In `generator.c`, rename the exported symbol: it is the directory path as a C identifier,
+     `gen_<owner>_<plugin>_<version>` (CMake discovers the directory and generates the registry).
    - Update the version strings (`grep -rn <old>`).
-2. Register the new version:
-   - add the symbol to `generators/registry.c` and `generator.c` to `generators/CMakeLists.txt`;
-   - add a `| <new> | … |` row to the README version table.
+2. Add a `| <new> | … |` row to the README version table.
 3. Copy `<old>.buf.gen.yaml` to `<new>.buf.gen.yaml`, change the version and run
    `scripts/gen-testdata.sh`.
 4. Port the upstream diff until `golden/<owner>/<plugin>/<new>/*` pass. The old version must not
@@ -82,7 +82,7 @@ to `pkg/languages/go/stdlib/go<version>/`
    usage, version table, options and known differences.
 2. Create `<version>/generator.c` exporting a `UniGenerator` ([`pkg/uni/uni.h`](pkg/uni/uni.h)).
    - The other `.c` files of the directory are `#include`d into it and stay `static`.
-   - Register it like a new version.
+   - Add `<version>/CMakeLists.txt` with `uni_generator(LIBRARIES <libraries it uses>)`.
 3. Write the template and run `scripts/gen-testdata.sh`.
 4. Port. Shared code goes to `pkg/languages/<lang>/` or `pkg/`.
 

@@ -3,7 +3,7 @@
 # testdata/checksums/ are consistent:
 #   - names are <owner>/<plugin> as on buf.build, versions vX.Y.Z[-pre]; the list is sorted by
 #     name, then version, without duplicates;
-#   - every generator has generators/<name>/<version>/generator.c, a version entry in
+#   - every generator has generators/<name>/<version>/{CMakeLists.txt,generator.c}, a version entry in
 #     generators/<name>/README.md, testdata/checksums/<name>/<version>.{buf.gen.yaml,sha256} and
 #     the test inputs (testdata/proto/<test>) of its template;
 #   - every version directory belongs to a generator; template and checksum files without a version
@@ -37,7 +37,7 @@ while read -r name version; do
 	known=$known$key$'\n'
 	[[ $name =~ ^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$ ]] || err "$key: name must be <owner>/<plugin> as on buf.build"
 	[[ $version =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || err "$key: version must be vX.Y.Z"
-	[ -f "generators/$key/generator.c" ] || err "$key: generators/$key/generator.c not found"
+	for f in CMakeLists.txt generator.c; do [ -f "generators/$key/$f" ] || err "$key: generators/$key/$f not found"; done
 	readme=generators/$name/README.md
 	if [ ! -f "$readme" ]; then
 		err "$key: $readme not found"
@@ -63,7 +63,7 @@ for p in generators/*/*/v*/ testdata/checksums/*/*/v*.buf.gen.yaml testdata/chec
 	case $p in
 	testdata/*) [ -d "generators/$key" ] || { pending=$pending$key$'\n'; continue; } ;;
 	esac
-	err "$p: $key is not a generator of $bin (generators/registry.c)"
+	err "$p: $key is not a generator of $bin (missing generators/$key/CMakeLists.txt?)"
 done
 pending=$(printf '%s' "$pending" | LC_ALL=C sort -u)
 [ -z "$pending" ] || echo "pending (test data without a port): $(printf '%s' "$pending" | tr '\n' ' ')"

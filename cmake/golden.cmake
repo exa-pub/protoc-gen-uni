@@ -38,6 +38,9 @@ foreach(template IN LISTS _uni_templates)
   endforeach()
 endforeach()
 
-# generators/, README files and testdata/checksums/ must match the generators of the binary.
+# generators/, README files and testdata/checksums/ must match the generators of the binary
+# (only for a build of all generators).
+if(UNI_GENERATORS STREQUAL "all")
 add_test(NAME registry COMMAND ${UNI_BASH} ${CMAKE_SOURCE_DIR}/tests/e2e/check-registry.sh ${_uni_runner}
   $<TARGET_FILE:protoc-gen-uni>)
+endif()

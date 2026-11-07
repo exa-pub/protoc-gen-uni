@@ -23,15 +23,27 @@ function(uni_add_unit_test name)
   set_tests_properties(unit/${name} PROPERTIES LABELS unit)
 endfunction()
 
-# Libraries, from the bottom up: pkg/core (util.h: arena, buffers, strings, errors; sys.h: I/O),
-# pkg/pb (wire format, schemas), pkg/uni (generator selection), pkg/languages/* (shared by the
-# generators of one language), generators (all generators and the registry).
-add_subdirectory(pkg/core)
-add_subdirectory(pkg/pb)
-add_subdirectory(pkg/uni)
-add_subdirectory(pkg/languages/ecmascript/protobuf)
-add_subdirectory(pkg/languages/ecmascript/protoplugin)
-add_subdirectory(pkg/languages/go)
+# Libraries: every top-most CMakeLists.txt under pkg/ (pkg/core: util.h, sys.h; pkg/pb: wire
+# format, schemas; pkg/uni: generator selection; pkg/languages/<language>/...: shared by the
+# generators of one language; ...), then generators/ (discovered generators and the registry).
+# Build a single target (e.g. --target protoc-gen-uni) to compile only what it needs.
+file(GLOB_RECURSE _uni_pkg_lists ${CMAKE_SOURCE_DIR}/pkg/*/CMakeLists.txt)
+list(SORT _uni_pkg_lists)
+set(_uni_pkg_dirs)
+foreach(f IN LISTS _uni_pkg_lists)
+  get_filename_component(dir ${f} DIRECTORY)
+  set(nested FALSE)
+  foreach(d IN LISTS _uni_pkg_dirs)
+    string(FIND "${dir}/" "${d}/" pos)
+    if(pos EQUAL 0)
+      set(nested TRUE)
+    endif()
+  endforeach()
+  if(NOT nested)
+    list(APPEND _uni_pkg_dirs ${dir})
+    add_subdirectory(${dir})
+  endif()
+endforeach()
 add_subdirectory(generators)
 
 add_executable(protoc-gen-uni main.c)
