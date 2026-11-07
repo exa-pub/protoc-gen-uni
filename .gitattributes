@@ -1,1 +1,1 @@
-testdata/checksums/**/*.sha256 linguist-generated=true
+testdata/checksums/**/checksums.txt linguist-generated=true

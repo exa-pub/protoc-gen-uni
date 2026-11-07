@@ -22,7 +22,9 @@ generators/<owner>/<plugin>/ discovered by generators/CMakeLists.txt
 tests/{unit,e2e}/, fuzz/     unit tests; golden.sh, check-registry.sh; libFuzzer harness
 testdata/
 ├── proto/<test>/            input buf workspaces
-├── checksums/<owner>/<plugin>/<version>.{buf.gen.yaml,sha256}
+├── checksums/<owner>/<plugin>/
+│   ├── <version>.buf.gen.yaml  buf template: test inputs, option groups
+│   └── checksums.txt        upstream output sum per version and test
 └── gen/                     upstream output for diffs (not committed)
 ```
 

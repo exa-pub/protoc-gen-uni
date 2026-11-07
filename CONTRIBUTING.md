@@ -40,11 +40,14 @@ ctest runs three kinds of tests:
 ## Golden tests
 
 [`tests/e2e/golden.sh`](tests/e2e/golden.sh) runs the binary through buf as a local plugin. It
-uses the template's inputs and option groups and compares the sha256 of every output file with
-`<version>.sha256`.
+uses the template's inputs and option groups. For each test it compares one sum over the output of
+all option groups with the line `<sum>  <version>/<test>` in
+`testdata/checksums/<owner>/<plugin>/checksums.txt`. [The gen-testdata.sh
+header](scripts/gen-testdata.sh) defines the sum.
 
-When a file differs, the test diffs it against the upstream output in `testdata/gen/`, if that
-exists. Run `scripts/gen-testdata.sh` to create it. `UNI_E2E_WORK=<dir>` keeps our output.
+When the sum differs, the test lists the missing, extra and differing files and diffs them against
+the upstream output in `testdata/gen/`, if that exists. Run `scripts/gen-testdata.sh` to create it.
+`UNI_E2E_WORK=<dir>` keeps our output.
 
 ## Test data
 
@@ -58,7 +61,8 @@ exists. Run `scripts/gen-testdata.sh` to create it. `UNI_E2E_WORK=<dir>` keeps o
 - **Regenerate:** `BUF_TOKEN=… scripts/gen-testdata.sh <owner>/<plugin> <version>`. This needs
   network access. Without a token, buf.build rate-limits almost immediately.
   - [The script header](scripts/gen-testdata.sh) lists the template constraints.
-  - Commit only the template and `<version>.sha256`.
+  - It replaces the lines of that version in `checksums.txt` and rewrites `testdata/gen/`.
+  - Commit only the template and `checksums.txt`.
   - Reconfigure CMake afterwards: the golden test list is read from the templates.
 
 ## New version of a generator

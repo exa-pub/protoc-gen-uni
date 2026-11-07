@@ -1,7 +1,9 @@
 # E2E golden tests (tests/e2e/golden.sh): one ctest test per generator version and test input,
 # named golden/<owner>/<plugin>/<version>/<test>, from the inputs of
-# testdata/checksums/<owner>/<plugin>/<version>.buf.gen.yaml. Generators that the binary does not
-# contain are skipped. buf is downloaded once by the setup/buf fixture unless UNI_BUF is set.
+# testdata/checksums/<owner>/<plugin>/<version>.buf.gen.yaml; the test compares the sum of its output
+# with its line in testdata/checksums/<owner>/<plugin>/checksums.txt (read at test time). Generators
+# that the binary does not contain are skipped. buf is downloaded once by the setup/buf fixture
+# unless UNI_BUF is set.
 set(UNI_BUF "" CACHE FILEPATH "buf binary for the e2e tests (default: scripts/get-buf.sh)")
 find_program(UNI_BASH bash REQUIRED)
 

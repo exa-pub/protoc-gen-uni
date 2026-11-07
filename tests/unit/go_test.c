@@ -375,6 +375,21 @@ static PgPlugin *new_plugin(const char *go_package, const char *param, const cha
 	return gen;
 }
 
+/* proto.Unmarshal checks required fields (descriptor.proto: NamePart only); detrand.Bool()
+ * selects the no-break spaces of the "proto:" prefix. */
+static void test_decode_required(void)
+{
+	const GoMsgDef *uo = gopb_schema_msg(gopb_schema_base(), "google.protobuf.UninterpretedOption");
+	CHECK_STR(gopb_decode(pb_new(&uo->pb), (const uint8_t *)"\x12\x00", 2),
+		  "proto: required field google.protobuf.UninterpretedOption.NamePart.name_part not set");
+	CHECK_STR(gopb_decode(pb_new(&uo->pb), (const uint8_t *)"\x12\x03\x0a\x01x", 5),
+		  "proto: required field google.protobuf.UninterpretedOption.NamePart.is_extension not set");
+	CHECK(gopb_decode(pb_new(&uo->pb), (const uint8_t *)"\x12\x05\x0a\x01x\x10\x00", 7) == NULL);
+	go_detrand = true;
+	CHECK_STR(gopb_decode(pb_new(&uo->pb), (const uint8_t *)"\x12", 1), "proto:\xc2\xa0" "cannot parse invalid wire-format data");
+	go_detrand = false;
+}
+
 static void test_protogen_names(void)
 {
 	const char *err;
@@ -492,5 +507,5 @@ static void test_protogen_errors(void)
 }
 
 TESTS(TEST(test_go_camel_case), TEST(test_go_sanitized), TEST(test_trim_enum_prefix), TEST(test_format_float),
-      TEST(test_tag_marshal), TEST(test_features_defaults), TEST(test_features_merge_and_wire), TEST(test_protogen_names),
-      TEST(test_protogen_import_paths), TEST(test_protogen_errors))
+      TEST(test_tag_marshal), TEST(test_features_defaults), TEST(test_features_merge_and_wire), TEST(test_decode_required),
+      TEST(test_protogen_names), TEST(test_protogen_import_paths), TEST(test_protogen_errors))

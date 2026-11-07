@@ -7,11 +7,19 @@
 #   $d/<version>.buf.gen.yaml   committed, input. Tests: `inputs:` entries `- directory: testdata/proto/<test>`.
 #                               Option groups: one `- remote: buf.build/<owner>/<plugin>:<version>` plugin
 #                               entry per group with `out: <group>`; no `strategy:` (not allowed for remote).
-#   $d/<version>.sha256         committed, output: `<sha256>  <group>/<test>/<path>` of the upstream output,
-#                               sorted by path; checked by the e2e tests (tests/e2e/golden.sh).
+#   $d/checksums.txt            committed, output: one line `<sum>  <version>/<test>` per version and test,
+#                               sorted by version (sort -V), then test (byte order); this script replaces
+#                               the lines of <version>. Checked by the e2e tests (tests/e2e/golden.sh).
 #   testdata/gen/<owner>/<plugin>/<version>/<group>/<test>/
 #                               NOT committed (.gitignore): the upstream output; tests show diffs against
 #                               it when it exists.
+#
+# The sum of a test covers the output of all its option groups: for every output file the line
+# `<sha256 of the file>  <group>/<path>` (lowercase hex, two spaces, <path> relative to the group's
+# `out:` directory), the lines sorted by `<group>/<path>` in byte order and each ended by "\n"; <sum>
+# is the sha256 of that text. A test without output has the sum of the empty text
+# (e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855). tests/e2e/golden.sh implements
+# the same definition (filesums there).
 #
 # Needs: network, sha256sum. Env: BUF — buf binary to use (default: scripts/get-buf.sh, the pinned
 # version); BUF_TOKEN — buf.build token (remote plugins are rate limited).
@@ -39,8 +47,9 @@ die() {
 grep -qE '^[[:space:]]*strategy:' "$template" && die "remove 'strategy:', it is not allowed for remote plugins"
 mapfile -t groups < <(sed -nE 's/^[[:space:]]*-?[[:space:]]*out:[[:space:]]*([^[:space:]#]+).*/\1/p' "$template")
 remotes=$(grep -cE '^[[:space:]]*-[[:space:]]*remote:' "$template" || true)
-[ "${#groups[@]}" -gt 0 ] && [ "${#groups[@]}" -eq "$remotes" ] ||
+if [ "${#groups[@]}" -eq 0 ] || [ "${#groups[@]}" -ne "$remotes" ]; then
 	die "every plugin entry must be '- remote: buf.build/$name:$version' with 'out: <group>'"
+fi
 for g in "${groups[@]}"; do
 	[[ "$g" =~ ^[A-Za-z0-9._-]+$ ]] || die "out: $g must be a plain directory name"
 done
@@ -72,6 +81,23 @@ generate() {
 	return 1
 }
 
+# "<sha256>  <group>/<path>" of the files DIR/<group>/<path>, sorted by "<group>/<path>" in byte order
+# (the lines of the test sum, see above; same as filesums in tests/e2e/golden.sh).
+filesums() {
+	(
+		cd "$1" 2>/dev/null || exit 0
+		find . -type f | sed 's|^\./||' | while IFS= read -r f; do
+			printf '%s  %s\n' "$(sha256sum <"$f" | cut -c1-64)" "$f"
+		done | LC_ALL=C sort -t ' ' -k3
+	)
+}
+
+# checksums.txt lines sorted by version (sort -V), then test (byte order).
+sortsums() {
+	awk '{ i = index($2, "/"); print substr($2, 1, i - 1), substr($2, i + 1), $1 }' |
+		LC_ALL=C sort -k1,1V -k2,2 | awk '{ print $3 "  " $1 "/" $2 }'
+}
+
 # --- generate -------------------------------------------------------------------------------------
 rm -rf "${gen:?}"
 mkdir -p "$gen"
@@ -81,6 +107,7 @@ for test in "${tests[@]}"; do
 	[ -d "$input" ] || { echo "$input: not found" >&2; exit 1; }
 	echo "$name $version: $test" >&2
 	generate "$input" "$tmp/ref/$test"
+	echo "$(filesums "$tmp/ref/$test" | sha256sum | cut -c1-64)  $version/$test" >>"$tmp/sums"
 	for g in "${groups[@]}"; do
 		if [ -d "$tmp/ref/$test/$g" ]; then
 			mkdir -p "$gen/$g"
@@ -89,8 +116,12 @@ for test in "${tests[@]}"; do
 	done
 done
 
-# "<sha256>  <group>/<test>/<path>", sorted by path (a test without output has no lines).
-(cd "$gen" && find . -type f | sed 's|^\./||' | LC_ALL=C sort | while IFS= read -r f; do sha256sum -- "$f"; done) |
-	LC_ALL=C sort -k2 >"$d/$version.sha256"
+# Replace the lines of this version in checksums.txt.
+sums=$d/checksums.txt
+{
+	if [ -f "$sums" ]; then awk -v v="$version/" 'index($2, v) != 1' "$sums"; fi
+	cat "$tmp/sums"
+} | sortsums >"$sums.tmp"
+mv "$sums.tmp" "$sums"
 
-echo "done: $d/$version.sha256 ($(wc -l <"$d/$version.sha256") files), upstream output: $gen" >&2
+echo "done: $sums ($version: ${#tests[@]} tests, $(find "$gen" -type f | wc -l | tr -d ' ') files), upstream output: $gen" >&2
