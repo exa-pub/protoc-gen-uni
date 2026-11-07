@@ -9,7 +9,7 @@ set(_go_core uni_core)
 set(_go1_26_5 ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/go1.26.5)
 add_library(go_stdlib_go1_26_5 STATIC ${_go1_26_5}/go1_26_5.c)
 # Size/speed experiment (not the default): another optimization level for this translation unit
-# only, e.g. -DUNI_GOFMT_OPT=Os (see generators/protocolbuffers/go/README.md for measurements).
+# only, e.g. -DUNI_GOFMT_OPT=Os (with -DUNI_OPT=O3: Os here gave 508 888 → 406 488 B, +6 % time).
 set(UNI_GOFMT_OPT "" CACHE STRING "optimization level of the Go formatter TU only (O2, Os; empty: UNI_OPT)")
 if(UNI_GOFMT_OPT)
   set_source_files_properties(${_go1_26_5}/go1_26_5.c PROPERTIES COMPILE_OPTIONS -${UNI_GOFMT_OPT})

@@ -1,6 +1,7 @@
 # Compiler and linker flags. Release builds: -Os (UNI_OPT) plus everything else that makes the
 # binary smaller. -Os is not slower than -O3 here (one process per request: loading a smaller
-# binary outweighs faster hot loops); see CONTRIBUTING.md for measurements.
+# binary outweighs faster hot loops). x86_64, es + go, 222 requests, one process each:
+#   -Os + LTO 349 312 B 1214 ms | -O2 + LTO 447 448 B 1265 ms | -O3 + LTO 508 888 B 1300 ms
 set(UNI_OPT "Os" CACHE STRING "optimization level of release builds: Os, O2 or O3")
 set_property(CACHE UNI_OPT PROPERTY STRINGS Os O2 O3)
 option(UNI_HARDENING "stack protector and RELRO (about +10 KB)" OFF)
