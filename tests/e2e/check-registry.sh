@@ -6,7 +6,8 @@
 #   - every generator has generators/<name>/<version>/generator.c, a version entry in
 #     generators/<name>/README.md, testdata/checksums/<name>/<version>.{buf.gen.yaml,sha256} and
 #     the test inputs (testdata/proto/<test>) of its template;
-#   - every version directory and every template or checksum file belongs to a generator.
+#   - every version directory belongs to a generator; template and checksum files without a version
+#     directory are test data prepared for a port that does not exist yet (reported as pending).
 #
 #   tests/e2e/check-registry.sh [--runner CMD] BIN
 set -euo pipefail
@@ -30,6 +31,7 @@ printf '%s\n' "$list" | LC_ALL=C sort -c -u -k1,1 -k2,2V 2>/dev/null ||
 	err "generators must be sorted by name, then version, without duplicates:"$'\n'"$list"
 
 known=
+pending=
 while read -r name version; do
 	key=$name/$version
 	known=$known$key$'\n'
@@ -57,8 +59,14 @@ for p in generators/*/*/v*/ testdata/checksums/*/*/v*.buf.gen.yaml testdata/chec
 	key=${key#testdata/checksums/}
 	key=${key%.buf.gen.yaml}
 	key=${key%.sha256}
-	printf '%s' "$known" | grep -qxF "$key" || err "$p: $key is not a generator of $bin (generators/registry.c)"
+	printf '%s' "$known" | grep -qxF "$key" && continue
+	case $p in
+	testdata/*) [ -d "generators/$key" ] || { pending=$pending$key$'\n'; continue; } ;;
+	esac
+	err "$p: $key is not a generator of $bin (generators/registry.c)"
 done
+pending=$(printf '%s' "$pending" | LC_ALL=C sort -u)
+[ -z "$pending" ] || echo "pending (test data without a port): $(printf '%s' "$pending" | tr '\n' ' ')"
 
 [ $fail -eq 0 ] && echo "ok   $(printf '%s\n' "$list" | wc -l | tr -d ' ') generators"
 exit $fail

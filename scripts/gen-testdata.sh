@@ -56,6 +56,22 @@ BUF=${BUF:-$("$root/scripts/get-buf.sh")}
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
+# buf generate, retried while buf.build rate-limits remote plugins (resource_exhausted).
+generate() {
+	local i
+	for i in 1 2 3 4 5 6 7 8 9 10; do
+		rm -rf "$2"
+		if "$BUF" generate "$1" --template "$template" -o "$2" 2>"$tmp/err"; then
+			return 0
+		fi
+		grep -q resource_exhausted "$tmp/err" || { cat "$tmp/err" >&2; return 1; }
+		echo "rate limited, retrying in $((i * 15)) s" >&2
+		sleep $((i * 15))
+	done
+	cat "$tmp/err" >&2
+	return 1
+}
+
 # --- generate -------------------------------------------------------------------------------------
 rm -rf "${gen:?}"
 mkdir -p "$gen"
@@ -64,7 +80,7 @@ for test in "${tests[@]}"; do
 	input=testdata/proto/$test
 	[ -d "$input" ] || { echo "$input: not found" >&2; exit 1; }
 	echo "$name $version: $test" >&2
-	"$BUF" generate "$input" --template "$template" -o "$tmp/ref/$test"
+	generate "$input" "$tmp/ref/$test"
 	for g in "${groups[@]}"; do
 		if [ -d "$tmp/ref/$test/$g" ]; then
 			mkdir -p "$gen/$g"
