@@ -6,15 +6,20 @@
 #   scripts/docker.sh bash
 #
 # The image is tagged with a hash of the Dockerfile and built locally on first use (~30 minutes:
-# GCC is compiled for every target). UNI_TOOLCHAIN_IMAGE selects another image (CI: ghcr.io).
+# GCC is compiled for every target). UNI_TOOLCHAIN_IMAGE selects a registry image instead, which is
+# pulled, never built (CI: ghcr.io, pushed by .github/workflows/toolchain.yml).
 set -euo pipefail
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 dockerfile=$root/docker/toolchain.Dockerfile
 hash=$( (sha256sum "$dockerfile" 2>/dev/null || shasum -a 256 "$dockerfile") | cut -c1-12)
 image=${UNI_TOOLCHAIN_IMAGE:-protoc-gen-uni-toolchain:$hash}
 if ! docker image inspect "$image" >/dev/null 2>&1; then
-	echo "building $image (once)..." >&2
-	docker build -t "$image" -f "$dockerfile" "$root/docker" >&2
+	if [ -n "${UNI_TOOLCHAIN_IMAGE:-}" ]; then
+		docker pull "$image" >&2
+	else
+		echo "building $image (once)..." >&2
+		docker build -t "$image" -f "$dockerfile" "$root/docker" >&2
+	fi
 fi
 tty=()
 [ -t 0 ] && [ -t 1 ] && tty=(-t)

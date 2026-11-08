@@ -1,8 +1,7 @@
 # Toolchain image (docker/toolchain.Dockerfile), tagged with the hash of the Dockerfile and pushed to
 # ghcr.io/<owner>/protoc-gen-uni-toolchain. Building it compiles the musl cross GCC (~35 minutes),
-# so it runs apart from ci.yml: new pushes do not cancel it (one run per Dockerfile hash at a time,
-# not cancelled), and a run whose tag already exists ends at once. The `toolchain` job of ci.yml
-# waits for the tag.
+# so it runs apart from ci.yml: new pushes do not cancel it (one run at a time, never cancelled), and
+# a run whose tag already exists ends at once. The `toolchain` job of ci.yml waits for the tag.
 name: toolchain
 
 on:
@@ -11,7 +10,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: toolchain-${{ hashFiles('docker/toolchain.Dockerfile') }}
+  group: toolchain
   cancel-in-progress: false
 
 permissions:

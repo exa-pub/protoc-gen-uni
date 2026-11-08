@@ -112,7 +112,10 @@ jobs:
   build:
     needs: [version, toolchain]
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
@@ -121,6 +124,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: log in to ghcr.io (toolchain image)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
       - name: build (twice, must be byte-identical)
         env:
           IMAGE: ${{ needs.toolchain.outputs.image }}
@@ -136,7 +143,7 @@ jobs:
           cmp "build/$PRESET/$bin" "build/$PRESET-again/$bin"
           # unit tests, registry check and golden tests (aarch64 under qemu; no Wine for Windows)
           if [ "$PRESET" != windows-x86_64 ]; then
-            UNI_TOOLCHAIN_IMAGE=$IMAGE scripts/docker.sh ctest --test-dir "build/$PRESET" --output-on-failure
+            UNI_TOOLCHAIN_IMAGE=$IMAGE scripts/docker.sh ctest --test-dir "build/$PRESET" -j "$(nproc)" --output-on-failure
           fi
           mkdir -p out && cp "build/$PRESET/$bin" out/
           ls -l out/ | tee -a "$GITHUB_STEP_SUMMARY"
@@ -235,11 +242,18 @@ jobs:
   asan:
     needs: toolchain
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: log in to ghcr.io (toolchain image)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
       - env:
           IMAGE: ${{ needs.toolchain.outputs.image }}
         run: UNI_TOOLCHAIN_IMAGE=$IMAGE scripts/docker.sh cmake --workflow --preset asan
@@ -249,11 +263,18 @@ jobs:
   fuzz:
     needs: toolchain
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: log in to ghcr.io (toolchain image)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
       - env:
           IMAGE: ${{ needs.toolchain.outputs.image }}
         run: |
