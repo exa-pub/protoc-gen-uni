@@ -11,7 +11,7 @@
  * Unity build: this file includes the other .c files of the version directory, and everything
  * but the generator below is static. A new version is a copy of the directory with the exported
  * name changed (gen_protocolbuffers_go_v1_36_12), so versions never clash. */
-#include "go1_26_5.h"
+#include "go_std.h"
 #include "protogen.h"
 #include "strs.h"
 #include "tag.h"
@@ -86,7 +86,7 @@ static void run(void *arg)
 	pg_plugin_response(c->gen, c->out);
 }
 
-static COLD const char *generate(PbMsg *uni_req, Str raw, Buf *out)
+static COLD const char *generate1(PbMsg *uni_req, Str raw, Buf *out)
 {
 	/* main.go: proto.Unmarshal of the request (protobuf-go semantics), then the parameter
 	 * without the uni-* options. */
@@ -123,4 +123,20 @@ static COLD const char *generate(PbMsg *uni_req, Str raw, Buf *out)
 	return NULL;
 }
 
-const UniGenerator gen_protocolbuffers_go_v1_36_12 = {"protocolbuffers/go", Version, generate};
+static COLD const char *generate(PbMsg *uni_req, Str raw, Buf *out)
+{
+	/* internal/detrand.Bool() of the buf.build plugin binary: true ("proto:" with no-break
+	 * spaces, two spaces between the fields of the .pb.go.meta files). */
+	go_detrand = true;
+	go_std_use(&go_std_go1_26_5); /* the Go toolchain of the buf.build plugin */
+	const char *err = generate1(uni_req, raw, out);
+	go_std_use(NULL);
+	go_detrand = false;
+	return err;
+}
+
+const UniGenerator gen_protocolbuffers_go_v1_36_12 = {
+	.name = "protocolbuffers/go",
+	.version = Version,
+	.generate = generate,
+};

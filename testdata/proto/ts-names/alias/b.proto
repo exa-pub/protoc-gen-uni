@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package alias.b;
+
+import "google/protobuf/timestamp.proto";
+
+message B {
+  google.protobuf.Timestamp t = 1;
+}

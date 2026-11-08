@@ -1,0 +1,6 @@
+// No package, with ruby_package.
+syntax = "proto3";
+
+option ruby_package = "Root";
+
+message RootType {}

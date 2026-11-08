@@ -93,12 +93,9 @@ static void file_desc_call(GeneratedFile *f, DescFile *file, Schema *s)
 	/* Schema provides files with source retention options. Since we do not want to
 	 * embed source retention options in generated code, we use FileDescriptorProto
 	 * messages from CodeGeneratorRequest.proto_file instead. */
-	PbMsg *runtime = file->h.proto;
-	for (int i = 0; i < pb_count(s->request, CGR_PROTO_FILE); i++)
-		if (str_equal(pb_bytes(pb_msg_at(s->request, CGR_PROTO_FILE, i), FDP_NAME), pb_bytes(runtime, FDP_NAME))) {
-			runtime = pb_msg_at(s->request, CGR_PROTO_FILE, i);
-			break;
-		}
+	PbMsg *runtime = map_get(&s->proto_files, pb_str(file->h.proto, FDP_NAME));
+	if (!runtime)
+		runtime = file->h.proto;
 	if (embed_bootable(runtime) && !has_prefix(f->rt->create->from, "@bufbuild/protobuf")) {
 		/* google/protobuf/descriptor.proto is embedded as a plain object when
 		 * bootstrapping to avoid recursion */
@@ -197,6 +194,18 @@ static void generate_obj_enum(GeneratedFile *f, const DescEnum *e, int target)
 
 static const char *type_decl(int target) { return target == TARGET_TS ? "type" : "declare type"; }
 
+/* A Map key for a string that may contain NUL: NUL becomes \1\2, \1 becomes \1\1. */
+static const char *set_key(Str s)
+{
+	Buf b = {0};
+	for (size_t i = 0; i < s.n; i++) {
+		if (s.p[i] == 0 || s.p[i] == 1)
+			buf_addc(&b, 1);
+		buf_addc(&b, s.p[i] == 0 ? 2 : s.p[i]);
+	}
+	return buf_str(&b);
+}
+
 static void generate_enum_json_shape(GeneratedFile *f, const DescEnum *e, int target)
 {
 	gf_jsdoc(f, &e->h, "");
@@ -209,13 +218,13 @@ static void generate_enum_json_shape(GeneratedFile *f, const DescEnum *e, int ta
 		/* The JSON type matches the output of toJson(), which emits the custom JSON
 		 * name if one is set. We omit the Protobuf name from the type, even though
 		 * fromJson() accepts it. */
+		Map names = {0}; /* new Set<string>() */
 		for (int i = 0, first = 1; i < e->values.n; i++) {
 			const DescEnumValue *v = e->values.v[i];
-			bool seen = false;
-			for (int j = 0; j < i && !seen; j++)
-				seen = str_equal(((const DescEnumValue *)e->values.v[j])->json_name, v->json_name);
-			if (seen)
+			const char *key = set_key(v->json_name);
+			if (map_has(&names, key))
 				continue;
+			map_put(&names, key, (void *)1);
 			if (!first)
 				gf_s(f, " | ");
 			first = 0;

@@ -12,8 +12,9 @@ headers this guide links to.
   a while.
 - **Native:** CMake ≥ 3.28, Ninja, GCC or clang, bash and curl are enough for the `dev`, `asan`,
   `fuzz` and `darwin` presets.
-- Tests download a pinned buf ([`scripts/get-buf.sh`](scripts/get-buf.sh)). The `es-validate`
-  input needs network access for its buf dependencies.
+- Tests download a pinned buf ([`scripts/get-buf.sh`](scripts/get-buf.sh)). Inputs with buf
+  dependencies (`deps:` in their `buf.yaml`, e.g. `es-validate`, `gnostic-openapi`,
+  `http-gateway*`) need network access.
 
 ## Build and test
 
@@ -59,6 +60,9 @@ the upstream output in `testdata/gen/`, if that exists. Run `scripts/gen-testdat
     `SOURCE` file (repository, commit, what was taken).
   - Add `- directory: testdata/proto/<test>` to the templates that should cover it.
 - **New option group:** add a `- remote:` entry with its own `out:` and `opt:` to the template.
+  - A group may fail upstream (an invalid option, an unsupported input). Its error text is then
+    tested byte for byte instead of files, as the line `<group>:error` of the test sum (see the
+    script header).
 - **Regenerate:** `BUF_TOKEN=… scripts/gen-testdata.sh <owner>/<plugin> <version>`. This needs
   network access. Without a token, buf.build rate-limits almost immediately.
   - [The script header](scripts/gen-testdata.sh) lists the template constraints.
@@ -74,7 +78,8 @@ the upstream output in `testdata/gen/`, if that exists. Run `scripts/gen-testdat
    - A version costs its difference, not a copy: code the versions share lives in
      `generators/<owner>/<plugin>/common/` (move it there when the second version appears), and
      `<new>/` holds only what differs.
-2. Add a `| <new> | … |` row to the README version table.
+2. Add a `| <new> | … |` row to the README version table and a `<owner>/<plugin>/<new>` line to
+   [`testdata/size-budget.txt`](testdata/size-budget.txt) (see Checks: Size).
 3. Copy `<old>.buf.gen.yaml` to `<new>.buf.gen.yaml`, change the version and run
    `scripts/gen-testdata.sh`.
 4. Port the upstream diff until `golden/<owner>/<plugin>/<new>/*` pass. The old version must not
@@ -99,6 +104,8 @@ Unicode, strconv and sort changes.
 3. Write the template and run `scripts/gen-testdata.sh`.
 4. Port, following [docs/LAYOUT.md](docs/LAYOUT.md): upstream libraries to `pkg/languages/<language>/<library>/`,
    formatters to `pkg/languages/<language>/formatters/<name>/`, code shared by versions to `common/`.
+5. Add its line to [`testdata/size-budget.txt`](testdata/size-budget.txt) and raise `total`
+   (see Checks: Size).
 
 ## Checks
 
@@ -107,15 +114,28 @@ Unicode, strconv and sort changes.
 - **Fuzzing:** `make fuzz FUZZ_TIME=600`.
   - The harness is [`fuzz/fuzz_request.c`](fuzz/fuzz_request.c).
   - [`scripts/fuzz-corpus.sh`](scripts/fuzz-corpus.sh) records the seeds via buf.
-  - Every finding is a bug.
-- **Size:** compare `ls -l build/linux-*/protoc-gen-uni` before and after a change.
+  - Every finding is a bug. Findings (`crash-*`, `oom-*`, `timeout-*`) are written to `build/fuzz/`;
+    `slow-unit-*` is an input slower than 10 s under the sanitizers, not a finding by itself.
+- **Size:** `scripts/size.sh [<build dir prefix>]` (default `build/size`) checks the size budget,
+  in CI too.
+  - It builds the linux-x86_64 binary in the image once per generator version, each together with
+    the baseline `bufbuild/es/v2.17.0` (`UNI_GENERATORS` cannot be empty), plus the full binary,
+    and prints `generator  bytes  delta  budget`. The delta is what the generator adds to a binary.
+  - [`testdata/size-budget.txt`](testdata/size-budget.txt) has a line
+    `<owner>/<plugin>/<version>  <max delta bytes>` per generator version (the baseline's limits its
+    whole binary) and `total  <max bytes>` for the full binary. A delta over its budget, a generator
+    without a line or a line without a generator is an error.
+  - A new generator or version adds its line: the first measurement + 10%, rounded up to 1 KiB, and
+    raises `total` by what the full binary grows (shared libraries count once there, unlike in the
+    deltas). A budget is raised deliberately, in the change that needs it.
+  - Build directories are kept: a second run rebuilds only what changed.
   - To attribute size to object files, build with
     `-DUNI_LTO=OFF -DCMAKE_EXE_LINKER_FLAGS=-Wl,-Map=<file>`.
   - Measurements of the optimization levels are in [`cmake/flags.cmake`](cmake/flags.cmake).
 - **Lint:** `scripts/check-includes.sh` allows only libc headers.
 - **CI** ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) builds every target twice and
   compares the binaries. It also runs the golden tests natively on Linux, macOS and Windows, plus
-  ASan and fuzzing. It releases from `main`.
+  ASan, fuzzing and the size budget. It releases from `main`.
 
 ## Commits
 

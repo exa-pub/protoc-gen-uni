@@ -1,0 +1,19 @@
+// Test: generic services.
+//
+// Sets the *_generic_services file options; the grpc C++ plugin rejects
+// them with an error.
+syntax = "proto2";
+
+package test.generic;
+
+option cc_generic_services = true;
+option java_generic_services = true;
+option py_generic_services = true;
+
+message Msg {
+  optional string value = 1;
+}
+
+service Generic {
+  rpc Call(Msg) returns (Msg);
+}

@@ -1,0 +1,170 @@
+// Test: protobuf-c (community/protobuf-c) on proto2 without groups.
+//
+// Covers explicit default values for every scalar kind (bytes and string escapes, float/double
+// inf/nan/exponents), enum defaults, required/optional/repeated labels, packed options,
+// deprecated fields, C++ keywords and CamelCase as field names, oneofs with and without bytes,
+// extensions and extension ranges, block comments that could close a C comment, and the
+// message and field options of protobuf-c.proto (base_field_name, gen_init_helpers,
+// gen_pack_helpers, string_as_bytes).
+syntax = "proto2";
+
+package copts.defaults;
+
+import "protobuf-c/protobuf-c.proto";
+import "copts/nogen.proto";
+
+// A comment with a */ inside,
+///a line starting with a slash and /* an opener */ and /*/ both.
+enum Color {
+  COLOR_RED = 1; // trailing */ comment
+  COLOR_GREEN = 2;
+  COLOR_ALIAS = 2;
+  COLOR_BLUE = 3;
+  COLOR_NEG = -5;
+  COLOR_MAX = 2147483647;
+  option allow_alias = true;
+}
+
+// Defaults of every kind.
+message Defaults {
+  option (pb_c_msg).base_field_name = "parent";
+  optional double d_double = 1 [default = 3.14159];
+  optional double d_double_exp = 2 [default = -1.5e-300];
+  optional double d_double_inf = 3 [default = inf];
+  optional double d_double_neginf = 4 [default = -inf];
+  optional double d_double_nan = 5 [default = nan];
+  optional float d_float = 6 [default = 2.5];
+  optional float d_float_inf = 7 [default = inf];
+  optional float d_float_neginf = 8 [default = -inf];
+  optional float d_float_nan = 9 [default = nan];
+  optional int32 d_int32 = 10 [default = -42];
+  optional int64 d_int64 = 11 [default = -9223372036854775808];
+  optional uint32 d_uint32 = 12 [default = 4294967295];
+  optional uint64 d_uint64 = 13 [default = 18446744073709551615];
+  optional sint32 d_sint32 = 14 [default = -2147483648];
+  optional sint64 d_sint64 = 15 [default = 9223372036854775807];
+  optional fixed32 d_fixed32 = 16 [default = 123];
+  optional fixed64 d_fixed64 = 17 [default = 456];
+  optional sfixed32 d_sfixed32 = 18 [default = -789];
+  optional sfixed64 d_sfixed64 = 19 [default = -1011];
+  optional bool d_bool_true = 20 [default = true];
+  optional bool d_bool_false = 21 [default = false];
+  optional string d_string = 22 [default = "hello \"world\"\n\t\\ caf\u00e9 \x01 ?"];
+  optional string d_string_empty = 23 [default = ""];
+  optional bytes d_bytes = 24 [default = "\000\001\x7f\xff\n\r\t\"\'\\abc\?"];
+  optional bytes d_bytes_empty = 25 [default = ""];
+  optional Color d_enum = 26 [default = COLOR_GREEN];
+  optional Color d_enum_neg = 27 [default = COLOR_NEG];
+  optional int64 d_int64_hex = 28 [default = 0x7fffffff];
+  optional int32 d_int32_oct = 29 [default = 017];
+  optional double d_double_int = 30 [default = 1];
+  optional float d_float_small = 31 [default = 1e-10];
+  optional double d_double_big = 32 [default = 1.7976931348623157e308];
+  optional float d_float_third = 33 [default = 0.333333343];
+  optional double d_double_tiny = 34 [default = 4.9e-324];
+  optional string d_as_bytes = 35 [default = "raw\001", (pb_c_field).string_as_bytes = true];
+  optional string no_default_as_bytes = 36 [(pb_c_field).string_as_bytes = true];
+  repeated string rep_as_bytes = 37 [(pb_c_field).string_as_bytes = true];
+}
+
+message Labels {
+  option (pb_c_msg).gen_init_helpers = false;
+  required int32 r_int32 = 1;
+  required string r_string = 2;
+  required bytes r_bytes = 3;
+  required Color r_enum = 4;
+  required Defaults r_message = 5;
+  optional int32 o_int32 = 6 [deprecated = true];
+  optional string o_string = 7 [deprecated = true];
+  optional bytes o_bytes = 8;
+  optional Color o_enum = 9;
+  optional Labels o_message = 10 [deprecated = true];
+  repeated int32 unpacked = 11;
+  repeated int32 packed = 12 [packed = true];
+  repeated sint64 packed_false = 13 [packed = false];
+  repeated Color packed_enum = 14 [packed = true, deprecated = true];
+  repeated string strings = 15;
+  repeated bytes bytes_list = 16;
+  repeated Labels messages = 17;
+  repeated double doubles = 100;
+  repeated bool bools = 101 [packed = true];
+  optional uint64 big = 536870911;
+  extensions 1000 to 1999;
+}
+
+// Field names that are C++ keywords or CamelCase.
+message Names {
+  // The int.
+  optional int32 int = 1;
+  optional string class = 2; // trailing
+  optional bool CamelCase = 3;
+  optional bytes HTTPServer = 4;
+  optional int32 xor_eq = 5;
+  optional int32 struct_ = 6;
+  oneof Choice {
+    int32 OneInt = 7;
+    string OneString = 8;
+  }
+  // Nested message.
+  message NestedMsg {
+    option (pb_c_msg).gen_pack_helpers = true;
+    optional int32 v = 1;
+    message Deeper {
+      option (pb_c_msg).gen_pack_helpers = false;
+      enum DeepEnum {
+        DEEP_ZERO = 0;
+      }
+      optional DeepEnum e = 1;
+    }
+  }
+  enum NestedEnum {
+    NESTED_A = 0;
+    NESTED_B = 1;
+  }
+  optional NestedMsg nested = 9;
+  optional NestedEnum nested_enum = 10 [default = NESTED_B];
+  optional copts.nogen.Hidden hidden = 11;
+}
+
+message Oneofs {
+  oneof with_bytes {
+    bytes b = 1;
+    string s = 2;
+    int32 i = 3;
+    double d = 4;
+    int64 l = 5;
+    Oneofs m = 6;
+    float f = 7;
+    Color c = 8;
+    bool z = 9;
+    uint32 u = 10;
+    fixed64 x = 11;
+  }
+  oneof without_bytes {
+    int32 only = 12 [default = 7];
+    string text = 13 [default = "dflt"];
+  }
+  optional int32 after = 14;
+}
+
+message Empty {
+}
+
+extend Labels {
+  optional int32 ext_int = 1000;
+  repeated string ext_strings = 1001;
+}
+
+message Scope {
+  extend Labels {
+    optional Scope ext_scope = 1002;
+  }
+}
+
+// The service.
+service Greeter {
+  // Says hello.
+  rpc SayHello(Defaults) returns (Labels);
+  rpc sayBye(Empty) returns (Empty);
+  rpc HTTPGet(Names.NestedMsg) returns (Names.NestedMsg.Deeper);
+}

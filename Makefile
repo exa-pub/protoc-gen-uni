@@ -22,7 +22,7 @@ asan:
 FUZZ_TIME ?= 60
 fuzz:
 	$(DOCKER) bash -c 'cmake --preset fuzz && cmake --build --preset fuzz && scripts/fuzz-corpus.sh && \
-		build/fuzz/fuzz/fuzz_request -max_total_time=$(FUZZ_TIME) -timeout=10 -rss_limit_mb=2048 \
+		build/fuzz/fuzz/fuzz_request -max_total_time=$(FUZZ_TIME) -timeout=10 -rss_limit_mb=2048 -artifact_prefix=build/fuzz/ \
 		-dict=fuzz/params.dict build/fuzz/corpus'
 
 lint:

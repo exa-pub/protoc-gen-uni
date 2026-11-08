@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package very.long.package_name.for_the_typescript_printer.v1.importer;
+
+import "very_long_directory_name_for_imports/another_quite_long_directory/long_names_and_comments_for_typescript.proto";
+import "google/protobuf/timestamp.proto";
+
+// Uses types of the other file through a long relative import path.
+message AnImportingMessageWithALongName {
+  very.long.package_name.for_the_typescript_printer.v1.AMessageWithAVeryLongNameThatGoesOnAndOnForMoreThanOneHundredCharactersToTestTheTypeScriptPrinter imported_message_field_with_a_long_name = 1;
+  google.protobuf.Timestamp a_timestamp_with_a_long_field_name_that_imports_a_well_known_type = 3;
+  optional string an_optional_proto3_string_field_with_a_long_name = 4;
+}

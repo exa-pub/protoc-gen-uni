@@ -1,0 +1,28 @@
+# Golden config for grpc/kotlin v1.5.0: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# No options: one group.
+# Inputs left out: editions2023, editions2024, services-editions, real-protovalidate-editions (the
+# plugin declares no editions support, buf rejects them); services-case (upstream does not finish:
+# deadline_exceeded on buf.build).
+# Regenerate: scripts/gen-testdata.sh grpc/kotlin v1.5.0
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/kotlin-long
+  - directory: testdata/proto/kotlin-grpc-names
+plugins:
+  - remote: buf.build/grpc/kotlin:v1.5.0
+    out: default

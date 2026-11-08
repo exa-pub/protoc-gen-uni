@@ -4,6 +4,11 @@
 
 #include "protoplugin.h"
 
+/* An older @bufbuild/protoplugin (see protoplugin.h) */
+#define V2_13(s) ((s)->protoplugin == PROTOPLUGIN_V2_13_0)
+/* maximumEdition of the @bufbuild/protobuf the plugin is built on */
+#define MAX_EDITION(s) (V2_13(s) ? ED_2024 : ED_MAXIMUM)
+
 /* parameter.c */
 NORETURN COLD void plugin_option_error(Str option, const char *detail);
 COLD void parse_parameter(Schema *s, const EsPlugin *p, Str parameter);
@@ -25,29 +30,19 @@ const char *derive_import_path(const char *filename);
 const char *make_import_path_relative(const char *importer, const char *path);
 
 /* names.c, safe_identifier.c */
-const char *safe_identifier(const char *name);
 void all_names(DescFile *file);
 const char *generate_file_path(const Schema *s, const DescFile *file);
 
-/* source_code_info.c */
-typedef struct {
-	Str *leading_detached;
-	int n_leading_detached;
-	Str leading, trailing; /* p == NULL if absent */
-} Comments;
-Comments get_comments(const Desc *d);
-Comments get_syntax_comments(const DescFile *f);
-Comments get_package_comments(const DescFile *f);
+/* source_code_info.c (the rest is in protoplugin.h) */
 Vec feature_option_strings(const Desc *d); /* const char * */
-Str declaration_string(const Desc *d);
 
 /* jsdoc.c */
 Str jsdoc_text_from_desc(const Desc *d);
 Str format_jsdoc_block(Str text, const char *indent);
 
 /* file_preamble.c */
-Str make_file_preamble(const Schema *s, const DescFile *file);
-const char *edition_to_string(int64_t edition);
+Str make_file_preamble(const Schema *s, DescFile *file);
+const char *edition_to_string(const Schema *s, int64_t edition);
 
 /* generated_file.c */
 Str escape_string(Str s); /* a string literal */

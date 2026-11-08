@@ -1,0 +1,20 @@
+// Test: optimize_for = CODE_SIZE with a custom option defined and used in the
+// same file (the C++ generator falls back to SPEED for it), and a lite file.
+syntax = "proto2";
+
+package test.cppcodesize;
+
+import "google/protobuf/descriptor.proto";
+
+option optimize_for = CODE_SIZE;
+option (file_tag) = "tagged";
+
+extend google.protobuf.FileOptions {
+  optional string file_tag = 50001;
+}
+
+message Sized {
+  optional int32 a = 1;
+  repeated string b = 2;
+  optional Sized child = 3;
+}

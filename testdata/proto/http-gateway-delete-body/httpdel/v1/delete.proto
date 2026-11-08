@@ -1,0 +1,33 @@
+// Test: an HTTP DELETE binding with a body.
+//
+// grpc-gateway and openapiv2 reject it unless allow_delete_body is set.
+syntax = "proto3";
+
+package test.httpdel.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+message DeleteItemsRequest {
+  string parent = 1;
+  repeated string names = 2;
+  bool force = 3;
+}
+
+service ItemService {
+  // DeleteItems deletes items named in the body.
+  rpc DeleteItems(DeleteItemsRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v1/{parent=items/*}"
+      body: "*"
+    };
+  }
+
+  // DeleteNames deletes items named by a body field.
+  rpc DeleteNames(DeleteItemsRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v1/{parent=items/*}:names"
+      body: "names"
+    };
+  }
+}

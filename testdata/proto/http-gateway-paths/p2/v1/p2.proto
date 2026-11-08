@@ -1,0 +1,61 @@
+// Test: grpc-gateway path parameters of proto2 messages (pointer converters, getters in nested
+// field paths, oneofs, enums of another package).
+syntax = "proto2";
+
+package test.paths.p2.v1;
+
+import "google/api/annotations.proto";
+import "runtime/runtime.proto";
+
+message P2Req {
+  optional string id = 1;
+  required int32 num = 2;
+  repeated string tags = 3;
+  optional test.paths.runtime.OtherEnum oe = 4;
+  repeated test.paths.runtime.OtherEnum oes = 5;
+  optional Sub sub = 6;
+  message Sub {
+    optional string name = 1;
+    optional Sub2 s2 = 2;
+    message Sub2 {
+      optional string leaf = 1;
+    }
+  }
+  oneof o {
+    string oa = 7;
+    Sub ob = 8;
+  }
+  optional double dd = 9;
+  repeated int64 ii = 10;
+}
+
+service P2Svc {
+  rpc Get(P2Req) returns (P2Req) {
+    option (google.api.http) = {get: "/p2/{id}/{num}/{tags}/{oe}/{oes}/{dd}/{ii}"};
+  }
+  rpc Nested(P2Req) returns (P2Req) {
+    option (google.api.http) = {
+      post: "/p2/{sub.name}/{sub.s2.leaf}"
+      body: "sub"
+    };
+  }
+  rpc Oneof(P2Req) returns (P2Req) {
+    option (google.api.http) = {
+      post: "/p2/o/{oa}"
+      body: "*"
+    };
+  }
+  rpc OneofBody(P2Req) returns (P2Req) {
+    option (google.api.http) = {
+      post: "/p2/ob"
+      body: "ob"
+      response_body: "sub"
+    };
+  }
+  rpc Patch(P2Req) returns (P2Req) {
+    option (google.api.http) = {
+      patch: "/p2/patch/{id}"
+      body: "sub"
+    };
+  }
+}

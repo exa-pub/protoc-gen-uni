@@ -1,0 +1,75 @@
+// Test: service naming.
+//
+// Covers names that collide in generated code: request/response types with
+// the same name from three packages (two of them in files with the same
+// name), messages named like generated client/server/stub classes, a child
+// package named like a service of its parent package that declares a
+// service of the same name, lower-case and snake_case service and method
+// names, names with digits and acronyms, keywords of target languages, names
+// of generated members (NewStub, Descriptor, ServiceName), nested message
+// types as request/response, a file without package (rootless.proto) and
+// file options that rename generated code (rpcnames/opts/v1/opts.proto).
+// Method names that differ only in case are in services-case.
+syntax = "proto3";
+
+package test.rpcnames;
+
+import "rpcnames/a/v1/types.proto";
+import "rpcnames/b/v1/types.proto";
+import "rpcnames/greeter/reply.proto";
+
+message Request {
+  string name = 1;
+}
+
+message GreeterClient {}
+
+message GreeterServer {}
+
+message GreeterStub {}
+
+message GreeterGrpc {}
+
+message Outer {
+  message Inner {
+    string value = 1;
+  }
+}
+
+// Greeter collides with the package test.rpcnames.greeter and with the
+// service test.rpcnames.greeter.Greeter.
+service Greeter {
+  // SayHello uses a type from the child package.
+  rpc SayHello(Request) returns (test.rpcnames.greeter.Reply);
+  rpc FromA(test.rpcnames.a.v1.Request) returns (test.rpcnames.a.v1.Response);
+  rpc FromB(stream test.rpcnames.b.v1.Request) returns (test.rpcnames.b.v1.Response);
+  rpc AToB(test.rpcnames.a.v1.Request) returns (stream test.rpcnames.b.v1.Response);
+  rpc Nested(stream Outer.Inner) returns (stream Outer.Inner);
+  rpc Clients(GreeterClient) returns (GreeterServer);
+  rpc Stubs(GreeterStub) returns (GreeterGrpc);
+  rpc list(Request) returns (Request);
+  rpc get_v2_item(Request) returns (Request);
+  rpc HTTPGetURL(Request) returns (Request);
+  rpc NewStub(Request) returns (Request);
+  rpc Descriptor(Request) returns (Request);
+  rpc ServiceName(Request) returns (Request);
+  rpc Return(Request) returns (Request);
+  rpc import(Request) returns (Request);
+  rpc yield(Request) returns (Request);
+  rpc async(Request) returns (Request);
+  rpc self(Request) returns (Request);
+  rpc None(Request) returns (Request);
+  rpc Default(Request) returns (Request);
+  rpc Init(Request) returns (Request);
+}
+
+// A snake_case service name with a digit.
+service greeter_v2 {
+  rpc Hello(Request) returns (Request);
+}
+
+// A service named like a generated class.
+service Server {
+  rpc Client(Request) returns (Request);
+  rpc Server(Request) returns (Request);
+}

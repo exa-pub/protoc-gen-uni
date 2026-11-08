@@ -1,0 +1,45 @@
+# Golden config for grpc/python v1.85.1: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Groups: default; grpc_2_0 with a strip prefix (matched against the dotted module name: "google/"
+# strips nothing, "google." strips); errors: an unknown grpc version, too many parameters.
+# Not tested: grpc_1_0 (writes into the module_scope insertion point of the protocolbuffers/python
+# output of the same run; compared with the remote plugins by hand, see the README).
+# Inputs left out: naming: libprotoc 35.1 rejects naming/legacy.proto (JSON name conflict) and
+# exits with a timestamped log line.
+# Regenerate: scripts/gen-testdata.sh grpc/python v1.85.1
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-case
+  - directory: testdata/proto/services-editions
+  - directory: testdata/proto/services-editions2024
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/grpc/python:v1.85.1
+    out: default
+  - remote: buf.build/grpc/python:v1.85.1
+    out: strip
+    opt: [grpc_2_0, google/]
+  - remote: buf.build/grpc/python:v1.85.1
+    out: strip-dot
+    opt: [grpc_2_0, google.]
+  - remote: buf.build/grpc/python:v1.85.1
+    out: error-version
+    opt: [grpc_3_0]
+  - remote: buf.build/grpc/python:v1.85.1
+    out: error-params
+    opt: [grpc_2_0, a/, b/]

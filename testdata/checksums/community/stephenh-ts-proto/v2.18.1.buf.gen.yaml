@@ -18,6 +18,8 @@ inputs:
   - directory: testdata/proto/real-otel
   - directory: testdata/proto/real-protovalidate
   - directory: testdata/proto/real-protovalidate-editions
+  - directory: testdata/proto/ts-long
+  - directory: testdata/proto/ts-names
 plugins:
   - remote: buf.build/community/stephenh-ts-proto:v2.18.1
     out: default
@@ -30,3 +32,12 @@ plugins:
   - remote: buf.build/community/stephenh-ts-proto:v2.18.1
     out: variants
     opt: [snakeToCamel=false, oneof=unions-value, useDate=string, stringEnums=true]
+  - remote: buf.build/community/stephenh-ts-proto:v2.18.1
+    out: services
+    opt: [outputServices=default, outputServices=nice-grpc, outputClientImpl=grpc-web, useAbortSignal=true, outputIndex=true]
+  - remote: buf.build/community/stephenh-ts-proto:v2.18.1
+    out: nest
+    opt: [nestJs=true, context=true, addGrpcMetadata=true, useDate=string-nano]
+  - remote: buf.build/community/stephenh-ts-proto:v2.18.1
+    out: extensions
+    opt: [outputExtensions=true, unknownFields=true, outputTypeRegistry=true, enumsAsLiterals=true, globalThisPolyfill=true, useAsyncIterable=true, outputServices=generic-definitions]

@@ -1,0 +1,1 @@
+uni_generator(LIBRARIES cpp_libprotoc)

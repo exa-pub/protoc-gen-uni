@@ -10,8 +10,9 @@
  *     LegacyFieldOrder and GenericKeyOrder for maps),
  *   - types/dynamicpb (isSet: implicit-presence zero values are not serialized; setting a oneof
  *     member clears the others),
- *   - cmd/protoc-gen-go/internal_gengo/reflect.go (stripSourceRetentionFieldsFromMessage).
- * Required fields are not checked (AllowPartial). */
+ *   - proto/checkinit.go, internal/impl/checkinit.go (the check of required fields after
+ *     decoding),
+ *   - cmd/protoc-gen-go/internal_gengo/reflect.go (stripSourceRetentionFieldsFromMessage). */
 #include "internal.h"
 
 #include <string.h>
@@ -23,11 +24,15 @@
  * stack, the Windows default). */
 #define GO_STACK_LIMIT (256 * 1024)
 static uintptr_t stack_base;
+static bool stack_hit; /* the stack limit, not protobuf-go's, stopped decoding */
 
 static bool stack_exhausted(void)
 {
 	uintptr_t p = (uintptr_t)__builtin_frame_address(0);
-	return (p > stack_base ? p - stack_base : stack_base - p) > GO_STACK_LIMIT;
+	if ((p > stack_base ? p - stack_base : stack_base - p) <= GO_STACK_LIMIT)
+		return false;
+	stack_hit = true;
+	return true;
 }
 
 struct GoSchema {
@@ -183,6 +188,8 @@ static GoMsgDef *build_static(GoSchema *s, int idx)
 		TmpField t = {0};
 		t.f = (PbField){sf->num, sf->type, sf->label, sf->msg >= 0 ? &build_static(s, sf->msg)->pb : NULL, NULL, 0};
 		t.flags = sf->flags;
+		if (sm->names)
+			t.name = xcat(sm->name, ".", sm->names[i]);
 		tmp[n++] = t;
 	}
 	if (sm->has_ext)
@@ -215,6 +222,8 @@ static GoMsgDef *build_dynamic(GoSchema *s, const GoMessage *m)
 			t.flags |= GOF_IMPLICIT;
 		if (go_field_is_map(fd))
 			t.flags |= GOF_MAP;
+		if (fd->cardinality == GO_REQUIRED)
+			t.flags |= GOF_REQUIRED;
 		if (fd->oneof && !go_oneof_is_synthetic(fd->oneof))
 			t.oneof = fd->oneof->d.index + 1;
 		t.name = fd->d.full_name;
@@ -269,6 +278,13 @@ GoSchema *gopb_schema_base(void)
 	return base;
 }
 
+GoSchema *gopb_schema_types(void)
+{
+	GoSchema *s = xalloc(sizeof *s); /* schema_new without the base extension */
+	schema_build(s);
+	return s;
+}
+
 GoSchema *gopb_schema_with_extensions(GoField *const *xs, int n)
 {
 	GoSchema *s = schema_new();
@@ -290,8 +306,9 @@ const GoMsgDef *gopb_schema_msg(const GoSchema *s, const char *full_name)
 /* ---- decoding ---- */
 
 #define DEF(m) ((const GoMsgDef *)(m)->def)
-#define ERR_DECODE "proto: cannot parse invalid wire-format data"
-#define ERR_DEPTH "proto: exceeded maximum recursion depth"
+static COLD const char *err_decode(void) { return go_err("cannot parse invalid wire-format data"); }
+#define ERR_DECODE err_decode()
+#define ERR_DEPTH go_err("exceeded maximum recursion depth")
 
 static int wire_type_of(int type)
 {
@@ -583,10 +600,87 @@ static const char *decode(PbMsg *m, const uint8_t *p, size_t n, int depth)
 	return NULL;
 }
 
+/* errors.RequiredNotSet */
+static COLD const char *required_not_set(const GoMsgDef *def, int fi)
+{
+	return go_err("required field %s not set", def->names[fi] ? def->names[fi] : "");
+}
+
+static const char *check_initialized(const PbMsg *m);
+
+/* The messages of a set field: each element, or the values of a map. */
+static const char *check_field(const PbMsg *m, int fi)
+{
+	const GoMsgDef *def = DEF(m);
+	const PbField *f = &def->pb.f[fi];
+	if (f->type != PT_MESSAGE && f->type != PT_GROUP)
+		return NULL;
+	const PbSlot *s = &m->slots[fi];
+	for (int i = 0; i < s->n; i++) {
+		const PbMsg *sub = s->v[i].m;
+		if (def->flags[fi] & GOF_MAP) {
+			/* the value of the entry (field 2) if it is a message: an empty one if the entry
+			 * has none (unmarshalMap sets mapv.NewValue()) */
+			const GoMsgDef *ed = DEF(sub);
+			int vi = field_index(&ed->pb, 2);
+			const PbField *vf = vi >= 0 ? &ed->pb.f[vi] : NULL;
+			if (!vf || (vf->type != PT_MESSAGE && vf->type != PT_GROUP) || !vf->msg)
+				continue;
+			sub = sub->slots[vi].n ? sub->slots[vi].v[0].m : pb_new(vf->msg);
+		}
+		const char *err = check_initialized(sub);
+		if (err)
+			return err;
+	}
+	return NULL;
+}
+
+/* proto.checkInitialized: the first required field that is not set, depth first. Generated
+ * messages check their extensions first, then the fields by number (isInitializedPointer);
+ * dynamic messages check their own required fields in declaration order, then recurse into the
+ * set fields (checkInitializedSlow). Go visits extensions and the fields of dynamic messages in
+ * map order (random); here in number order. The recursion is as deep as the decoding that built
+ * m, whose frames are larger. */
+static const char *check_initialized(const PbMsg *m)
+{
+	const GoMsgDef *def = DEF(m);
+	if (def->dynamic) {
+		const GoMessage *md = def->desc;
+		for (int i = 0; i < md->n_fields; i++) {
+			int fi = field_index(&def->pb, (uint32_t)md->fields[i]->number);
+			if (fi >= 0 && (def->flags[fi] & GOF_REQUIRED) && !m->slots[fi].n)
+				return required_not_set(def, fi);
+		}
+	} else {
+		for (int fi = 0; fi < def->pb.n; fi++) {
+			const char *err = def->flags[fi] & GOF_EXT ? check_field(m, fi) : NULL;
+			if (err)
+				return err;
+		}
+	}
+	for (int fi = 0; fi < def->pb.n; fi++) {
+		if ((def->flags[fi] & GOF_EXT) && !def->dynamic)
+			continue;
+		if (!m->slots[fi].n) {
+			if (def->flags[fi] & GOF_REQUIRED)
+				return required_not_set(def, fi);
+			continue;
+		}
+		const char *err = check_field(m, fi);
+		if (err)
+			return err;
+	}
+	return NULL;
+}
+
 const char *gopb_decode(PbMsg *m, const uint8_t *p, size_t n)
 {
 	stack_base = (uintptr_t)__builtin_frame_address(0);
-	return decode(m, p, n, 1);
+	stack_hit = false;
+	const char *err = decode(m, p, n, 1);
+	if (err && stack_hit)
+		return GOPB_ERR_TOO_DEEP; /* protobuf-go would go on: name the limit of the port */
+	return err ? err : check_initialized(m);
 }
 
 /* ---- encoding ---- */

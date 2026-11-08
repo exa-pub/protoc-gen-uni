@@ -1,0 +1,22 @@
+// Reserved words that swc accepts in the positions ts-proto puts them: `this` and `static` as
+// type and value names, `interface` as a service.
+syntax = "proto3";
+
+package kw.names;
+
+message this {
+  int32 a = 1;
+}
+
+message static {
+  this t = 1;
+}
+
+message Holder {
+  this x = 1;
+  static y = 2;
+}
+
+service interface {
+  rpc Get(Holder) returns (Holder);
+}

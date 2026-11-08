@@ -25,6 +25,20 @@
 #include "gofeatures.h"
 #include "pb.h"
 
+/* internal/detrand.Bool() of the plugin binary. protobuf-go derives it from a hash of its
+ * executable, so each upstream plugin binary has its own value. True: the "proto:" error prefix
+ * ends with a no-break space (U+00A0) and single-line prototext puts two spaces between fields.
+ * A generator that knows the value of its upstream binary sets it for its request and resets it
+ * (default false). */
+extern bool go_detrand;
+/* internal/errors prefix: "proto: ", with a no-break space if go_detrand. */
+const char *go_err_prefix(void);
+/* The protobuf-go v1.36.11 runtime where it differs from v1.36.12, for the plugins built with it
+ * (set for a request and reset like go_detrand): internal/encoding/defval parses integer default
+ * values with strconv.ParseInt/ParseUint in base 10 (v1.36.12: base 0, with 0x, 0o, 0b, 0
+ * prefixes and underscores). */
+extern bool go_protobuf_v1_36_11;
+
 /* ---- wire.c, schema.c ---- */
 
 typedef struct GoDesc GoDesc;
@@ -44,6 +58,7 @@ enum {
 	GOF_MAP = 4,        /* a map field (msg is the map entry) */
 	GOF_SOURCE = 8,     /* [retention = RETENTION_SOURCE] */
 	GOF_UTF8 = 16,      /* string with UTF-8 validation */
+	GOF_REQUIRED = 32,  /* a required field (checked after decoding) */
 };
 
 /* A message definition: pb.def points here (PbMsg.def == &GoMsgDef.pb). */
@@ -67,6 +82,9 @@ typedef struct GoSchema GoSchema;
 /* The schema of protoc-gen-go: protoregistry.GlobalTypes (only the pb.go extension). Built on
  * every call (arena memory). */
 GoSchema *gopb_schema_base(void);
+/* descriptorpb and pluginpb with no extension type registered: protoregistry.GlobalTypes of a
+ * plugin that links none (extensions stay unknown fields). Built on every call. */
+GoSchema *gopb_schema_types(void);
 /* The base schema plus dynamic extension types of xs (n extension descriptors, in registration
  * order; an extension whose extendee/number is already taken locally is an error reported by
  * the caller), as protogen's extensionRegistry resolves them. */
@@ -75,8 +93,12 @@ GoSchema *gopb_schema_with_extensions(GoField *const *xs, int n);
  * "google.protobuf.compiler.CodeGeneratorRequest", ...), or NULL. */
 const GoMsgDef *gopb_schema_msg(const GoSchema *s, const char *full_name);
 
-/* proto.Unmarshal (merges into m). Returns NULL or the error text ("proto: ..."). */
+/* proto.Unmarshal (merges into m), with the check of required fields. Returns NULL or the
+ * error text ("proto: ..."), or GOPB_ERR_TOO_DEEP. */
 const char *gopb_decode(PbMsg *m, const uint8_t *p, size_t n);
+/* The error of gopb_decode when nesting exhausts its stack limit (256 KiB, see wire.c) before
+ * protobuf-go's limit of 10000 levels: input upstream accepts and the port does not support. */
+#define GOPB_ERR_TOO_DEEP "unsupported by protoc-gen-uni: messages nested too deeply (over 256 KiB of decoder stack)"
 /* proto.MarshalOptions{AllowPartial: true, Deterministic: true}.Marshal. */
 void gopb_encode(const PbMsg *m, Buf *out);
 /* Clears every populated field declared with [retention = RETENTION_SOURCE], recursively

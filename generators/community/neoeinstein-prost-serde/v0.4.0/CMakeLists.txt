@@ -1,0 +1,1 @@
+uni_generator(LIBRARIES rust_pbjson_build rust_protoc_gen_prost)

@@ -1,0 +1,63 @@
+# Golden config for community/neoeinstein-tonic v0.5.0: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Every group sets no_include=true (the buf.build default): without it the plugin writes into
+# insertion points of the protoc-gen-prost output, which needs that plugin in the same run.
+# Groups: default; flat_output_dir; no_server with no_transport and compile_well_known_types;
+# no_client with extern_path, disable_package_emission and default_package_filename; the four
+# attribute options (doc comments as attributes: a template opt cannot contain "]");
+# attrs-match: attribute patterns that match by suffix or equality, a block doc comment;
+# extern: extern_path forms (absolute, crate-relative, a prefix, a generic type for a well-known
+# type); cwkt-extern: compile_well_known_types with an extern_path prefix and no_transport;
+# error: an unknown option.
+# Inputs left out: editions2023, editions2024, services-editions, services-editions2024,
+# real-protovalidate-editions (the plugin declares no editions support, buf rejects them).
+# Regenerate: scripts/gen-testdata.sh community/neoeinstein-tonic v0.5.0
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-case
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/services-connect
+  - directory: testdata/proto/http-gateway
+  - directory: testdata/proto/http-gateway-delete-body
+  - directory: testdata/proto/http-gateway-scalar-body
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+plugins:
+  - remote: buf.build/community/neoeinstein-tonic:v0.5.0
+    out: default
+    opt: [no_include=true]
+  - remote: buf.build/community/neoeinstein-tonic:v0.5.0
+    out: flat
+    opt: [no_include=true, flat_output_dir]
+  - remote: buf.build/community/neoeinstein-tonic:v0.5.0
+    out: client
+    opt: [no_include=true, no_server, no_transport, compile_well_known_types]
+  - remote: buf.build/community/neoeinstein-tonic:v0.5.0
+    out: server
+    opt: [no_include=true, no_client, extern_path=.google.protobuf=::pbjson_types, disable_package_emission, default_package_filename=root]
+  - remote: buf.build/community/neoeinstein-tonic:v0.5.0
+    out: attrs
+    opt: [no_include=true, "client_mod_attribute=.=/// client module", "server_attribute=.test=/// server", "client_attribute=.test.services.v1.Storage=/// storage client", "server_mod_attribute=.=/// server module"]
+  - remote: buf.build/community/neoeinstein-tonic:v0.5.0
+    out: attrs-match
+    opt: [no_include=true, "client_attribute=Storage=/// suffix match", "server_attribute=test.services.v1.Storage=/** exact match */", "client_mod_attribute=test.services.v1=/// mod exact", "server_mod_attribute=v1=/// mod suffix"]
+  - remote: buf.build/community/neoeinstein-tonic:v0.5.0
+    out: extern
+    opt: [no_include=true, extern_path=.test.types=::my_types, extern_path=.google.protobuf.Empty=crate::Empty, extern_path=.test=crate::foo, "extern_path=.google.protobuf.Timestamp=Vec<u8>"]
+  - remote: buf.build/community/neoeinstein-tonic:v0.5.0
+    out: cwkt-extern
+    opt: [no_include=true, compile_well_known_types, extern_path=.test.services.v1=::svc, no_transport=true, disable_package_emission=false]
+  - remote: buf.build/community/neoeinstein-tonic:v0.5.0
+    out: error-unknown
+    opt: [foo=bar]

@@ -1,0 +1,46 @@
+// Test: PHP names in gRPC service code.
+//
+// Covers package parts in snake_case and with PHP reserved words (list),
+// service and method names in snake_case and with acronyms, request and
+// response types from the same package (also named like a PHP reserved word),
+// from a package whose message names are PHP reserved words, from a package
+// with php_namespace, from google.protobuf (Empty is reserved), nested
+// message types, and a file with php_namespace that declares a service.
+syntax = "proto3";
+
+package test.php_grpc.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
+import "php_grpc/custom/v1/custom.proto";
+import "php_grpc/list/v1/types.proto";
+
+message Request {
+  string id = 1;
+}
+
+// Interface is a PHP reserved word in the package of the service.
+message Interface {
+  string id = 1;
+}
+
+message Outer {
+  message Inner {
+    string value = 1;
+  }
+}
+
+// snake_case_service has a snake_case name.
+service snake_case_service {
+  rpc get_item(Request) returns (Request);
+  rpc List(test.php_grpc.list.v1.Function) returns (test.php_grpc.list.v1.Class);
+  rpc Custom(test.php_grpc.custom.v1.Item) returns (google.protobuf.Empty);
+  rpc Nested(Outer.Inner) returns (Interface);
+  rpc ToStruct(google.protobuf.Value) returns (google.protobuf.Struct);
+  rpc Stream(stream Request) returns (stream test.php_grpc.list.v1.Plain);
+}
+
+// HTTPService has an acronym in its name.
+service HTTPService {
+  rpc GetURL(google.protobuf.Empty) returns (test.php_grpc.list.v1.Echo);
+}

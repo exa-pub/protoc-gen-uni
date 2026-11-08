@@ -1,0 +1,31 @@
+// Long names, long comments and the formatting characters of KotlinPoet (the ♢ wrap point and
+// the · non-breaking space) for connectrpc/kotlin: KotlinPoet 2 wraps lines only at ♢ (100 columns).
+syntax = "proto3";
+
+package kotlinlong.v1;
+
+option java_multiple_files = true;
+option java_package = "com.example.averyveryverylongjavapackagename.withmanysegments.thatgoesonandon.v1";
+
+message AnExtremelyLongRequestMessageNameThatMakesTheFunctionSignatureLongerThanOneHundredColumns {
+  string a_field_with_a_rather_long_name_for_good_measure = 1;
+}
+
+message AnExtremelyLongResponseMessageNameThatMakesTheReturnTypeLongerThanOneHundredColumnsToo {
+  message NestedResponseWithAnotherVeryLongNameThatIsAlsoQuiteLong {}
+}
+
+// A service with a long name. ♢ This comment has wrap points: ♢ a ♢ b ♢ c ♢ d ♢ e ♢ f ♢ g ♢ h ♢ i ♢ j ♢ k ♢ l ♢ m ♢ n ♢ o ♢ p ♢ q ♢ r ♢ s ♢ t ♢ u ♢ v ♢ w ♢ x ♢ y ♢ z.
+// Non·breaking·spaces·become·spaces·and·never·wrap·even·when·the·line·is·very·very·very·very·very·long·indeed·yes.
+// Escapes: /* block */, [link], @param, 100% and trailing spaces:   
+service AServiceWithAVeryLongNameThatKeepsGoingAndGoingAndGoingUntilTheClassLineIsLongEnough {
+  // A unary method with long types. ♢wrap♢points♢without♢spaces♢between♢the♢words♢of♢this♢comment♢that♢is♢long♢enough♢to♢wrap♢more♢than♢once♢in♢total♢yes
+  rpc AVeryLongUnaryMethodNameThatIsLongEnoughToPushTheSignaturePastTheLimit(AnExtremelyLongRequestMessageNameThatMakesTheFunctionSignatureLongerThanOneHundredColumns) returns (AnExtremelyLongResponseMessageNameThatMakesTheReturnTypeLongerThanOneHundredColumnsToo) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc AVeryLongServerStreamingMethodNameThatIsLongEnoughToPushTheSignaturePastTheLimit(AnExtremelyLongRequestMessageNameThatMakesTheFunctionSignatureLongerThanOneHundredColumns) returns (stream AnExtremelyLongResponseMessageNameThatMakesTheReturnTypeLongerThanOneHundredColumnsToo.NestedResponseWithAnotherVeryLongNameThatIsAlsoQuiteLong);
+  rpc AVeryLongBidiStreamingMethodName(stream AnExtremelyLongRequestMessageNameThatMakesTheFunctionSignatureLongerThanOneHundredColumns) returns (stream AnExtremelyLongRequestMessageNameThatMakesTheFunctionSignatureLongerThanOneHundredColumns) {
+    option deprecated = true;
+  }
+  rpc in(AnExtremelyLongRequestMessageNameThatMakesTheFunctionSignatureLongerThanOneHundredColumns) returns (AnExtremelyLongRequestMessageNameThatMakesTheFunctionSignatureLongerThanOneHundredColumns);
+}

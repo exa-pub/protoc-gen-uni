@@ -30,16 +30,35 @@ enum { IGNORE_ALWAYS = 3 };
 
 COLD static void rules_merge(Rules *r, const uint8_t *p, size_t n);
 
+/* Upstream reads the option with getExtension: a known field is read by its type whatever the
+ * wire type, and malformed data throws. Both are not supported here. */
+NORETURN COLD static void rules_unsupported(void)
+{
+	fail("unsupported by protoc-gen-uni: malformed option (buf.validate.field)");
+}
+
+/* The next field of a FieldRules, RepeatedRules or MapRules. */
+COLD static bool rules_next(PbReader *rd, PbRawField *f)
+{
+	if (rd->p >= rd->end)
+		return false;
+	if (!pb_next_field(rd, f))
+		rules_unsupported();
+	return true;
+}
+
 COLD static void rules_merge_child(Rules *r, const uint8_t *p, size_t n, uint32_t child_num)
 {
 	PbReader rd = {p, p + n};
 	PbRawField f;
-	while (pb_next_field(&rd, &f)) {
-		if (f.num == child_num && f.wt == WT_LEN) {
-			if (!r->child)
-				r->child = xalloc(sizeof(Rules)), r->child->type_case = "";
-			rules_merge(r->child, f.val, f.vlen);
-		}
+	while (rules_next(&rd, &f)) {
+		if (f.num != child_num)
+			continue;
+		if (f.wt != WT_LEN)
+			rules_unsupported();
+		if (!r->child)
+			r->child = xalloc(sizeof(Rules)), r->child->type_case = "";
+		rules_merge(r->child, f.val, f.vlen);
 	}
 }
 
@@ -48,14 +67,18 @@ static void rules_merge(Rules *r, const uint8_t *p, size_t n)
 {
 	PbReader rd = {p, p + n};
 	PbRawField f;
-	while (pb_next_field(&rd, &f)) {
-		if (f.num == 25 && f.wt == WT_VARINT) {
+	while (rules_next(&rd, &f)) {
+		if ((f.num == 25 || f.num == 27) && f.wt != WT_VARINT)
+			rules_unsupported();
+		if ((f.num == 18 || f.num == 19) && f.wt != WT_LEN)
+			rules_unsupported();
+		if (f.num == 25) {
 			r->required = f.v != 0;
-		} else if (f.num == 27 && f.wt == WT_VARINT) {
+		} else if (f.num == 27) {
 			int32_t v = (int32_t)f.v;
 			if (v == 0 || v == 1 || v == 3)
 				r->ignore = v; /* closed enum: other values are unknown fields */
-		} else if ((f.num == 18 || f.num == 19) && f.wt == WT_LEN) {
+		} else if (f.num == 18 || f.num == 19) {
 			const char *c = f.num == 18 ? "repeated" : "map";
 			if (!str_eq(r->type_case, c)) {
 				r->type_case = c;
@@ -78,8 +101,9 @@ COLD static Rules *field_rules(const DescField *f, bool *has)
 		if (uf.num != 1159)
 			continue;
 		*has = true;
-		if (uf.wt == WT_LEN)
-			rules_merge(r, uf.val, uf.vlen);
+		if (uf.wt != WT_LEN)
+			rules_unsupported();
+		rules_merge(r, uf.val, uf.vlen);
 	}
 	return r;
 }

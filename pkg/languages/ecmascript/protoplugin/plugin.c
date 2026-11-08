@@ -26,8 +26,12 @@ static void run(void *arg)
 	RunCtx *ctx = arg;
 	Schema *s = xalloc(sizeof *s);
 	ctx->s = s;
+	/* fromBinary(CodeGeneratorRequestSchema, data) */
+	from_binary(ctx->req);
 	s->request = ctx->req;
 	s->plugin_name = ctx->p->name;
+	s->protoplugin = ctx->p->protoplugin;
+	comments_normalize_line_breaks = !V2_13(s);
 	parse_parameter(s, ctx->p, pb_bytes(ctx->req, CGR_PARAMETER));
 	s->plugin_version = s->opts.elide_plugin_version ? NULL : ctx->p->version;
 	create_schema(s, ctx->req);
@@ -60,7 +64,7 @@ void es_plugin_run(const EsPlugin *p, PbMsg *req, Buf *out)
 	pb_put_tag(out, CGRESP_MINIMUM_EDITION, WT_VARINT);
 	pb_put_varint(out, ED_MINIMUM);
 	pb_put_tag(out, CGRESP_MAXIMUM_EDITION, WT_VARINT);
-	pb_put_varint(out, ED_MAXIMUM);
+	pb_put_varint(out, (uint64_t)MAX_EDITION(s));
 	for (int i = 0; i < s->generated.n; i++) {
 		GeneratedFile *f = s->generated.v[i];
 		Str content = generated_file_content(f);

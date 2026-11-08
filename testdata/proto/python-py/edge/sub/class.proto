@@ -1,0 +1,10 @@
+// Test: python-py, a module name that is a Python keyword (class) and comments.
+syntax = "proto3";
+package edge.sub;
+// leading
+message Item { /* trailing block */ int32 x = 1; // trailing x
+  // detached
+
+  // lead y
+  string y = 2;
+}

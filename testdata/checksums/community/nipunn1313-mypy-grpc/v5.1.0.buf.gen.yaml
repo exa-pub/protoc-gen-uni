@@ -1,0 +1,48 @@
+# Golden config for community/nipunn1313-mypy-grpc v5.1.0: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Groups: default; readable_stubs with only_async; only_sync with generate_concrete_servicer_stubs and
+# relax_strict_optional_primitives; use_default_deprecation_warnings with quiet; error (Python
+# traceback): only_sync with only_async. python-mypy is the mypy-specific input.
+# Regenerate: scripts/gen-testdata.sh community/nipunn1313-mypy-grpc v5.1.0
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-case
+  - directory: testdata/proto/services-editions
+  - directory: testdata/proto/services-editions2024
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/services-connect
+  - directory: testdata/proto/http-gateway
+  - directory: testdata/proto/http-gateway-delete-body
+  - directory: testdata/proto/http-gateway-scalar-body
+  - directory: testdata/proto/python-mypy
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/community/nipunn1313-mypy-grpc:v5.1.0
+    out: default
+  - remote: buf.build/community/nipunn1313-mypy-grpc:v5.1.0
+    out: readable-async
+    opt: [readable_stubs, only_async]
+  - remote: buf.build/community/nipunn1313-mypy-grpc:v5.1.0
+    out: sync
+    opt: [only_sync, generate_concrete_servicer_stubs, relax_strict_optional_primitives]
+  - remote: buf.build/community/nipunn1313-mypy-grpc:v5.1.0
+    out: deprecation
+    opt: [use_default_deprecation_warnings, quiet]
+  - remote: buf.build/community/nipunn1313-mypy-grpc:v5.1.0
+    out: error-sync-async
+    opt: [only_sync, only_async]

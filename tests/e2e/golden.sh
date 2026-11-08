@@ -2,8 +2,9 @@
 # End-to-end golden test of one generator version: buf runs the plugin binary as a local plugin on
 # testdata/proto/<test> with the option groups of testdata/checksums/<name>/<version>.buf.gen.yaml,
 # and the sum of the output of each test is compared with its line `<sum>  <version>/<test>` in
-# testdata/checksums/<name>/checksums.txt (the sums of the upstream plugin output; the sum is
-# defined in scripts/gen-testdata.sh and computed the same way here, see filesums).
+# testdata/checksums/<name>/checksums.txt (the sums of the upstream plugin output; the sum and the
+# expected errors of failing groups are defined in scripts/gen-testdata.sh and computed the same way
+# here, see filesums, testsums, errtext and entry).
 #
 #   tests/e2e/golden.sh [--runner CMD] BIN NAME VERSION [TEST...]
 #
@@ -57,13 +58,61 @@ filesums() {
 		done | LC_ALL=C sort -t ' ' -k3
 	)
 }
+# The lines of the test sum: filesums of OUT and "<sha256>  <group>:error" of the error texts
+# ERRORS/<group>, sorted by their third field.
+testsums() {
+	{
+		filesums "$1"
+		for f in "$2"/*; do
+			if [ -f "$f" ]; then printf '%s  %s:error\n' "$(sha256 <"$f")" "${f##*/}"; fi
+		done
+	} | LC_ALL=C sort -t ' ' -k3
+}
+# The template with only its K-th plugin entry (1-based).
+entry() {
+	awk -v k="$1" '
+		/^[^[:space:]#]/ { skip = 0 }
+		/^[[:space:]]*-[[:space:]]*(remote|local):/ { n++; skip = (n != k) }
+		!skip
+	' "$2"
+}
+# The error text of a failed plugin named NAME from buf's stderr FILE; fails if FILE is not such an
+# error (a crash, a non-zero exit status of the local plugin, any other failure).
+errtext() {
+	name=$1 awk '
+		{ t = t $0 "\n" }
+		END {
+			n = ENVIRON["name"]
+			p1 = "Failure: failed_precondition: plugin \"" n "\" failed: "
+			p2 = "Failure: invalid_argument: plugin \"" n "\" exited with non-zero status "
+			p3 = "Failure: plugin " n ": "
+			if (index(t, p1) == 1) {
+				t = substr(t, length(p1) + 1)
+			} else if (index(t, p2) == 1) {
+				t = substr(t, length(p2) + 1)
+				i = index(t, "\n")
+				if (substr(t, 1, i - 1) !~ /^[0-9]+$/) exit 1
+				t = substr(t, i + 1)
+				if (t != "" && index(t, "stderr:\n") != 1) exit 1
+				t = substr(t, 9)
+			} else if (index(t, p3) == 1) {
+				t = substr(t, length(p3) + 1)
+				if (t ~ /^(exit status [0-9]+|signal: [^\n]*)\n$/) exit 1
+			} else {
+				exit 1
+			}
+			sub(/\n+$/, "", t)
+			printf "%s\n", t
+		}
+	' "$2"
+}
 # Paths passed to buf: native Windows paths under Git Bash/MSYS (buf is a Windows program there).
 native() { if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else printf '%s\n' "$1"; fi; }
 
 # Skip generators the binary does not contain (`--list` prints "<name> <version>" lines; a binary
 # without --list is assumed to contain everything).
 if list=$(${runner[@]+"${runner[@]}"} "$bin" --list 2>/dev/null); then
-	if ! printf '%s\n' "$list" | grep -qxF "$name $version"; then
+	if ! grep -qxF "$name $version" <<<"$list"; then
 		echo "skip: $name $version is not in $bin"
 		exit 77
 	fi
@@ -84,42 +133,65 @@ else
 	trap 'rm -rf "$work"' EXIT
 fi
 
-# The template with every `remote:` entry replaced by the local binary, uni-name/uni-version
+# The template (stdin) with every `remote:` entry replaced by the local binary, uni-name/uni-version
 # prepended to its options, and `strategy: all` (one request with all files, like remote plugins).
-local_cmd=
-for w in ${runner[@]+"${runner[@]}"} "$(native "$bin")"; do local_cmd="$local_cmd${local_cmd:+, }\"$w\""; done
-tmpl=$work/$(echo "$name" | tr / _)_$version.buf.gen.yaml
-awk -v local="[$local_cmd]" -v uni="uni-name=$name, uni-version=$version" '
-	function flush() { if (pending) print ind "  opt: [" uni "]"; pending = 0 }
-	/^[[:space:]]*-[[:space:]]*remote:/ {
-		flush(); match($0, /^[[:space:]]*/); ind = substr($0, 1, RLENGTH)
-		print ind "- local: " local; print ind "  strategy: all"; pending = 1; next
-	}
-	pending && /^[[:space:]]*opt:/ {
-		if ($0 !~ /^[[:space:]]*opt:[[:space:]]*\[[^]]*[^][:space:]][^]]*\][[:space:]]*$/) {
-			print FILENAME ": opt must be a non-empty one-line list: " $0 > "/dev/stderr"; exit 1
+# buf names the local plugin by its command words joined by spaces (local_name, for errtext).
+local_cmd='' local_name=''
+for w in ${runner[@]+"${runner[@]}"} "$(native "$bin")"; do
+	local_cmd="$local_cmd${local_cmd:+, }\"$w\""
+	local_name="$local_name${local_name:+ }$w"
+done
+to_local() {
+	awk -v src="$template" -v local="[$local_cmd]" -v uni="uni-name=$name, uni-version=$version" '
+		function flush() { if (pending) print ind "  opt: [" uni "]"; pending = 0 }
+		/^[[:space:]]*-[[:space:]]*remote:/ {
+			flush(); match($0, /^[[:space:]]*/); ind = substr($0, 1, RLENGTH)
+			print ind "- local: " local; print ind "  strategy: all"; pending = 1; next
 		}
-		sub(/\[/, "[" uni ", "); print; pending = 0; next
-	}
-	pending && /^[^[:space:]]/ { flush() }
-	{ print }
-	END { flush() }
-' "$template" >"$tmpl"
+		pending && /^[[:space:]]*opt:/ {
+			if ($0 !~ /^[[:space:]]*opt:[[:space:]]*\[[^]]*[^][:space:]][^]]*\][[:space:]]*$/) {
+				print src ": opt must be a non-empty one-line list: " $0 > "/dev/stderr"; exit 1
+			}
+			sub(/\[/, "[" uni ", "); print; pending = 0; next
+		}
+		pending && /^[^[:space:]]/ { flush() }
+		{ print }
+		END { flush() }
+	'
+}
+tmpl=$work/$(echo "$name" | tr / _)_$version.buf.gen.yaml
+to_local <"$template" >"$tmpl"
+ngroups=$(grep -cE '^[[:space:]]*-[[:space:]]*remote:' "$template" || true)
 
 fail=0
 for test in "$@"; do
 	[ -d "testdata/proto/$test" ] || { echo "FAIL $test: testdata/proto/$test not found"; fail=1; continue; }
-	out=$work/$test
-	rm -rf "$out"
+	out=$work/$test errors=$work/$test.errors
+	rm -rf "$out" "$errors"
 	if ! "$BUF" generate "testdata/proto/$test" --template "$(native "$tmpl")" -o "$(native "$out")" >"$work/$test.log" 2>&1; then
-		echo "FAIL $test: buf generate failed:"
-		sed 's/^/    /' "$work/$test.log"
-		fail=1
-		continue
+		# A plugin failed: generate each group alone (expected errors, scripts/gen-testdata.sh).
+		rm -rf "$out"
+		mkdir -p "$out" "$errors"
+		k=0 ok=1
+		while [ $k -lt "$ngroups" ]; do
+			k=$((k + 1))
+			entry "$k" "$template" | to_local >"$tmpl.$k.yaml"
+			g=$(sed -nE 's/^[[:space:]]*-?[[:space:]]*out:[[:space:]]*([^[:space:]#]+).*/\1/p' "$tmpl.$k.yaml")
+			if "$BUF" generate "testdata/proto/$test" --template "$(native "$tmpl.$k.yaml")" -o "$(native "$out")" >"$work/$test.log" 2>&1; then
+				continue
+			fi
+			if ! errtext "$local_name" "$work/$test.log" >"$errors/$g"; then
+				echo "FAIL $test: buf generate failed (group $g):"
+				sed 's/^/    /' "$work/$test.log"
+				ok=0
+				break
+			fi
+		done
+		[ $ok = 1 ] || { fail=1; continue; }
 	fi
 	expected=$(awk -v k="$version/$test" '$2 == k { print $1 }' "$sums")
 	actual=$work/$test.actual
-	filesums "$out" >"$actual"
+	testsums "$out" "$errors" >"$actual"
 	sum=$(sha256 <"$actual")
 	if [ -z "$expected" ]; then
 		echo "FAIL $test: no line for $version/$test in $sums (run scripts/gen-testdata.sh $name $version)"
@@ -127,21 +199,33 @@ for test in "$@"; do
 		continue
 	fi
 	if [ "$sum" = "$expected" ]; then
-		echo "ok   $test ($(wc -l <"$actual" | tr -d ' ') files)"
+		nerr=$(grep -cE '^[0-9a-f]{64}  [A-Za-z0-9._-]+:error$' "$actual" || true)
+		if [ "$nerr" = 0 ]; then
+			echo "ok   $test ($(wc -l <"$actual" | tr -d ' ') files)"
+		else
+			echo "ok   $test ($(($(wc -l <"$actual") - nerr)) files, $nerr expected errors)"
+		fi
 		continue
 	fi
 	fail=1
 	echo "FAIL $test: sum $sum, expected $expected ($sums)"
 	if [ ! -d "$gen" ]; then
+		for f in "$errors"/*; do
+			if [ -f "$f" ]; then echo "    error ${f##*/}:"; sed 's/^/      /' "$f"; fi
+		done
 		echo "    (run scripts/gen-testdata.sh $name $version to get diffs against the upstream output)"
 		continue
 	fi
-	# The upstream lines from $gen/<group>/<test>/<path>.
+	# The upstream lines from $gen/<group>/<test>/<path>, or $gen/<group>/<test> for an error.
 	upstream=$work/$test.upstream
 	for g in "$gen"/*/; do
 		g=${g%/}
 		g=${g##*/}
-		filesums "$gen/$g/$test" | awk -v g="$g" '{ i = index($0, "  "); print substr($0, 1, i + 1) g "/" substr($0, i + 2) }'
+		if [ -f "$gen/$g/$test" ]; then
+			printf '%s  %s:error\n' "$(sha256 <"$gen/$g/$test")" "$g"
+		else
+			filesums "$gen/$g/$test" | awk -v g="$g" '{ i = index($0, "  "); print substr($0, 1, i + 1) g "/" substr($0, i + 2) }'
+		fi
 	done | LC_ALL=C sort -t ' ' -k3 >"$upstream"
 	if [ "$(sha256 <"$upstream")" != "$expected" ]; then
 		echo "    $gen is stale (does not match $sums), rerun scripts/gen-testdata.sh $name $version"
@@ -153,9 +237,13 @@ for test in "$@"; do
 			for (p in a) if (!(p in e)) print "extra   " p
 		}' "$upstream" "$actual" | LC_ALL=C sort -b -k2 | while read -r kind p; do
 		echo "    $kind $p"
-		[ "$kind" = differs ] || continue
-		group=${p%%/*} rest=${p#*/}
-		diff -u "$gen/$group/$test/$rest" "$out/$group/$rest" | head -n "$lines" | sed 's/^/      /' || true
+		case $kind:$p in
+		differs:*:error) diff -u "$gen/${p%:error}/$test" "$errors/${p%:error}" ;;
+		missing:*:error) sed 's/^/  /' "$gen/${p%:error}/$test" ;;
+		extra:*:error) sed 's/^/  /' "$errors/${p%:error}" ;;
+		differs:*) diff -u "$gen/${p%%/*}/$test/${p#*/}" "$out/$p" ;;
+		*) ;;
+		esac | head -n "$lines" | sed 's/^/      /' || true
 	done
 done
 exit $fail

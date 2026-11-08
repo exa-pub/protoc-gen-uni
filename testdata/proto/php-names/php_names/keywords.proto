@@ -1,0 +1,43 @@
+// php-names: open enums (editions) with reserved and valid-constant value names, enum defaults,
+// implicit and explicit presence, and a reserved top-level enum name.
+edition = "2023";
+
+package test.php.keywords;
+
+import "php_names/class/list_items.proto";
+
+enum Bool {
+  BOOL_UNSPECIFIED = 0;
+  class = 1;
+  bool = 2;
+  print = 3;
+  NULL = 4;
+  Readonly = 5;
+  ENUM = 6;
+}
+
+enum Plain {
+  PLAIN_ZERO = 0;
+  PLAIN_ONE = 1;
+}
+
+message Keywords {
+  Bool kind = 1 [default = print];
+  Plain plain = 2;
+  Plain implicit_plain = 3 [features.field_presence = IMPLICIT];
+  int32 implicit_int = 4 [features.field_presence = IMPLICIT, deprecated = true];
+  string text = 5 [default = "x"];
+  test.php.class.list.Function function = 6;
+  repeated Bool kinds = 7;
+  map<int32, Bool> kind_map = 8;
+  map<string, test.php.class.list.Empty> empties = 9;
+  message Interface {
+    enum Trait {
+      TRAIT_UNSPECIFIED = 0;
+    }
+    Trait trait = 1;
+  }
+  Interface iface = 10;
+  int64 field_2a = 11;
+  string a_b_c = 12;
+}

@@ -1,5 +1,6 @@
 /* Arena allocation: a bump allocator over large chunks. Nothing is freed individually; the whole
- * arena is freed by arena_reset() (used between fuzzer iterations).
+ * arena is freed by arena_reset() (used between fuzzer iterations), the part allocated after a mark
+ * by arena_release(). xalloc_keep() allocates from a second list that only arena_reset() frees.
  *
  * With -DUNI_NO_ARENA (sanitizer builds) every object is its own calloc'ed block, so ASan detects
  * overflows; the blocks are kept on a list for arena_reset(). */
@@ -14,27 +15,29 @@ typedef struct Chunk {
 	char pad[16 - sizeof(struct Chunk *)];
 } Chunk;
 
-static Chunk *chunks;
-static char *arena_p, *arena_end;
+static Chunk *chunks, *kept;
+static char *arena_p, *arena_end, *kept_p, *kept_end;
 
 static NORETURN COLD void oom(void) { sys_die("protoc-gen-uni: out of memory\n"); }
 
-static void *new_chunk(size_t payload)
+static void *new_chunk(Chunk **list, size_t payload)
 {
 	if (payload > SIZE_MAX - sizeof(Chunk))
 		oom();
 	Chunk *c = malloc(sizeof(Chunk) + payload);
 	if (!c)
 		oom();
-	c->prev = chunks;
-	chunks = c;
+	c->prev = *list;
+	*list = c;
 	return c + 1;
 }
 
-void *xalloc(size_t n)
+static void *alloc_in(Chunk **list, char **p, char **end, size_t n)
 {
 #ifdef UNI_NO_ARENA
-	void *q = new_chunk(n);
+	(void)p;
+	(void)end;
+	void *q = new_chunk(list, n);
 	memset(q, 0, n);
 	return q;
 #else
@@ -43,16 +46,37 @@ void *xalloc(size_t n)
 	n = (n + 15) & ~(size_t)15;
 	if (n == 0)
 		n = 16;
-	if ((size_t)(arena_end - arena_p) < n) {
+	if ((size_t)(*end - *p) < n) {
 		size_t chunk = n > (1u << 20) ? n : (1u << 20);
-		arena_p = new_chunk(chunk);
-		arena_end = arena_p + chunk;
+		*p = new_chunk(list, chunk);
+		*end = *p + chunk;
 	}
-	void *r = arena_p;
-	arena_p += n;
+	void *r = *p;
+	*p += n;
 	memset(r, 0, n);
 	return r;
 #endif
+}
+
+void *xalloc(size_t n) { return alloc_in(&chunks, &arena_p, &arena_end, n); }
+
+void *xalloc_keep(size_t n) { return alloc_in(&kept, &kept_p, &kept_end, n); }
+
+ArenaMark arena_mark(void)
+{
+	ArenaMark m = {chunks, arena_p, arena_end};
+	return m;
+}
+
+void arena_release(ArenaMark m)
+{
+	while (chunks && chunks != m.chunks) {
+		Chunk *prev = chunks->prev;
+		free(chunks);
+		chunks = prev;
+	}
+	arena_p = m.p;
+	arena_end = m.end;
 }
 
 void *xrealloc(void *p, size_t old, size_t n)
@@ -73,12 +97,18 @@ char *xstrndup(const char *s, size_t n)
 
 char *xstrdup(const char *s) { return xstrndup(s, strlen(s)); }
 
+static void free_list(Chunk **list)
+{
+	while (*list) {
+		Chunk *prev = (*list)->prev;
+		free(*list);
+		*list = prev;
+	}
+}
+
 void arena_reset(void)
 {
-	while (chunks) {
-		Chunk *prev = chunks->prev;
-		free(chunks);
-		chunks = prev;
-	}
-	arena_p = arena_end = NULL;
+	free_list(&chunks);
+	free_list(&kept);
+	arena_p = arena_end = kept_p = kept_end = NULL;
 }

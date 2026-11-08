@@ -1,0 +1,14 @@
+// Test: grpc/php for a file without package.
+edition = "2023";
+
+message RootRequest {
+  string id = 1;
+}
+
+message Echo {
+  string id = 1;
+}
+
+service RootService {
+  rpc Get(RootRequest) returns (Echo);
+}

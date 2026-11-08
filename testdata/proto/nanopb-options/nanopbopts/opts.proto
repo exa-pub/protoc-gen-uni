@@ -1,0 +1,113 @@
+syntax = "proto2";
+package test.opts;
+import "nanopb.proto";
+import "nanopbopts/other.proto";
+import "nanopbopts/incl.proto";
+
+option (nanopb_fileopt).long_names = false;
+
+// Leading comment of E
+enum E {
+  E_A = 1; // trailing
+  E_B = 2;
+  E_NEG = -1;
+}
+
+enum Packed {
+  option (nanopb_enumopt).packed_enum = true;
+  option (nanopb_enumopt).enum_to_string = true;
+  option (nanopb_enumopt).enum_validate = true;
+  option (nanopb_enumopt).enum_intsize = IS_8;
+  P_ZERO = 0;
+  P_ONE = 1;
+}
+
+/* Block comment with */ /* inside */
+message A {
+  option (nanopb_msgopt).msgid = 10;
+  required string s = 1 [(nanopb).max_size = 16, default = "a\"b'c\\d\x01é"];
+  optional bytes b = 2 [(nanopb).max_size = 8, default = "\001\002x\\"];
+  repeated int32 r = 3 [(nanopb).max_count = 4, (nanopb).fixed_count = true];
+  optional int32 i = 4 [default = -5];
+  optional float f = 5 [default = inf];
+  optional double d = 6 [default = 1.5];
+  optional E e = 7 [default = E_B];
+  oneof o {
+    int32 x = 8;
+    B bb = 9;
+    string os = 15 [(nanopb).max_length = 7];
+  }
+  optional fixed64 fx = 10 [default = 123];
+  optional bytes fl = 11 [(nanopb).max_size = 4, (nanopb).fixed_length = true, default = "ab"];
+  optional sint32 si = 12 [default = -3, (nanopb).int_size = IS_8];
+  repeated B bs = 13 [(nanopb).max_count = 2];
+  optional B ptr = 14 [(nanopb).type = FT_POINTER];
+  optional float f2 = 16 [default = 1e10];
+  optional float f3 = 17 [default = -nan];
+  optional uint64 u = 18 [default = 18446744073709551615];
+  optional sint64 s64 = 19 [default = -9223372036854775808];
+  optional bool flag = 20 [default = true];
+  optional Packed pk = 21;
+  optional E e2 = 22;
+  optional other.O ext_msg = 23;
+  repeated other.O ext_msgs = 24 [(nanopb).max_count = 3];
+  optional uint32 cb = 25 [(nanopb).type = FT_CALLBACK, (nanopb).callback_datatype = "my_cb_t*"];
+  repeated string ps = 26 [(nanopb).type = FT_POINTER];
+  optional double dd = 27 [default = 0];
+  optional int64 i64 = 28 [default = 0];
+  optional B msgcb = 29 [(nanopb).submsg_callback = true];
+  optional sfixed32 sf32 = 30 [default = -7];
+  optional sfixed64 sf64 = 31 [default = -8];
+  optional fixed32 f32 = 32 [default = 9];
+  optional uint32 u32 = 33 [default = 4000000000];
+  optional int32 init = 34 [(nanopb).initializer = "42"];
+  optional int32 hasdef = 35 [(nanopb).default_has = true, default = 3];
+  extensions 100 to 200;
+}
+
+message B {
+  option (nanopb_msgopt).packed_struct = true;
+  option (nanopb_msgopt).anonymous_oneof = true;
+  optional int32 X = 1;
+  optional int32 a = 2;
+  repeated B children = 3 [(nanopb).type = FT_POINTER];
+  oneof anon {
+    int32 p = 4;
+    int32 q = 5;
+  }
+}
+
+message C {
+  option (nanopb_msgopt).descriptorsize = DS_8;
+  optional int32 big = 1000;
+  map<string, int32> m = 2;
+  optional A a = 3;
+}
+
+message NoUnion {
+  option (nanopb_msgopt).no_unions = true;
+  oneof nu {
+    int32 n1 = 4;
+    int32 n2 = 5;
+  }
+}
+
+message D {
+  option (nanopb_msgopt).skip_message = true;
+  optional int32 x = 1;
+}
+
+message Ign {
+  optional int32 keep = 1;
+  optional int32 drop = 2 [(nanopb).type = FT_IGNORE];
+  optional int32 old = 3 [deprecated = true];
+}
+
+extend A {
+  optional int32 ext_i = 100;
+  optional B ext_b = 101;
+  repeated int32 ext_r = 102;
+  optional E ext_e = 103;
+}
+
+message Empty {}

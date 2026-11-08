@@ -1,0 +1,32 @@
+// use_oneof_field_name (every field is in a oneof: protoc-gen-c crashes on others) and a
+// c_package for a file without package; gen_pack_helpers unset with a message option on a
+// nested message.
+syntax = "proto2";
+
+import "protobuf-c/protobuf-c.proto";
+
+option (pb_c_file).use_oneof_field_name = true;
+option (pb_c_file).c_package = "nopkg";
+
+message Choice {
+  oneof value {
+    int32 number = 1;
+    string text = 2 [default = "x"];
+    bytes blob = 3;
+  }
+  oneof other {
+    Choice nested = 4;
+  }
+  message Sub {
+    option (pb_c_msg).gen_pack_helpers = true;
+    oneof v {
+      bool b = 1;
+    }
+    message SubSub {
+    }
+  }
+}
+
+enum TopLevel {
+  TOP_LEVEL_X = 0;
+}

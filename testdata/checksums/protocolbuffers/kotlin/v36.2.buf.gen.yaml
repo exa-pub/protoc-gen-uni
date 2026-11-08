@@ -25,3 +25,15 @@ plugins:
   - remote: buf.build/protocolbuffers/kotlin:v36.2
     out: lite
     opt: [lite]
+  - remote: buf.build/protocolbuffers/kotlin:v36.2
+    out: annotate
+    opt: [annotate_code]
+  - remote: buf.build/protocolbuffers/kotlin:v36.2
+    out: lite-no-jvm-dsl
+    opt: [lite, no_jvm_dsl]
+  - remote: buf.build/protocolbuffers/kotlin:v36.2
+    out: strip
+    opt: [experimental_strip_nonfunctional_codegen]
+  - remote: buf.build/protocolbuffers/kotlin:v36.2
+    out: mutable
+    opt: [mutable]

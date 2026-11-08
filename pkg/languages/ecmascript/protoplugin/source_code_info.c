@@ -19,9 +19,13 @@
 
 #include <string.h>
 
+bool comments_normalize_line_breaks = true;
+
 /* comment.replace(/\r\n|[\r  ]/g, "\n") */
 static Str normalize_line_breaks(Str s)
 {
+	if (!comments_normalize_line_breaks)
+		return s;
 	Buf b = {0};
 	for (size_t i = 0; i < s.n;) {
 		const unsigned char *p = (const unsigned char *)s.p + i;
@@ -40,30 +44,48 @@ static Str normalize_line_breaks(Str s)
 	return buf_view(&b);
 }
 
-static Comments find_comments(const PbMsg *file, const Vec *path)
+/* The key of a source path in DescFile.locations. */
+static const char *path_key(const int64_t *path, int n)
 {
-	Comments c = {0};
-	const PbMsg *sci = pb_msg(file, FDP_SOURCE_CODE_INFO);
-	for (int i = 0; i < pb_count(sci, SCI_LOCATION); i++) {
-		const PbMsg *loc = pb_msg_at(sci, SCI_LOCATION, i);
-		const PbSlot *ps = pb_slot(loc, LOC_PATH);
-		if (!ps || ps->n != path->n)
-			continue;
-		bool eq = true;
-		for (int j = 0; j < path->n && eq; j++)
-			eq = (int64_t)ps->v[j].u == (int64_t)(intptr_t)path->v[j];
-		if (!eq)
-			continue;
-		c.n_leading_detached = pb_count(loc, LOC_LEADING_DETACHED);
-		c.leading_detached = xalloc(sizeof(Str) * (size_t)(c.n_leading_detached + 1));
-		for (int j = 0; j < c.n_leading_detached; j++)
-			c.leading_detached[j] = normalize_line_breaks(pb_bytes_at(loc, LOC_LEADING_DETACHED, j));
-		if (pb_has(loc, LOC_LEADING))
-			c.leading = normalize_line_breaks(pb_bytes(loc, LOC_LEADING));
-		if (pb_has(loc, LOC_TRAILING))
-			c.trailing = normalize_line_breaks(pb_bytes(loc, LOC_TRAILING));
-		return c;
+	Buf b = {0};
+	for (int i = 0; i < n; i++)
+		buf_fmt(&b, i ? ",%lld" : "%lld", (long long)path[i]);
+	return buf_str(&b);
+}
+
+/* findComments: the first location with the path. Upstream searches the locations for every
+ * lookup; they are indexed once per file here. */
+static Comments find_comments(DescFile *file, const Vec *path)
+{
+	if (!file->locations_done) {
+		file->locations_done = true;
+		const PbMsg *sci = pb_msg(file->h.proto, FDP_SOURCE_CODE_INFO);
+		for (int i = 0; i < pb_count(sci, SCI_LOCATION); i++) {
+			PbMsg *loc = pb_msg_at(sci, SCI_LOCATION, i);
+			const PbSlot *ps = pb_slot(loc, LOC_PATH);
+			int64_t *p = xalloc(sizeof(int64_t) * (size_t)(ps && ps->n ? ps->n : 1));
+			for (int j = 0; ps && j < ps->n; j++)
+				p[j] = (int64_t)ps->v[j].u;
+			const char *key = path_key(p, ps ? ps->n : 0);
+			if (!map_has(&file->locations, key))
+				map_put(&file->locations, key, loc);
+		}
 	}
+	int64_t *p = xalloc(sizeof(int64_t) * (size_t)(path->n ? path->n : 1));
+	for (int j = 0; j < path->n; j++)
+		p[j] = (intptr_t)path->v[j];
+	const PbMsg *loc = map_get(&file->locations, path_key(p, path->n));
+	Comments c = {0};
+	if (!loc)
+		return c;
+	c.n_leading_detached = pb_count(loc, LOC_LEADING_DETACHED);
+	c.leading_detached = xalloc(sizeof(Str) * (size_t)(c.n_leading_detached + 1));
+	for (int j = 0; j < c.n_leading_detached; j++)
+		c.leading_detached[j] = normalize_line_breaks(pb_bytes_at(loc, LOC_LEADING_DETACHED, j));
+	if (pb_has(loc, LOC_LEADING))
+		c.leading = normalize_line_breaks(pb_bytes(loc, LOC_LEADING));
+	if (pb_has(loc, LOC_TRAILING))
+		c.trailing = normalize_line_breaks(pb_bytes(loc, LOC_TRAILING));
 	return c;
 }
 
@@ -125,18 +147,18 @@ Comments get_comments(const Desc *d)
 {
 	Vec path = {0};
 	source_path(d, &path);
-	return find_comments(desc_file_of(d)->h.proto, &path);
+	return find_comments(desc_file_of(d), &path);
 }
 
-static Comments file_comments(const DescFile *f, int num)
+static Comments file_comments(DescFile *f, int num)
 {
 	Vec path = {0};
 	vec_push(&path, (void *)(intptr_t)num);
-	return find_comments(f->h.proto, &path);
+	return find_comments(f, &path);
 }
 
-Comments get_syntax_comments(const DescFile *f) { return file_comments(f, FDP_SYNTAX); }
-Comments get_package_comments(const DescFile *f) { return file_comments(f, FDP_PACKAGE); }
+Comments get_syntax_comments(DescFile *f) { return file_comments(f, FDP_SYNTAX); }
+Comments get_package_comments(DescFile *f) { return file_comments(f, FDP_PACKAGE); }
 
 /* The enum fields of google.protobuf.FeatureSet known to @bufbuild/protobuf v2.17.0. */
 static const char *const feature_names[9] = {

@@ -50,6 +50,8 @@ static void parse_bool(Str raw, Str value, bool *dst)
 /* "<pattern>:<target>" of rewrite_imports and map_imports. */
 static PatternTarget *pattern_target(Str raw, Str value, bool rewrite)
 {
+	if (memchr(value.p, 0, value.n))
+		fail("unsupported by protoc-gen-uni: NUL byte in option %s", quote_json(raw));
 	const char *c = memchr(value.p, ':', value.n);
 	size_t i = c ? (size_t)(c - value.p) : 0;
 	if (!c || (!rewrite && (i < 1 || i == value.n - 1)))
@@ -101,7 +103,7 @@ void parse_parameter(Schema *s, const EsPlugin *p, Str parameter)
 			/* rewrite_imports can be noisy and is more of an implementation detail
 			 * so we strip it out of the preamble */
 			sanitize = true;
-		} else if (str_eqc(key, "map_imports")) {
+		} else if (str_eqc(key, "map_imports") && !V2_13(s)) {
 			vec_push(&o->map_imports, pattern_target(raw, value, false));
 		} else if (str_eqc(key, "import_extension")) {
 			if (str_eqc(value, "none") || !value.n)
@@ -122,6 +124,8 @@ void parse_parameter(Schema *s, const EsPlugin *p, Str parameter)
 		} else if (str_eqc(key, "keep_empty_files")) {
 			parse_bool(raw, value, &o->keep_empty_files);
 		} else {
+			if (!p->parse_options)
+				plugin_option_error(raw, NULL);
 			extra[n_extra++] = (RawOption){key, value};
 			if (n_extra > 1)
 				buf_addc(&extra_raw, ',');
@@ -134,6 +138,8 @@ void parse_parameter(Schema *s, const EsPlugin *p, Str parameter)
 		}
 	}
 	s->sanitized_parameter = buf_view(&sanitized);
+	if (!p->parse_options)
+		return;
 	const char *err = p->parse_options(extra, n_extra, &s->plugin_options);
 	if (err)
 		plugin_option_error(buf_view(&extra_raw), err);

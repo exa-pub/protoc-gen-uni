@@ -1,0 +1,15 @@
+// Test: proto3 field names that differ in JSON (buf accepts them) but not once lower-cased
+// without underscores, which protobuf 3.x rejects (ValidateProto3Message).
+syntax = "proto3";
+
+package jc.p3;
+
+message Ok {
+  int32 value = 1;
+}
+
+message Conflicts {
+  int32 foobar = 1;
+  int32 foo_bar = 2;
+  int32 f_oobar = 3;
+}

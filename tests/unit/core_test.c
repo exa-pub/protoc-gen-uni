@@ -110,5 +110,33 @@ static void test_arena(void)
 	}
 }
 
+/* arena_mark / arena_release / xalloc_keep: memory after the mark is reused, kept memory and memory
+ * before the mark stay valid */
+static void test_arena_mark(void)
+{
+	char *before = xstrdup("before");
+	for (int round = 0; round < 3; round++) {
+		ArenaMark m = arena_mark();
+		char *scratch = xalloc(64);
+		char *big = xalloc(3 << 20);
+		big[0] = 1;
+		char *keep = xalloc_keep(16);
+		memcpy(keep, "kept", 5);
+		memcpy(scratch, "scratch", 8);
+		arena_release(m);
+		char *again = xalloc(64);
+#ifndef UNI_NO_ARENA
+		CHECK(again == scratch); /* the bump pointer was restored */
+#else
+		(void)again;
+		(void)scratch;
+#endif
+		CHECK_STR(keep, "kept");
+		CHECK_STR(before, "before");
+	}
+	arena_reset();
+}
+
 TESTS(TEST(test_quote_go), TEST(test_quote_json), TEST(test_utf8_decode), TEST(test_go_trim_space),
-      TEST(test_base64), TEST(test_split), TEST(test_fmt), TEST(test_map), TEST(test_fail), TEST(test_arena))
+      TEST(test_base64), TEST(test_split), TEST(test_fmt), TEST(test_map), TEST(test_fail), TEST(test_arena),
+      TEST(test_arena_mark))

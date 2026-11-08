@@ -28,9 +28,10 @@
 
 /* The messages of google/protobuf/descriptor.proto, compiler/plugin.proto and go_features.proto
  * as compiled into google.golang.org/protobuf v1.36.12 (types/descriptorpb, types/pluginpb,
- * types/gofeaturespb): field numbers, types, labels, packedness, retention=SOURCE and whether
- * the message has extension ranges. Dumped from the Go descriptors (protoreflect) of that
- * version. FeatureSetDefaults is not needed (features.c has the defaults as a table). */
+ * types/gofeaturespb): field numbers, types, labels (required: NamePart only), packedness,
+ * retention=SOURCE and whether the message has extension ranges. Dumped from the Go descriptors
+ * (protoreflect) of that version. FeatureSetDefaults is not needed (features.c has the defaults
+ * as a table). */
 #include "internal.h"
 
 enum {
@@ -107,7 +108,10 @@ static const GoSpecField f_MethodOptions[] = {F(33, BOOL), F(34, ENUM), FM(35, F
 static const GoSpecField f_UninterpretedOption[] = {
 	RM(2, NamePart), F(3, STRING), F(4, UINT64), F(5, INT64), F(6, DOUBLE), F(7, BYTES), F(8, STRING),
 };
-static const GoSpecField f_NamePart[] = {F(1, STRING), F(2, BOOL)};
+static const GoSpecField f_NamePart[] = {
+	{1, PT_STRING, PL_OPT, GOF_REQUIRED, -1}, {2, PT_BOOL, PL_OPT, GOF_REQUIRED, -1},
+};
+static const char *const n_NamePart[] = {"name_part", "is_extension"};
 static const GoSpecField f_FeatureSet[] = {
 	F(1, ENUM), F(2, ENUM), F(3, ENUM), F(4, ENUM), F(5, ENUM), F(6, ENUM), FS(7, ENUM), FS(8, ENUM),
 };
@@ -121,7 +125,7 @@ static const GoSpecField f_CodeGeneratorRequest[] = {
 };
 static const GoSpecField f_GoFeatures[] = {F(1, BOOL), F(2, ENUM), F(3, ENUM)};
 
-#define MSG(name, fields, ext) {name, fields, (int)(sizeof fields / sizeof *fields), ext}
+#define MSG(name, fields, ext) {name, fields, (int)(sizeof fields / sizeof *fields), ext, NULL}
 const GoSpecMsg go_spec_msgs[M_COUNT] = {
 	MSG("google.protobuf.FileDescriptorProto", f_FileDescriptorProto, false),
 	MSG("google.protobuf.DescriptorProto", f_DescriptorProto, false),
@@ -147,7 +151,7 @@ const GoSpecMsg go_spec_msgs[M_COUNT] = {
 	MSG("google.protobuf.ServiceOptions", f_ServiceOptions, true),
 	MSG("google.protobuf.MethodOptions", f_MethodOptions, true),
 	MSG("google.protobuf.UninterpretedOption", f_UninterpretedOption, false),
-	MSG("google.protobuf.UninterpretedOption.NamePart", f_NamePart, false),
+	{"google.protobuf.UninterpretedOption.NamePart", f_NamePart, 2, false, n_NamePart},
 	MSG("google.protobuf.FeatureSet", f_FeatureSet, true),
 	MSG("google.protobuf.SourceCodeInfo", f_SourceCodeInfo, true),
 	MSG("google.protobuf.SourceCodeInfo.Location", f_Location, false),

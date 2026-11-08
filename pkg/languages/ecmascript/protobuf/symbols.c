@@ -12,10 +12,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. */
 
-/* Ported from packages/protobuf/src/codegenv2/symbols.ts (wktPublicImportPaths),
+/* Ported from packages/protobuf/src/codegenv2/symbols.ts (wktPublicImportPaths, also of v2.13.0),
  * codegenv2/scalar.ts (scalarTypeScriptType, scalarJsonType) and wkt/wrappers.ts
  * (isWrapperDesc). */
 #include "protobuf.h"
+
+#include <string.h>
 
 static bool is_64bit(int s)
 {
@@ -87,5 +89,24 @@ const char *wkt_public_import_path(const char *name)
 	for (size_t i = 0; i < sizeof own / sizeof *own; i++)
 		if (str_eq(name, own[i]))
 			return xcat("@bufbuild/protobuf/wkt/", str_trim_suffix(name, ".proto"), "_pb.js");
+	return NULL;
+}
+
+/* v2.13.0: every well-known file it knows is imported from the barrel. */
+const char *wkt_public_import_path_v2_13_0(const char *name)
+{
+	static const char *const files[] = {
+		"compiler/plugin", "any", "api", "cpp_features", "descriptor", "duration", "empty",
+		"field_mask", "go_features", "java_features", "source_context", "struct", "timestamp",
+		"type", "wrappers",
+	};
+	if (!has_prefix(name, "google/protobuf/"))
+		return NULL;
+	const char *rest = name + strlen("google/protobuf/");
+	for (size_t i = 0; i < sizeof files / sizeof *files; i++) {
+		size_t n = strlen(files[i]);
+		if (!strncmp(rest, files[i], n) && str_eq(rest + n, ".proto"))
+			return "@bufbuild/protobuf/wkt";
+	}
 	return NULL;
 }

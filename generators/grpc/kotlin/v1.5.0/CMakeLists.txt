@@ -1,0 +1,1 @@
+uni_generator(LIBRARIES kotlin_formatters_kotlinpoet java_protobuf_java uni_pb)

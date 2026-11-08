@@ -1,17 +1,24 @@
 # Golden config for community/nanopb v0.4.91: inputs = tests (testdata/proto/<test>),
 # one plugin entry = one option group (out: <group>).
-# Inputs left out: upstream fails on proto2 (circular dependency) and naming (traceback); no editions support.
-# Real-project inputs left out: real-protovalidate (groups not supported), real-protovalidate-editions (no editions).
+# proto2 and naming have groups, which upstream rejects with a traceback (NotImplementedError: 10).
+# Inputs left out: no editions support (buf refuses the plugin for editions files):
+# editions2023, editions2024, go-features, real-protovalidate-editions; real-protovalidate (groups).
+# Error groups: badsetting (text_format.ParseError of -s), badopt (optparse), badquote (shlex).
 # Regenerate: scripts/gen-testdata.sh community/nanopb v0.4.91
 version: v2
 inputs:
   - directory: testdata/proto/proto3
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/naming
   - directory: testdata/proto/wkt
   - directory: testdata/proto/services
   - directory: testdata/proto/imports
   - directory: testdata/proto/comments
   - directory: testdata/proto/custom-options
   - directory: testdata/proto/empty
+  - directory: testdata/proto/scala-options
+  - directory: testdata/proto/dart-long
+  - directory: testdata/proto/nanopb-options
   - directory: testdata/proto/real-googleapis
   - directory: testdata/proto/real-otel
 plugins:
@@ -23,3 +30,21 @@ plugins:
   - remote: buf.build/community/nanopb:v0.4.91
     out: ext
     opt: [--extension=.npb, --header-extension=.hpp, --source-extension=.cpp, --cpp-descriptors]
+  - remote: buf.build/community/nanopb:v0.4.91
+    out: settings
+    opt: [-s, "max_size:32", -s, "max_count:4", --protoc-insertion-points]
+  - remote: buf.build/community/nanopb:v0.4.91
+    out: formats
+    opt: [-Q, "#include <%s>", -L, quote]
+  - remote: buf.build/community/nanopb:v0.4.91
+    out: mangle
+    opt: [-s, "mangle_names:M_STRIP_PACKAGE", -s, "long_names:false"]
+  - remote: buf.build/community/nanopb:v0.4.91
+    out: badsetting
+    opt: [-s, "foo:1"]
+  - remote: buf.build/community/nanopb:v0.4.91
+    out: badopt
+    opt: [--foo]
+  - remote: buf.build/community/nanopb:v0.4.91
+    out: badquote
+    opt: ['"a']

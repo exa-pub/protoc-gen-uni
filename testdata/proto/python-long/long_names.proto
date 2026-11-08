@@ -1,0 +1,96 @@
+// Fields, maps, oneofs, wrappers and services with long names and long comments.
+syntax = "proto3";
+
+package python_long;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "very_long_package_name_for_the_imports/of_the_python_formatter/shared_definitions.proto";
+
+// LongFields has fields whose annotated assignments do not fit on one line: black splits them at
+// the parentheses of the call first, then puts the annotation in parentheses, then explodes the
+// arguments one per line with a trailing comma, which the second pass of format_str keeps.
+message LongFields {
+  // The call fits after splitting at its parentheses.
+  string a_field_name_that_is_long_enough_to_push_the_call_over_the_limit_x = 1;
+  // The annotation itself is long: a type from the long package.
+  very_long_package_name_for_the_imports.of_the_python_formatter.shared_definitions.AnExtremelyLongMessageNameThatMakesTheClassLineLongerThanTheLimitOfEightyEight imported_message_with_a_long_type = 2;
+  // Repeated and map fields of long message types: List[...] and Dict[...] annotations.
+  repeated very_long_package_name_for_the_imports.of_the_python_formatter.shared_definitions.AnExtremelyLongMessageNameThatMakesTheClassLineLongerThanTheLimitOfEightyEight repeated_imported_messages = 3;
+  map<string, very_long_package_name_for_the_imports.of_the_python_formatter.shared_definitions.AnExtremelyLongMessageNameThatMakesTheClassLineLongerThanTheLimitOfEightyEight> map_of_imported_messages_by_key = 4;
+  map<int64, LongFields> map_with_a_field_name_that_is_so_long_that_the_head_does_not_fit = 5;
+  map<string, google.protobuf.Timestamp> timestamps_by_a_long_key_name_in_the_map_field_x = 6;
+  oneof a_oneof_group_with_a_rather_long_name_that_is_repeated_in_every_field {
+    google.protobuf.Int64Value wrapped_integer_value_in_a_oneof_with_a_long_group = 7;
+    google.protobuf.Value dynamic_value_in_the_oneof = 8;
+    google.protobuf.Duration duration_in_the_oneof_with_a_long_group_name = 9;
+  }
+  very_long_package_name_for_the_imports.of_the_python_formatter.shared_definitions.Outer.InnerMessageWithAQuiteLongName.DeeplyNestedMessageWithAnotherLongName deeply_nested = 10;
+  very_long_package_name_for_the_imports.of_the_python_formatter.shared_definitions.AVeryLongEnumerationNameThatAlsoNeedsToBeSplitOverSeveralLinesByTheFormatter an_enum_field = 11;
+  google.protobuf.BoolValue x = 12;
+  repeated google.protobuf.StringValue repeated_wrapped_strings_with_a_long_field_name_xx = 13;
+  map<string, google.protobuf.ListValue> list_values = 14;
+  // A comment with "quotes", 'single quotes', back\slashes, tabs	and	hyphenated-words-that-wrap,
+  // em--dashes -- and a URL https://example.com/a-very-long-path/with-hyphens-in-it?query=value-x
+  // so that textwrap breaks the words exactly like Python: well-known, self-describing, e-mail.
+  int32 commented = 15;
+  // Non-ASCII text: Größe, naïve, 日本語のコメント, emoji-free… and non-breaking spaces.
+  int32 unicode_commented = 16;
+}
+
+// A message comment that is short."
+message ShortDocstring {
+  // "A field comment in quotes"
+  int32 x = 1;
+}
+
+/* A block comment
+ * with several lines that are joined without spaces by betterproto because it removes every
+ * newline before wrapping the text at 75 columns, so that words run together.
+ */
+message JoinedLines {}
+
+// A docstring whose last line is long: black puts the closing quotes on their own line when they would pass the limit.......
+message ClosingQuotes {
+  Outer.InnerMessageWithAQuiteLongName.DeeplyNestedMessageWithAnotherLongName local_nested_type_reference = 1;
+}
+
+message RequestWithManyFieldsSoThatTheMethodSignatureIsLong {
+  string first_parameter_name = 1;
+  int64 second_parameter_name = 2;
+  LongFields message_parameter = 3;
+  repeated string repeated_parameter = 4;
+  map<string, int32> map_parameter = 5;
+  google.protobuf.StringValue wrapped_parameter = 6;
+  bytes bytes_parameter = 7;
+  bool flag = 8;
+}
+
+message R {
+  string a = 1;
+}
+
+message Outer {
+  message InnerMessageWithAQuiteLongName {
+    message DeeplyNestedMessageWithAnotherLongName {
+      enum NestedEnumInADeeplyNestedMessageWithALongNameForTheClassLineToBeSplit {
+        NESTED_UNSPECIFIED = 0;
+      }
+      NestedEnumInADeeplyNestedMessageWithALongNameForTheClassLineToBeSplit e = 1;
+    }
+  }
+}
+
+// A service whose methods have long signatures: black splits def lines at the parameters (lhs),
+// and the calls of the method bodies have magic trailing commas from the template.
+service AServiceWithAVeryLongNameForTheStubClassWhichIsAlsoLongerThanTheLineLimit {
+  // A method with many parameters from its request message.
+  rpc MethodWithManyParameters(RequestWithManyFieldsSoThatTheMethodSignatureIsLong) returns (LongFields);
+  // A server streaming method with a long output type in AsyncGenerator.
+  rpc ServerStreamingMethodWithALongOutputType(R) returns (stream very_long_package_name_for_the_imports.of_the_python_formatter.shared_definitions.AnExtremelyLongMessageNameThatMakesTheClassLineLongerThanTheLimitOfEightyEight);
+  rpc OneParameter(R) returns (R);
+  rpc NoParametersButAVeryLongMethodNameThatNeedsToBeSplitAcrossLines(google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc Wrapped(google.protobuf.StringValue) returns (google.protobuf.StringValue);
+}

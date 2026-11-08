@@ -1,6 +1,8 @@
 # Golden config for community/protobuf-c v1.5.2: inputs = tests (testdata/proto/<test>),
 # one plugin entry = one option group (out: <group>).
-# Inputs left out: upstream crashes (SIGSEGV) on proto2 and naming; protobuf 3.21 rejects editions.
+# Inputs left out: upstream crashes (SIGSEGV) on group fields (proto2, naming, scala-proto2).
+# editions2023: protobuf 3.21 rejects editions (expected error); json-conflicts-proto3: protobuf
+# 3.21 rejects what buf accepts (expected error).
 # Real-project inputs left out: real-protovalidate (upstream SIGSEGV), real-protovalidate-editions (no editions).
 # Regenerate: scripts/gen-testdata.sh community/protobuf-c v1.5.2
 version: v2
@@ -14,9 +16,16 @@ inputs:
   - directory: testdata/proto/empty
   - directory: testdata/proto/real-googleapis
   - directory: testdata/proto/real-otel
+  - directory: testdata/proto/c-options
+  - directory: testdata/proto/json-conflicts-proto2
+  - directory: testdata/proto/json-conflicts-proto3
+  - directory: testdata/proto/editions2023
 plugins:
   - remote: buf.build/community/protobuf-c:v1.5.2
     out: default
   - remote: buf.build/community/protobuf-c:v1.5.2
     out: dllexport
     opt: [dllexport_decl=MY_EXPORT]
+  - remote: buf.build/community/protobuf-c:v1.5.2
+    out: unknown-option
+    opt: [dllexport_decl=, foo=bar]

@@ -1,0 +1,56 @@
+# Golden config for connectrpc/go v2.0.2: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Inputs set no go_package: managed mode adds go_package_prefix.
+# Groups: paths=source_relative; package_suffix empty (same package); package_suffix=rpc with module=;
+# annotate_code (.meta files); default import paths with the connect suffix; errors: a package_suffix
+# that is not a Go identifier, an unknown flag.
+# Regenerate: scripts/gen-testdata.sh connectrpc/go v2.0.2
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: example.com/gen
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-case
+  - directory: testdata/proto/services-editions
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/services-connect
+  - directory: testdata/proto/services-editions2024
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/connectrpc/go:v2.0.2
+    out: source-relative
+    opt: [paths=source_relative]
+  - remote: buf.build/connectrpc/go:v2.0.2
+    out: same-package
+    opt: [paths=source_relative, package_suffix]
+  - remote: buf.build/connectrpc/go:v2.0.2
+    out: suffix-module
+    opt: [package_suffix=rpc, module=example.com/gen]
+  - remote: buf.build/connectrpc/go:v2.0.2
+    out: annotate
+    opt: [paths=source_relative, annotate_code]
+  - remote: buf.build/connectrpc/go:v2.0.2
+    out: import-path
+  - remote: buf.build/connectrpc/go:v2.0.2
+    out: error-suffix
+    opt: [package_suffix=1rpc]
+  - remote: buf.build/connectrpc/go:v2.0.2
+    out: error-unknown
+    opt: [foo=bar]

@@ -1,0 +1,45 @@
+# Golden config for connectrpc/kotlin v0.10.0: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Groups: default (coroutine methods); generateCallbackMethods=true; snake_case keys with coroutine
+# methods off, blocking unary methods on and TRUE (Kotlin toBoolean ignores case); values that
+# toBoolean reads as false and an unknown key (ignored).
+# proto2 tests an upstream crash: a file-level extension of type group (Plugin.kt adds it to the
+# ExtensionRegistry without a default instance; IllegalArgumentException with its stack trace).
+# kotlin-long: long names and comments with the ♢ wrap points and · spaces of KotlinPoet.
+# Inputs left out: editions2023 (the same crash as proto2: a delimited message extension).
+# Regenerate: scripts/gen-testdata.sh connectrpc/kotlin v0.10.0
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-case
+  - directory: testdata/proto/services-editions
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/services-connect
+  - directory: testdata/proto/services-editions2024
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+  - directory: testdata/proto/kotlin-long
+plugins:
+  - remote: buf.build/connectrpc/kotlin:v0.10.0
+    out: default
+  - remote: buf.build/connectrpc/kotlin:v0.10.0
+    out: callbacks
+    opt: [generateCallbackMethods=true]
+  - remote: buf.build/connectrpc/kotlin:v0.10.0
+    out: snake-case
+    opt: [generate_coroutine_methods=false, generate_blocking_unary_methods=true, generateCallbackMethods=TRUE]
+  - remote: buf.build/connectrpc/kotlin:v0.10.0
+    out: ignored
+    opt: [generateCoroutineMethods=yes, generateCallbackMethods=1, foo=bar]

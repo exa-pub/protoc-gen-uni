@@ -1,0 +1,12 @@
+// A file with (pb_c_file).no_generate: no output, and no #include of it.
+syntax = "proto2";
+
+package copts.nogen;
+
+import "protobuf-c/protobuf-c.proto";
+
+option (pb_c_file).no_generate = true;
+
+message Hidden {
+  optional int32 x = 1;
+}

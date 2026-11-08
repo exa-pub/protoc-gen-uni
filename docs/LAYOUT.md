@@ -9,8 +9,8 @@ similar code stays in its upstream library.
 ```
 pkg/
 ├── core/ pb/ uni/           libc helpers; wire format and schemas; uni-name dispatch
-├── proto/                   descriptor model shared by plugin libraries (planned)
-├── num/                     shortest float (now pkg/fmtnum)
+├── proto/                   descriptor model shared by plugin libraries
+├── num/                     shortest float
 └── languages/<language>/
     ├── std/                 standard library, as far as it shows in output
     ├── <library>/           upstream library under its own name (protogen, libprotoc, heck, …)
@@ -25,11 +25,12 @@ testdata/
 ├── checksums/<owner>/<plugin>/
 │   ├── <version>.buf.gen.yaml  buf template: test inputs, option groups
 │   └── checksums.txt        upstream output sum per version and test
+├── size-budget.txt          bytes each generator version may add (scripts/size.sh)
 └── gen/                     upstream output for diffs (not committed)
 ```
 
 Dependencies point down: generator → common → libraries, formatters → std → proto, num → core, pb;
-generators never use each other. Some directories predate this layout and move in a separate step.
+generators never use each other.
 
 ## Applying it
 

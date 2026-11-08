@@ -1,0 +1,1 @@
+uni_generator(LIBRARIES rust_buffa_codegen rust_heck)

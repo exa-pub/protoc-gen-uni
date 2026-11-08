@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+// A file without package.
+
+import "rpcnames/greeter.proto";
+
+message RootMessage {
+  string value = 1;
+}
+
+service RootService {
+  rpc Call(RootMessage) returns (RootMessage);
+  rpc Greet(stream test.rpcnames.Request) returns (stream RootMessage);
+}

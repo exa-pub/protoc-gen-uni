@@ -1,0 +1,48 @@
+# Golden config for connectrpc/swift v1.2.3: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Groups: default; Visibility=Public with FileNaming=PathToUnderscores; callback methods without async
+# methods, KeepMethodCasing and no service metadata; Visibility=Package with FileNaming=DropPath,
+# repeated ExtraModuleImports and SwiftProtobufModuleName; errors: an invalid value (values are
+# case-sensitive), an unknown parameter.
+# Not tested: ProtoPathModuleMappings (reads a local file).
+# Inputs left out: editions2024, services-editions2024 (maximum edition 2023, buf rejects them).
+# Regenerate: scripts/gen-testdata.sh connectrpc/swift v1.2.3
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-case
+  - directory: testdata/proto/services-editions
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/services-connect
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/connectrpc/swift:v1.2.3
+    out: default
+  - remote: buf.build/connectrpc/swift:v1.2.3
+    out: public
+    opt: [Visibility=Public, FileNaming=PathToUnderscores]
+  - remote: buf.build/connectrpc/swift:v1.2.3
+    out: callbacks
+    opt: [GenerateCallbackMethods=true, GenerateAsyncMethods=false, KeepMethodCasing=true, GenerateServiceMetadata=false]
+  - remote: buf.build/connectrpc/swift:v1.2.3
+    out: package
+    opt: [Visibility=Package, FileNaming=DropPath, ExtraModuleImports=Foo, ExtraModuleImports=Bar, SwiftProtobufModuleName=SP]
+  - remote: buf.build/connectrpc/swift:v1.2.3
+    out: error-value
+    opt: [Visibility=public]
+  - remote: buf.build/connectrpc/swift:v1.2.3
+    out: error-unknown
+    opt: [foo=bar]

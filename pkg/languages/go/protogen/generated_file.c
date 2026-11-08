@@ -7,7 +7,7 @@
  * internal/encoding/text (string quoting of the compact prototext of .meta files). */
 #include "internal.h"
 
-#include "go1_26_5.h"
+#include "go_std.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -121,7 +121,7 @@ void pg_p(PgGeneratedFile *g, const PgArg *args, int n)
 
 static int cmp_import(const void *a, const void *b)
 {
-	return strcmp(((const go1_26_5_import *)a)->path, ((const go1_26_5_import *)b)->path);
+	return strcmp(((const go_std_import *)a)->path, ((const go_std_import *)b)->path);
 }
 
 /* The bad code with line numbers (bufio.Scanner lines, "%5d\t%s\n"); a debugging aid upstream. */
@@ -157,19 +157,19 @@ bool pg_content(PgGeneratedFile *g, Str *out, Str *err)
 	}
 	/* Collect a sorted list of all imports. */
 	int ni = g->packageNameKeys.n + g->manualImportKeys.n;
-	go1_26_5_import *imports = xalloc(sizeof *imports * (size_t)(ni ? ni : 1));
+	go_std_import *imports = xalloc(sizeof *imports * (size_t)(ni ? ni : 1));
 	int k = 0;
 	for (int i = 0; i < g->packageNameKeys.n; i++) {
 		const char *path = g->packageNameKeys.v[i];
 		const char *rewritten = g->gen->opts.ImportRewriteFunc ? g->gen->opts.ImportRewriteFunc(g->gen->opts.ImportRewriteCtx, path) : path;
-		imports[k++] = (go1_26_5_import){map_get(&g->packageNames, path), rewritten};
+		imports[k++] = (go_std_import){map_get(&g->packageNames, path), rewritten};
 	}
 	for (int i = 0; i < g->manualImportKeys.n; i++) {
 		const char *path = g->manualImportKeys.v[i];
 		if (map_get(&g->packageNames, path))
 			continue;
 		const char *rewritten = g->gen->opts.ImportRewriteFunc ? g->gen->opts.ImportRewriteFunc(g->gen->opts.ImportRewriteCtx, path) : path;
-		imports[k++] = (go1_26_5_import){"_", rewritten};
+		imports[k++] = (go_std_import){"_", rewritten};
 	}
 	qsort(imports, (size_t)k, sizeof *imports, cmp_import);
 
@@ -177,7 +177,7 @@ bool pg_content(PgGeneratedFile *g, Str *out, Str *err)
 	if (!original.p)
 		original = (Str){"", 0};
 	Buf formatted = {0};
-	const char *perr = go1_26_5_format_content(original.p, original.n, imports, (size_t)k, &formatted);
+	const char *perr = go_std_format_content(original.p, original.n, imports, (size_t)k, &formatted);
 	if (perr) {
 		Buf e = {0};
 		buf_adds(&e, xcat(g->filename, ": unparsable Go source: ", perr, "\n"));
@@ -236,32 +236,34 @@ static void text_append_string(Buf *out, const char *in)
  * randomly doubles some spaces per binary, this writes single spaces). */
 static bool meta_file(PgGeneratedFile *g, Str content, Str *out, Str *err)
 {
-	go1_26_5_ident *ids;
+	go_std_ident *ids;
 	size_t nids;
-	const char *perr = go1_26_5_decl_idents(content.p, content.n, &ids, &nids);
+	const char *perr = go_std_decl_idents(content.p, content.n, &ids, &nids);
 	if (perr) {
 		*err = str_c(perr);
 		return false;
 	}
 	Map seen = {0};
 	Buf b = {0};
+	/* prototext.Marshal (single line): the space between fields, doubled by detrand.Bool() */
+	const char *sp = go_detrand ? "  " : " ";
 	for (size_t i = 0; i < nids; i++) {
 		map_put(&seen, ids[i].symbol, MAP_TRUE);
 		Vec *as = map_get(&g->annotations, ids[i].symbol);
 		for (int j = 0; as && j < as->n; j++) {
 			const PgAnnotation *a = as->v[j];
 			if (b.n)
-				buf_addc(&b, ' ');
+				buf_adds(&b, sp);
 			buf_adds(&b, "annotation:{");
 			for (int k = 0; k < a->Location.nPath; k++)
-				buf_adds(&b, xcat("path:", go_itoa(a->Location.Path[k]), " "));
+				buf_adds(&b, xcat("path:", go_itoa(a->Location.Path[k]), sp));
 			buf_adds(&b, "source_file:");
 			text_append_string(&b, a->Location.SourceFile);
-			buf_adds(&b, xcat(" begin:", go_itoa(ids[i].begin), " end:", go_itoa(ids[i].end)));
+			buf_adds(&b, xcat(sp, "begin:", go_itoa(ids[i].begin), sp, "end:", go_itoa(ids[i].end)));
 			if (a->Semantic) {
 				static const char *const sem[] = {"NONE", "SET", "ALIAS"};
 				int s = a->Semantic - 1;
-				buf_adds(&b, xcat(" semantic:", s >= 0 && s < 3 ? sem[s] : go_itoa(s)));
+				buf_adds(&b, xcat(sp, "semantic:", s >= 0 && s < 3 ? sem[s] : go_itoa(s)));
 			}
 			buf_addc(&b, '}');
 		}
@@ -307,7 +309,8 @@ void pg_plugin_response(PgPlugin *gen, Buf *out)
 	}
 	if (gen->has_err) {
 		pb_put_bytes(out, CGRESP_ERROR, gen->err);
-		buf_add(out, head.p, head.n);
+		if (PG_V1_36(gen->opts.Version)) /* v1.31.0: without supported_features */
+			buf_add(out, head.p, head.n);
 		return;
 	}
 	for (int i = 0; i < gen->genFiles.n; i++) {

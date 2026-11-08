@@ -1,0 +1,121 @@
+diff --git a/pkg/languages/go/protogen/protogen.go b/pkg/languages/go/protogen/protogen.go
+index 08fdce3..11cd31c 100644
+--- a/pkg/languages/go/protogen/protogen.go
++++ b/pkg/languages/go/protogen/protogen.go
+@@ -1492,6 +1492,9 @@ func (g *GeneratedFile) Content() ([]byte, error) {
+ 	if err = (&printer.Config{Mode: printer.TabIndent | printer.UseSpaces, Tabwidth: 8}).Fprint(&out, fset, file); err != nil {
+ 		return nil, fmt.Errorf("%v: can not reformat Go source: %v", g.filename, err)
+ 	}
++	if dir := os.Getenv(dumpGofmtEnv); dir != "" {
++		dumpGofmt(dir, original, importPaths, out.Bytes())
++	}
+ 	return out.Bytes(), nil
+ }
+ 
+diff --git a/pkg/languages/go/protogen/protogen_dump.go b/pkg/languages/go/protogen/protogen_dump.go
+new file mode 100644
+index 0000000..db8f9a3
+--- /dev/null
++++ b/pkg/languages/go/protogen/protogen_dump.go
+@@ -0,0 +1,101 @@
++// Dev-only instrumentation (not part of upstream protogen): records formatter test cases for the
++// C port of the Go formatter (pkg/languages/go/std, std/testdata/make-corpus.sh).
++
++package protogen
++
++import (
++	"bytes"
++	"crypto/sha256"
++	"encoding/hex"
++	"fmt"
++	"go/ast"
++	"go/parser"
++	"go/token"
++	"os"
++	"path/filepath"
++)
++
++// dumpGofmtEnv names the directory that receives one case per formatted file when set:
++// <hash>.in.go (source before formatting), <hash>.imports (lines "name\tpath", the inserted
++// import block), <hash>.out.go (formatted output) and <hash>.idents (lines "symbol\tbegin\tend",
++// the identifiers generatedCodeInfo visits in the formatted output, in its order).
++const dumpGofmtEnv = "UNI_DUMP_GOFMT"
++
++func dumpGofmt(dir string, original []byte, imports [][2]string, out []byte) {
++	var imp bytes.Buffer
++	for _, ip := range imports {
++		fmt.Fprintf(&imp, "%s\t%s\n", ip[0], ip[1])
++	}
++	h := sha256.New()
++	h.Write(original)
++	h.Write([]byte{0})
++	h.Write(imp.Bytes())
++	name := filepath.Join(dir, hex.EncodeToString(h.Sum(nil))[:16])
++	if err := os.MkdirAll(dir, 0o755); err != nil {
++		panic(err)
++	}
++	write := func(suffix string, data []byte) {
++		if err := os.WriteFile(name+suffix, data, 0o644); err != nil {
++			panic(err)
++		}
++	}
++	write(".in.go", original)
++	write(".imports", imp.Bytes())
++	write(".out.go", out)
++	write(".idents", dumpIdents(out))
++}
++
++// dumpIdents mirrors the traversal of generatedCodeInfo.
++func dumpIdents(content []byte) []byte {
++	fset := token.NewFileSet()
++	astFile, err := parser.ParseFile(fset, "", content, 0)
++	if err != nil {
++		panic(err)
++	}
++	var b bytes.Buffer
++	annotate := func(s string, ident *ast.Ident) {
++		fmt.Fprintf(&b, "%s\t%d\t%d\n", s, fset.Position(ident.Pos()).Offset, fset.Position(ident.End()).Offset)
++	}
++	for _, decl := range astFile.Decls {
++		switch decl := decl.(type) {
++		case *ast.GenDecl:
++			for _, spec := range decl.Specs {
++				switch spec := spec.(type) {
++				case *ast.TypeSpec:
++					annotate(spec.Name.Name, spec.Name)
++					switch st := spec.Type.(type) {
++					case *ast.StructType:
++						for _, field := range st.Fields.List {
++							for _, name := range field.Names {
++								annotate(spec.Name.Name+"."+name.Name, name)
++							}
++						}
++					case *ast.InterfaceType:
++						for _, field := range st.Methods.List {
++							for _, name := range field.Names {
++								annotate(spec.Name.Name+"."+name.Name, name)
++							}
++						}
++					}
++				case *ast.ValueSpec:
++					for _, name := range spec.Names {
++						annotate(name.Name, name)
++					}
++				}
++			}
++		case *ast.FuncDecl:
++			if decl.Recv == nil {
++				annotate(decl.Name.Name, decl.Name)
++			} else {
++				recv := decl.Recv.List[0].Type
++				if s, ok := recv.(*ast.StarExpr); ok {
++					recv = s.X
++				}
++				if id, ok := recv.(*ast.Ident); ok {
++					annotate(id.Name+"."+decl.Name.Name, decl.Name)
++				}
++			}
++		}
++	}
++	return b.Bytes()
++}

@@ -1,7 +1,7 @@
 /* pkg/languages/go: strs naming, strconv.FormatFloat, struct tags, edition features, the Go wire
  * format, and protogen naming, import paths and parameter errors. Expected values were produced
  * with the Go implementation (google.golang.org/protobuf v1.36.12, Go 1.26.5). */
-#include "go1_26_5.h"
+#include "go_std.h"
 #include "protogen.h"
 #include "strs.h"
 #include "tag.h"
@@ -113,12 +113,12 @@ static void test_format_float(void)
 		{4.35, "4.35", "4.35"},
 	};
 	for (size_t i = 0; i < sizeof tests / sizeof *tests; i++) {
-		CHECK_STR(go1_26_5_format_float(tests[i].f, 'g', -1, 64), tests[i].g64);
-		CHECK_STR(go1_26_5_format_float(tests[i].f, 'g', -1, 32), tests[i].g32);
+		CHECK_STR(go_std_format_float(tests[i].f, 'g', -1, 64), tests[i].g64);
+		CHECK_STR(go_std_format_float(tests[i].f, 'g', -1, 32), tests[i].g32);
 	}
-	CHECK_STR(go1_26_5_format_float(1.0 / 0.0, 'g', -1, 64), "+Inf");
-	CHECK_STR(go1_26_5_format_float(3.14159, 'e', 3, 64), "3.142e+00");
-	CHECK_STR(go1_26_5_format_float(3.14159, 'f', 2, 64), "3.14");
+	CHECK_STR(go_std_format_float(1.0 / 0.0, 'g', -1, 64), "+Inf");
+	CHECK_STR(go_std_format_float(3.14159, 'e', 3, 64), "3.142e+00");
+	CHECK_STR(go_std_format_float(3.14159, 'f', 2, 64), "3.14");
 }
 
 /* ---- struct tags ---- */

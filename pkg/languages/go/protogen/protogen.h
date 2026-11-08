@@ -13,7 +13,7 @@
  *	pg_plugin_response(gen, out);                        // Response, serialized
  *
  * Descriptors come from pkg/languages/go/protodesc (Desc fields). Generated Go files are formatted
- * with the Go 1.26.5 port in pkg/languages/go/stdlib (the toolchain of the buf.build remote
+ * with the Go 1.26.5 port in pkg/languages/go/std (the toolchain of the buf.build remote
  * plugins), so the output does not depend on anything else.
  *
  * Not ported: ResolvedFeatures (descriptorpb.FeatureSet per declaration; edition features are
@@ -190,6 +190,8 @@ struct PgMethod {
 	PgCommentSet Comments;
 };
 
+typedef struct PgVersion PgVersion; /* internal.h */
+
 typedef struct {
 	/* ParamFunc, if set, is called with each unknown generator parameter (name and value may
 	 * contain any bytes); it returns an error, or {NULL, 0}. */
@@ -202,12 +204,19 @@ typedef struct {
 	const bool *InternalStripForEditionsDiff;
 	/* DefaultAPILevel overrides which API to generate by default. */
 	int DefaultAPILevel;
+	/* Not upstream: the full names of the extensions linked into the plugin besides the ones
+	 * protogen links (protoregistry.GlobalTypes; NULL-terminated, may be NULL): protogen does not
+	 * register dynamic types for them. */
+	const char *const *LinkedExtensions;
+	/* Not upstream: the older compiler/protogen to behave like where it differs (pg_v1_31_0 of
+	 * protogen_v1.31.0.h), or NULL for v1.36.12. */
+	const PgVersion *Version;
 } PgOptions;
 
 struct PgPlugin {
 	PbMsg *Request; /* the CodeGeneratorRequest, parsed with protobuf-go semantics */
 	/* Files is the set of files to generate and everything they import, in topological
-	 * order. */
+	 * order (v1.31.0: every ProtoFile, in request order). */
 	PgFile **Files;
 	int nFiles;
 	Map FilesByPath;
@@ -231,6 +240,11 @@ PbMsg *pg_parse_request(const uint8_t *req, size_t n, const char **err);
 /* Options.New. Returns NULL and the error text on failure (upstream prints it to stderr and
  * exits). */
 PgPlugin *pg_options_new(const PgOptions *opts, PbMsg *req, Str *err);
+/* What this port does not support in a request upstream accepts: a NUL byte in a file name
+ * (proto_file, dependency), in go_package or in an M<file> parameter element (the port ends them
+ * at the NUL; protoc and buf never produce one). Returns the error naming it ("unsupported by
+ * protoc-gen-uni: ..."), or NULL. */
+const char *pg_unsupported(const PbMsg *req);
 /* Error records an error in code generation (the first one wins). */
 void pg_plugin_error(PgPlugin *gen, Str err);
 bool pg_plugin_internal_strip_for_editions_diff(const PgPlugin *gen);
@@ -330,5 +344,12 @@ void pg_p(PgGeneratedFile *g, const PgArg *args, int n);
 /* GoIdent.String-free helpers used by generators */
 /* cleanPackageName converts a string to a valid Go package name. */
 const char *pg_clean_package_name(const char *name);
+
+/* Package path of Go, as protogen and its plugins use it: path.Clean, path.Base, path.Dir and
+ * path.Join of two elements. */
+const char *pg_path_clean(const char *path);
+const char *pg_path_base(const char *path);
+const char *pg_path_dir(const char *path);
+const char *pg_path_join(const char *a, const char *b);
 
 #endif

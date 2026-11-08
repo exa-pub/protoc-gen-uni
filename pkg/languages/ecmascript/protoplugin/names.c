@@ -26,14 +26,9 @@
 const char *generate_file_path(const Schema *s, const DescFile *file)
 {
 	const char *pname = pb_str(file->h.proto, FDP_NAME);
-	const char *wkt = wkt_public_import_path(pname);
-	if (wkt && !s->opts.bootstrap_wkt) {
-		bool generating = false;
-		for (int i = 0; i < s->files.n && !generating; i++)
-			generating = str_eq(((const DescFile *)s->files.v[i])->name, file->name);
-		if (!generating)
-			return wkt;
-	}
+	const char *wkt = V2_13(s) ? wkt_public_import_path_v2_13_0(pname) : wkt_public_import_path(pname);
+	if (wkt && !s->opts.bootstrap_wkt && !map_has(&s->generating, file->name))
+		return wkt;
 	for (int i = 0; i < s->opts.map_imports.n; i++) {
 		const PatternTarget *mi = s->opts.map_imports.v[i];
 		if (import_pattern_match(mi->pattern, pname, true))

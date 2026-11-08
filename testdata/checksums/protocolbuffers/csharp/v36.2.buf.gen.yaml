@@ -28,3 +28,9 @@ plugins:
   - remote: buf.build/protocolbuffers/csharp:v36.2
     out: internal
     opt: [internal_access, serializable, file_extension=.g.cs]
+  - remote: buf.build/protocolbuffers/csharp:v36.2
+    out: strip
+    opt: [experimental_strip_nonfunctional_codegen]
+  - remote: buf.build/protocolbuffers/csharp:v36.2
+    out: base-namespace-google
+    opt: [base_namespace=Google]

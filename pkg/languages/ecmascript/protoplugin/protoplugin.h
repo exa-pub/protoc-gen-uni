@@ -10,6 +10,13 @@
 
 enum { TARGET_JS = 1, TARGET_TS = 2, TARGET_DTS = 4 };
 
+/* The version of @bufbuild/protoplugin (with the @bufbuild/protobuf it requires) a plugin is
+ * built on. The library implements v2.17.0; an older version changes only the parts that differ.
+ * v2.13.0: no map_imports option, no escaping in the preamble, import_extension applies to every
+ * import path, names are not validated, comments keep their line breaks, editions up to 2024,
+ * well-known types are all imported from the @bufbuild/protobuf/wkt barrel. */
+enum { PROTOPLUGIN_V2_17_0, PROTOPLUGIN_V2_13_0 };
+
 /* import-symbol.ts */
 typedef struct {
 	const char *name, *from;
@@ -50,8 +57,9 @@ typedef struct GeneratedFile GeneratedFile;
 /* create-es-plugin.ts: a plugin built on the framework. */
 typedef struct {
 	const char *name, *version;
+	int protoplugin; /* PROTOPLUGIN_V2_17_0 (0) or an older version */
 	/* Parses the plugin's own options. Returns NULL on success, or the reason of an error ("" for
-	 * none). */
+	 * none). NULL if the plugin has no options: an unknown option is an error. */
 	const char *(*parse_options)(RawOption *opts, int n, void **out);
 	void (*generate_ts)(Schema *s);
 	void (*generate_js)(Schema *s);
@@ -69,6 +77,9 @@ struct Schema {
 	RuntimeImports *runtime;
 	const char *plugin_name, *plugin_version /* NULL if elided */;
 	Str sanitized_parameter;
+	int protoplugin; /* EsPlugin.protoplugin */
+	Map proto_files; /* name -> the first CodeGeneratorRequest.proto_file with the name */
+	Map generating;  /* DescFile.name of the files to generate */
 };
 
 /* generated-file.ts */
@@ -85,6 +96,9 @@ struct GeneratedFile {
  * are reported in CodeGeneratorResponse.error, prefixed with the plugin name. */
 void es_plugin_run(const EsPlugin *p, PbMsg *req, Buf *out);
 
+/* safe-identifier.ts: escapes reserved words and built-in names. */
+const char *safe_identifier(const char *name);
+
 GeneratedFile *gf_new(Schema *s, const char *name);
 void gf_preamble(GeneratedFile *f, DescFile *file);
 void gf_s(GeneratedFile *f, const char *s);
@@ -100,5 +114,21 @@ ImportSymbol *gf_import_schema(GeneratedFile *f, const Desc *d, bool type_only);
 ImportSymbol *gf_import_shape(GeneratedFile *f, const Desc *d);
 ImportSymbol *gf_import_json(GeneratedFile *f, const Desc *d);
 ImportSymbol *gf_import_valid(GeneratedFile *f, const Desc *d);
+
+/* source-code-info.ts: comments of descriptors (getComments, getSyntaxComments,
+ * getPackageComments) and getDeclarationString. */
+typedef struct {
+	Str *leading_detached;
+	int n_leading_detached;
+	Str leading, trailing; /* p == NULL if absent */
+} Comments;
+Comments get_comments(const Desc *d);
+Comments get_syntax_comments(DescFile *f);
+Comments get_package_comments(DescFile *f);
+Str declaration_string(const Desc *d);
+/* Whether comments have their line breaks normalized to LF (true, added after 2.13.0). Plugins
+ * built on an older @bufbuild/protoplugin set it to false before generating (2.5.2: protobuf-ts;
+ * es_plugin_run sets it from EsPlugin.protoplugin). */
+extern bool comments_normalize_line_breaks;
 
 #endif

@@ -1,0 +1,128 @@
+// Test: services for connect plugins.
+//
+// Covers names that collide in the code connect plugins generate: procedure
+// and client/handler names (service Foo with method BarBaz and service FooBar
+// with method Baz; services named FooClient, FooHandler and Connect), method
+// names of generated members and runtime types (Procedure, Handler, Client,
+// Spec, Unimplemented, Interceptor, …), keywords of Go, Kotlin, Swift, Dart,
+// Rust and TypeScript as method names; idempotency_level NO_SIDE_EFFECTS on
+// every streaming kind (only unary methods may use HTTP GET), on a method
+// taking google.protobuf.Empty and on a deprecated method of a deprecated
+// service; deprecated methods without comments.
+syntax = "proto3";
+
+package test.svcconnect.v1;
+
+import "google/protobuf/empty.proto";
+
+message Msg {
+  string value = 1;
+}
+
+// Foo and FooBar produce the same concatenated procedure names.
+service Foo {
+  rpc BarBaz(Msg) returns (Msg);
+}
+
+service FooBar {
+  rpc Baz(Msg) returns (Msg);
+}
+
+// FooClient is named like the client of Foo.
+service FooClient {
+  rpc Call(Msg) returns (Msg);
+}
+
+// FooHandler is named like the handler of Foo.
+service FooHandler {
+  rpc Call(Msg) returns (Msg);
+}
+
+// Connect is named like the runtime package of most connect plugins.
+service Connect {
+  rpc Connect(Msg) returns (Msg);
+}
+
+// Members has methods named like generated members and runtime types.
+service Members {
+  rpc Procedure(Msg) returns (Msg);
+  rpc Handler(Msg) returns (Msg);
+  rpc Client(Msg) returns (Msg);
+  rpc Spec(Msg) returns (Msg);
+  rpc Name(Msg) returns (Msg);
+  rpc Unimplemented(Msg) returns (Msg);
+  rpc Interceptor(Msg) returns (Msg);
+  rpc Options(Msg) returns (Msg);
+  rpc Request(Msg) returns (Msg);
+  rpc Response(Msg) returns (Msg);
+  rpc Stream(stream Msg) returns (stream Msg);
+  rpc Context(Msg) returns (Msg);
+  rpc Error(Msg) returns (Msg);
+  rpc Method(Msg) returns (Msg);
+  rpc Service(Msg) returns (Msg);
+  rpc Headers(Msg) returns (Msg);
+  rpc Callback(Msg) returns (Msg);
+  rpc Blocking(Msg) returns (Msg);
+  rpc Transport(Msg) returns (Msg);
+  rpc Mock(Msg) returns (Msg);
+  rpc Query(Msg) returns (Msg);
+  rpc Mutation(Msg) returns (Msg);
+  rpc InfiniteQuery(Msg) returns (Msg);
+}
+
+// Keywords has methods named like keywords of target languages.
+service Keywords {
+  rpc func(Msg) returns (Msg);
+  rpc type(Msg) returns (Msg);
+  rpc package(Msg) returns (Msg);
+  rpc interface(Msg) returns (Msg);
+  rpc fun(Msg) returns (Msg);
+  rpc object(Msg) returns (Msg);
+  rpc when(Msg) returns (Msg);
+  rpc protocol(Msg) returns (Msg);
+  rpc extension(Msg) returns (Msg);
+  rpc await(Msg) returns (Msg);
+  rpc dynamic(Msg) returns (Msg);
+  rpc fn(Msg) returns (Msg);
+  rpc match(Msg) returns (Msg);
+  rpc delete(Msg) returns (Msg);
+  rpc constructor(Msg) returns (Msg);
+}
+
+// Idempotency sets NO_SIDE_EFFECTS on every streaming kind.
+service Idempotency {
+  rpc UnaryGet(Msg) returns (Msg) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc ClientGet(stream Msg) returns (Msg) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc ServerGet(Msg) returns (stream Msg) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc BidiGet(stream Msg) returns (stream Msg) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc EmptyGet(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc UnaryIdempotent(Msg) returns (Msg) {
+    option idempotency_level = IDEMPOTENT;
+    option deprecated = true;
+  }
+  rpc ServerIdempotent(Msg) returns (stream Msg) {
+    option idempotency_level = IDEMPOTENT;
+  }
+}
+
+service OldService {
+  option deprecated = true;
+
+  rpc OldGet(Msg) returns (Msg) {
+    option deprecated = true;
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc OldStream(stream Msg) returns (stream Msg) {
+    option deprecated = true;
+  }
+}

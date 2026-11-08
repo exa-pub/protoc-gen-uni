@@ -19,6 +19,7 @@ inputs:
   - directory: testdata/proto/real-otel
   - directory: testdata/proto/real-protovalidate
   - directory: testdata/proto/real-protovalidate-editions
+  - directory: testdata/proto/dart-long
 plugins:
   - remote: buf.build/protocolbuffers/dart:v25.1.0
     out: default
@@ -29,7 +30,7 @@ plugins:
     out: noargs
     opt: [disable_constructor_args]
   # generate_kythe_info: .pb.dart and .pbenum.dart are not formatted (plain generator output,
-  # the input of the dart_style port in pkg/languages/dart), plus .meta files.
+  # the linearized text of the dart_style nodes), plus .meta files.
   - remote: buf.build/protocolbuffers/dart:v25.1.0
     out: kythe
     opt: [generate_kythe_info]

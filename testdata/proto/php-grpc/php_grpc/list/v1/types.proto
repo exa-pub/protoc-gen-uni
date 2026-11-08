@@ -1,0 +1,27 @@
+// Test: PHP names in gRPC service code, types.
+//
+// The package part "list" and the message names are PHP reserved words.
+syntax = "proto3";
+
+package test.php_grpc.list.v1;
+
+message Function {
+  string name = 1;
+}
+
+message Class {
+  string name = 1;
+}
+
+message Echo {
+  string text = 1;
+}
+
+message Plain {
+  string text = 1;
+}
+
+// Print is a service in a package with a reserved word.
+service Print {
+  rpc Echo(.test.php_grpc.list.v1.Echo) returns (Plain);
+}

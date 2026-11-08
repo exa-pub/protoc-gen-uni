@@ -79,7 +79,9 @@ const char *uni_lookup(const UniGenerator *const *gens, int n, Str name, Str ver
 		    ", available: ", str_join(&versions, ", "));
 }
 
-const char *uni_run(PbMsg *req, Str raw, const UniGenerator *const *gens, int n, Buf *out)
+/* Dispatches req; partial: req holds only the parameter of a request that pb_decode rejected as
+ * nested deeper than PB_MAX_DEPTH (see UniGenerator.parses_raw). */
+static const char *dispatch(PbMsg *req, Str raw, const UniGenerator *const *gens, int n, Buf *out, bool partial)
 {
 	Str name, version, rest;
 	const UniGenerator *g = NULL;
@@ -90,15 +92,79 @@ const char *uni_run(PbMsg *req, Str raw, const UniGenerator *const *gens, int n,
 		pb_put_bytes(out, CGRESP_ERROR, str_c(err));
 		return NULL;
 	}
+	if (partial && !g->parses_raw)
+		return "messages nested deeper than 100 levels are not supported";
 	pb_set_bytes(req, CGR_PARAMETER, rest.n ? rest : (Str){NULL, 0});
 	return g->generate(req, raw, out);
+}
+
+const char *uni_run(PbMsg *req, Str raw, const UniGenerator *const *gens, int n, Buf *out)
+{
+	return dispatch(req, raw, gens, n, out, false);
+}
+
+/* Skips the rest of the group num at r iteratively: unlike pb_skip_value, without a depth limit
+ * (the stack of open groups is on the arena, in proportion to the input). */
+static COLD bool skip_group(PbReader *r, uint32_t num)
+{
+	Vec open = {0};
+	vec_push(&open, (void *)(uintptr_t)num);
+	while (open.n) {
+		uint32_t n2;
+		int wt;
+		if (!pb_read_tag(r, &n2, &wt))
+			return false;
+		if (wt == WT_EGROUP) {
+			if ((uintptr_t)open.v[--open.n] != n2)
+				return false;
+		} else if (wt == WT_SGROUP) {
+			vec_push(&open, (void *)(uintptr_t)n2);
+		} else if (!pb_skip_value(r, n2, wt, NULL, NULL, 0)) {
+			return false;
+		}
+	}
+	return true;
+}
+
+/* A request with only the parameter of the request in[0:len] (the last length-delimited field 2
+ * of the top level, as pb_decode takes it), or NULL if the top level is malformed. */
+static COLD PbMsg *parameter_only(const uint8_t *in, size_t len)
+{
+	PbMsg *req = pb_new(&pbd_CodeGeneratorRequest);
+	PbReader r = {in, in + len};
+	while (r.p < r.end) {
+		uint32_t num;
+		int wt;
+		const uint8_t *v;
+		size_t vn;
+		if (!pb_read_tag(&r, &num, &wt) || wt == WT_EGROUP)
+			return NULL;
+		if (wt == WT_SGROUP) {
+			if (!skip_group(&r, num))
+				return NULL;
+			continue;
+		}
+		if (!pb_skip_value(&r, num, wt, &v, &vn, 0))
+			return NULL;
+		if (num == CGR_PARAMETER && wt == WT_LEN)
+			pb_set_bytes(req, CGR_PARAMETER, (Str){xstrndup((const char *)v, vn), vn});
+	}
+	return req;
 }
 
 const char *uni_main(const uint8_t *in, size_t len, const UniGenerator *const *gens, int n, Buf *out)
 {
 	PbMsg *req = pb_new(&pbd_CodeGeneratorRequest);
-	if (!pb_decode(req, in, len))
-		return "protoc-gen-uni: parse request: proto: cannot parse invalid wire-format data";
-	const char *err = uni_run(req, (Str){(const char *)in, len}, gens, n, out);
+	bool partial = false;
+	if (!pb_decode(req, in, len)) {
+		/* too deep for pkg/pb: generators that parse the request themselves may still take it */
+		if (!pb_too_deep)
+			return "protoc-gen-uni: parse request: proto: cannot parse invalid wire-format data";
+		req = parameter_only(in, len);
+		if (!req)
+			return "protoc-gen-uni: parse request: messages nested deeper than 100 levels are not supported";
+		partial = true;
+	}
+	const char *err = dispatch(req, (Str){(const char *)in, len}, gens, n, out, partial);
 	return err ? xcat("protoc-gen-uni: parse request: ", err) : NULL;
 }

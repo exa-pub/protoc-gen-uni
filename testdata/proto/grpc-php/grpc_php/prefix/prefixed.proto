@@ -1,0 +1,23 @@
+// Test: grpc/php with php_class_prefix and an empty php_namespace.
+syntax = "proto2";
+
+package grpc_php.prefix;
+
+option php_class_prefix = "Pre";
+option php_namespace = "";
+
+message Thing {
+  optional string id = 1;
+  message Nested {
+    optional string id = 1;
+  }
+}
+
+// Interface is reserved, but php_class_prefix replaces the reserved prefix.
+message Interface {
+  optional string id = 1;
+}
+
+service PrefixedService {
+  rpc Get(Thing) returns (Interface);
+}

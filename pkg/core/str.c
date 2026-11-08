@@ -148,7 +148,7 @@ int utf8_decode(const char *s, size_t n, uint32_t *rune)
 }
 
 /* unicode.IsSpace */
-static bool go_is_space(uint32_t r)
+bool go_is_space(uint32_t r)
 {
 	switch (r) {
 	case '\t': case '\n': case '\v': case '\f': case '\r': case ' ': case 0x85: case 0xa0:

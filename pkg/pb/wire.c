@@ -58,8 +58,10 @@ bool pb_skip_value(PbReader *r, uint32_t num, int wt, const uint8_t **val, size_
 		r->p += v;
 		return true;
 	case WT_SGROUP:
-		if (depth >= PB_MAX_DEPTH)
+		if (depth >= PB_MAX_DEPTH) {
+			pb_too_deep = true;
 			return false;
+		}
 		for (;;) {
 			uint32_t n2;
 			int wt2;

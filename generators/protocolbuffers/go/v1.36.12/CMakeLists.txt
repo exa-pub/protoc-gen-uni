@@ -1,1 +1,1 @@
-uni_generator(LIBRARIES go_protogen go_tag)
+uni_generator(LIBRARIES go_protogen go_tag go_std_go1_26_5)

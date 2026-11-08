@@ -1,0 +1,20 @@
+/* libprotoc 36.2: the unity build of this directory (see libprotoc.h). Everything but the API of
+ * libprotoc.h is static. */
+#include "internal.h"
+
+#include "strutil.c"
+#include "message.c"
+#include "printer.c"
+#include "descriptor.c"
+#include "feature_resolver.c"
+#include "retention.c"
+#include "embedded.c"
+#include "plugin.c"
+#include "debug_string.c"
+#include "source_location.c"
+#include "reflection.c"
+#include "objectivec_names.c"
+#include "php_names.c"
+#include "csharp_names.c"
+#include "cpp_names.c"
+#include "scc.c"

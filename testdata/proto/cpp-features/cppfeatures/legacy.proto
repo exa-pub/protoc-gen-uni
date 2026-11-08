@@ -1,0 +1,171 @@
+// Test: proto2 constructs of the C++ generator.
+//
+// ctype CORD and STRING_PIECE, groups, required fields across messages
+// (IsInitialized), a message set with extensions, scoped and file extensions
+// of every kind, oneofs with three or more messages, defaults that need
+// escaping (trigraphs, bytes, special floats), sparse, negative and aliased
+// enum values (enum data tables), field numbers around the fast table limits
+// and the skip map blocks, packed repeated fields (cached sizes) and maps with
+// closed enum values.
+syntax = "proto2";
+
+package test.cpplegacy;
+
+enum Sparse {
+  option allow_alias = true;
+  SPARSE_MIN = -2147483648;
+  SPARSE_NEG = -7;
+  SPARSE_ZERO = 0;
+  SPARSE_ALIAS = 0;
+  SPARSE_SIXTY = 60;
+  SPARSE_BIG = 70000;
+  SPARSE_MAX = 2147483647;
+}
+
+enum Seq {
+  SEQ_ONE = 1;
+  SEQ_TWO = 2;
+  SEQ_THREE = 3;
+}
+
+enum Bits {
+  BITS_ZERO = 0;
+  BITS_THREE = 3;
+  BITS_FORTY = 40;
+}
+
+message Leaf {
+  required int32 id = 1;
+  optional string name = 2;
+}
+
+message Node {
+  optional Node next = 1;
+  optional Leaf leaf = 2;
+  repeated Leaf leaves = 3;
+  map<string, Leaf> leaf_map = 4;
+  oneof kind {
+    Leaf a = 5;
+    Node b = 6;
+    Leaf c = 7;
+    int32 d = 8;
+  }
+}
+
+message Strings {
+  optional bytes cord = 1 [ctype = CORD];
+  optional bytes cord_default = 2 [ctype = CORD, default = "a\000b"];
+  optional string piece = 3 [ctype = STRING_PIECE];
+  repeated string cord_list = 4 [ctype = CORD];
+  optional string trigraph = 5 [default = "??( ??) ??< ??> ??= ??/ ??' ??! ??-"];
+  optional bytes raw = 6 [default = "\377\000\n\"'"];
+  oneof o {
+    bytes oneof_cord = 7 [ctype = CORD];
+    string oneof_piece = 8 [ctype = STRING_PIECE];
+  }
+}
+
+message Defaults {
+  optional double d_inf = 1 [default = inf];
+  optional double d_ninf = 2 [default = -inf];
+  optional double d_nan = 3 [default = nan];
+  optional double d_small = 4 [default = 1e-300];
+  optional float f_inf = 5 [default = inf];
+  optional float f_nan = 6 [default = nan];
+  optional float f_val = 7 [default = 1.5];
+  optional float f_int = 8 [default = 3];
+  optional int32 i32_min = 9 [default = -2147483648];
+  optional int64 i64_min = 10 [default = -9223372036854775808];
+  optional uint64 u64_max = 11 [default = 18446744073709551615];
+  optional uint32 u32_max = 12 [default = 4294967295];
+  optional Sparse sparse = 13 [default = SPARSE_NEG];
+  optional Bits bits = 14 [default = BITS_FORTY];
+  optional bool flag = 15 [default = true];
+  optional sint64 s64 = 16 [default = -5];
+}
+
+message Numbers {
+  optional int32 f1 = 1;
+  optional int64 f15 = 15;
+  optional uint32 f16 = 16;
+  optional sint32 f17 = 17;
+  optional fixed32 f31 = 31;
+  optional fixed64 f32 = 32;
+  optional sfixed32 f33 = 33;
+  optional bool f200 = 200;
+  optional double f2047 = 2047;
+  optional float f2048 = 2048;
+  optional int32 f10000 = 10000;
+  optional Seq seq = 10001;
+  optional Sparse sparse = 10002;
+  optional Bits bits = 10003;
+  optional sfixed64 f536870911 = 536870911;
+  repeated int32 packed_varint = 20 [packed = true];
+  repeated sint64 packed_zigzag = 21 [packed = true];
+  repeated fixed32 packed_fixed = 22 [packed = true];
+  repeated Sparse packed_enum = 23 [packed = true];
+  repeated Seq unpacked_enum = 24;
+  repeated bool unpacked_bool = 25;
+  map<int32, Bits> enum_map = 26;
+  map<bool, bytes> bytes_map = 27;
+}
+
+message WithGroup {
+  optional group Inner = 1 {
+    optional int32 x = 2;
+    required string y = 3;
+  }
+  repeated group Items = 4 {
+    optional int64 z = 5;
+  }
+}
+
+message Extendable {
+  optional int32 plain = 1;
+  extensions 100 to 199;
+  extensions 1000 to max;
+}
+
+message Scope {
+  extend Extendable {
+    optional int32 scoped_int = 100;
+    optional string scoped_string = 101 [default = "s"];
+    optional Leaf scoped_leaf = 102;
+    repeated Sparse scoped_enums = 103;
+  }
+}
+
+extend Extendable {
+  optional bytes file_bytes = 110;
+  repeated int32 file_packed = 111 [packed = true];
+  optional Seq file_enum = 112 [default = SEQ_TWO];
+  optional double file_double = 1000;
+  optional group FileGroup = 113 {
+    optional int32 g = 1;
+  }
+}
+
+message Set {
+  option message_set_wire_format = true;
+  extensions 4 to max;
+}
+
+message SetItem {
+  extend Set {
+    optional SetItem item = 4;
+  }
+  optional string value = 1;
+}
+
+message Empty {}
+
+message OnlyOneofs {
+  oneof first {
+    Empty e1 = 1;
+    Leaf l1 = 2;
+  }
+  oneof second {
+    string s2 = 3;
+    int32 i2 = 4;
+  }
+}

@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+// A child package named like the service test.rpcnames.Greeter.
+package test.rpcnames.greeter;
+
+message Reply {
+  string message = 1;
+}
+
+// Same simple name as test.rpcnames.Greeter.
+service Greeter {
+  rpc SayHello(Reply) returns (Reply);
+}

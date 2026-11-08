@@ -23,6 +23,9 @@ enum { WT_VARINT = 0, WT_I64 = 1, WT_LEN = 2, WT_SGROUP = 3, WT_EGROUP = 4, WT_I
 
 /* Maximum nesting of messages (protobuf-es BinaryReadOptions.recursionLimit). */
 #define PB_MAX_DEPTH 100
+/* Set when pb_decode or pb_skip_value failed because of nesting deeper than PB_MAX_DEPTH;
+ * pb_decode clears it first. */
+extern bool pb_too_deep;
 
 typedef struct PbMsgDef PbMsgDef;
 typedef struct {

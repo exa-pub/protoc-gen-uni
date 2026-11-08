@@ -22,6 +22,10 @@ typedef struct {
 	 * pkg/pb (protobuf-go). Returns NULL, or the error of a request that the generator cannot
 	 * parse (out is ignored; the process exits with status 1 like for unparsable requests). */
 	const char *(*generate)(PbMsg *req, Str raw, Buf *out);
+	/* generate reads nothing from req but the parameter and parses raw itself: uni_main then
+	 * also runs it for a request that pkg/pb rejects as nested deeper than PB_MAX_DEPTH, with a
+	 * req that holds only the parameter. Otherwise such a request is a parse error. */
+	bool parses_raw;
 } UniGenerator;
 
 /* Extracts uni-name and uni-version from a protoc parameter string. The remaining
@@ -39,7 +43,8 @@ COLD const char *uni_lookup(const UniGenerator *const *gens, int n, Str name, St
 const char *uni_run(PbMsg *req, Str raw, const UniGenerator *const *gens, int n, Buf *out);
 
 /* Parses the serialized CodeGeneratorRequest in[0:len] and runs it. Returns NULL, or a message
- * for stderr (exit status 1) if the request cannot be parsed. */
+ * for stderr (exit status 1) if the request cannot be parsed (including a request nested deeper
+ * than PB_MAX_DEPTH for a generator without parses_raw). */
 const char *uni_main(const uint8_t *in, size_t len, const UniGenerator *const *gens, int n, Buf *out);
 
 #endif

@@ -1,0 +1,37 @@
+# Golden config for community/roadrunner-server-php-grpc v6.0.0: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# No options: the parameter is ignored (group "ignored" passes an unknown option). The plugin writes
+# an interface for every service of every file in the request, imports included. php-grpc is the
+# PHP-specific input (namespaces, reserved words, php_namespace).
+# Inputs left out: editions2023, editions2024, services-editions, services-editions2024,
+# real-protovalidate-editions (the plugin declares no editions support, buf rejects them);
+# services-naming (upstream names the file of a service without package /RootServiceInterface.php,
+# buf rejects the absolute path); services-case (services greeter and Greeter map to the same file,
+# buf rejects the duplicate).
+# Regenerate: scripts/gen-testdata.sh community/roadrunner-server-php-grpc v6.0.0
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/services-connect
+  - directory: testdata/proto/http-gateway
+  - directory: testdata/proto/http-gateway-delete-body
+  - directory: testdata/proto/http-gateway-scalar-body
+  - directory: testdata/proto/php-grpc
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+plugins:
+  - remote: buf.build/community/roadrunner-server-php-grpc:v6.0.0
+    out: default
+  - remote: buf.build/community/roadrunner-server-php-grpc:v6.0.0
+    out: ignored
+    opt: [foo=bar]

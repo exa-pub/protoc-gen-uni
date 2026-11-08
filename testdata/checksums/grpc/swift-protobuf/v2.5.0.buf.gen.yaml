@@ -1,0 +1,47 @@
+# Golden config for grpc/swift-protobuf v2.5.0: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Groups: default; Visibility=Public with FileNaming; Client=false with the module names and two
+# Availability values; Server=false with UseAccessLevelOnImports and ExtraModuleImports;
+# errors: ReflectionData (always rejected), an unknown parameter.
+# Not tested: ProtoPathModuleMappings (reads a local file).
+# Inputs left out: services-case (upstream rejects the method names, but its error text contains
+# a runtime address: "unknown context at $5593...").
+# Regenerate: scripts/gen-testdata.sh grpc/swift-protobuf v2.5.0
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-editions
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/grpc/swift-protobuf:v2.5.0
+    out: default
+  - remote: buf.build/grpc/swift-protobuf:v2.5.0
+    out: public
+    opt: [Visibility=Public, FileNaming=PathToUnderscores]
+  - remote: buf.build/grpc/swift-protobuf:v2.5.0
+    out: client
+    opt: [Client=false, GRPCModuleName=G, GRPCProtobufModuleName=GP, Availability=macOS 15.0, Availability=iOS 18.0]
+  - remote: buf.build/grpc/swift-protobuf:v2.5.0
+    out: server
+    opt: [Server=false, UseAccessLevelOnImports=FALSE, ExtraModuleImports=X]
+  - remote: buf.build/grpc/swift-protobuf:v2.5.0
+    out: error-reflection
+    opt: [ReflectionData=true]
+  - remote: buf.build/grpc/swift-protobuf:v2.5.0
+    out: error-unknown
+    opt: [foo=bar]

@@ -6,7 +6,7 @@
  * internal/encoding/defval/default.go. */
 #include "tag.h"
 
-#include "go1_26_5.h"
+#include "go_std.h"
 
 #include <math.h>
 
@@ -83,7 +83,7 @@ const char *tag_marshal_default(const GoValue *v, int kind, Str *out)
 		else if (isnan(v->f))
 			*out = str_c("nan");
 		else
-			*out = str_c(go1_26_5_format_float(v->f, 'g', -1, kind == PT_FLOAT ? 32 : 64));
+			*out = str_c(go_std_format_float(v->f, 'g', -1, kind == PT_FLOAT ? 32 : 64));
 		return NULL;
 	case PT_STRING:
 		/* String values are serialized as is without any escaping. */

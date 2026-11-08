@@ -1,0 +1,2 @@
+uni_generator(LIBRARIES uni_pb uni_es_std ecmascript_formatters_dprint_typescript ecmascript_ts_poet
+  ecmascript_case_anything ecmascript_ts_proto_descriptors)

@@ -18,8 +18,24 @@
 # `<sha256 of the file>  <group>/<path>` (lowercase hex, two spaces, <path> relative to the group's
 # `out:` directory), the lines sorted by `<group>/<path>` in byte order and each ended by "\n"; <sum>
 # is the sha256 of that text. A test without output has the sum of the empty text
-# (e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855). tests/e2e/golden.sh implements
-# the same definition (filesums there).
+# (e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855).
+#
+# Expected errors: an option group may fail (the upstream plugin rejects an option or an input); its
+# error text is then tested instead of files. buf aborts the whole run when a plugin fails, so a test
+# whose run fails is generated again one group at a time (the template with only that group's plugin
+# entry). A group that fails there contributes the line `<sha256 of E>  <group>:error` (no file path
+# has this form) to the test sum, sorted with the file lines. E is the error the plugin returned
+# (CodeGeneratorResponse.error, or the stderr of a plugin that exited with a non-zero status) without
+# buf's prefix, i.e. buf's stderr after `Failure: failed_precondition: plugin "<plugin>" failed: `,
+# `Failure: invalid_argument: plugin "<plugin>" exited with non-zero status <n>` + "\nstderr:\n"
+# (remote plugins) or `Failure: plugin <plugin>: ` (local plugins; <plugin> is the command, its words
+# joined by spaces), with trailing newlines removed and one "\n" appended; a port returns E as its
+# CodeGeneratorResponse.error whichever way upstream reports it. Any other failure (network,
+# input, a local plugin that crashes or exits with a non-zero status) is an error of this script and
+# of the test. The upstream error text goes to testdata/gen/<owner>/<plugin>/<version>/<group>/<test>,
+# a file instead of the output directory.
+#
+# tests/e2e/golden.sh implements the same definitions (filesums, testsums, errtext and entry there).
 #
 # Needs: network, sha256sum. Env: BUF — buf binary to use (default: scripts/get-buf.sh, the pinned
 # version); BUF_TOKEN — buf.build token (remote plugins are rate limited).
@@ -65,20 +81,66 @@ BUF=${BUF:-$("$root/scripts/get-buf.sh")}
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-# buf generate, retried while buf.build rate-limits remote plugins (resource_exhausted).
+# buf generate TEMPLATE INPUT OUT, retried while buf.build rate-limits remote plugins
+# (resource_exhausted) or the connection fails (canceled, unavailable: large inputs often get
+# "connection reset by peer"). On failure, buf's stderr is in $tmp/stderr.
 generate() {
 	local i
 	for i in 1 2 3 4 5 6 7 8 9 10; do
-		rm -rf "$2"
-		if "$BUF" generate "$1" --template "$template" -o "$2" 2>"$tmp/err"; then
+		rm -rf "$3"
+		if "$BUF" generate "$2" --template "$1" -o "$3" 2>"$tmp/stderr"; then
 			return 0
 		fi
-		grep -q resource_exhausted "$tmp/err" || { cat "$tmp/err" >&2; return 1; }
-		echo "rate limited, retrying in $((i * 15)) s" >&2
+		if grep -q resource_exhausted "$tmp/stderr"; then
+			echo "rate limited, retrying in $((i * 15)) s" >&2
+		elif grep -qE '^Failure: (canceled|unavailable): ' "$tmp/stderr"; then
+			echo "connection failed, retrying in $((i * 15)) s: $(head -n 1 "$tmp/stderr")" >&2
+		else
+			return 1
+		fi
 		sleep $((i * 15))
 	done
-	cat "$tmp/err" >&2
 	return 1
+}
+
+# The template with only its K-th plugin entry (1-based), see "Expected errors" above.
+entry() {
+	awk -v k="$1" '
+		/^[^[:space:]#]/ { skip = 0 }
+		/^[[:space:]]*-[[:space:]]*(remote|local):/ { n++; skip = (n != k) }
+		!skip
+	' "$2"
+}
+
+# The error text E of a failed plugin named NAME from buf's stderr FILE (see "Expected errors" above);
+# fails if FILE is not such an error.
+errtext() {
+	name=$1 awk '
+		{ t = t $0 "\n" }
+		END {
+			n = ENVIRON["name"]
+			p1 = "Failure: failed_precondition: plugin \"" n "\" failed: "
+			p2 = "Failure: invalid_argument: plugin \"" n "\" exited with non-zero status "
+			p3 = "Failure: plugin " n ": "
+			if (index(t, p1) == 1) {
+				t = substr(t, length(p1) + 1)
+			} else if (index(t, p2) == 1) {
+				t = substr(t, length(p2) + 1)
+				i = index(t, "\n")
+				if (substr(t, 1, i - 1) !~ /^[0-9]+$/) exit 1
+				t = substr(t, i + 1)
+				if (t != "" && index(t, "stderr:\n") != 1) exit 1
+				t = substr(t, 9)
+			} else if (index(t, p3) == 1) {
+				t = substr(t, length(p3) + 1)
+				if (t ~ /^(exit status [0-9]+|signal: [^\n]*)\n$/) exit 1
+			} else {
+				exit 1
+			}
+			sub(/\n+$/, "", t)
+			printf "%s\n", t
+		}
+	' "$2"
 }
 
 # "<sha256>  <group>/<path>" of the files DIR/<group>/<path>, sorted by "<group>/<path>" in byte order
@@ -92,6 +154,17 @@ filesums() {
 	)
 }
 
+# The lines of the test sum: filesums of OUT and "<sha256>  <group>:error" of the error texts
+# ERRORS/<group>, sorted by their third field.
+testsums() {
+	{
+		filesums "$1"
+		for f in "$2"/*; do
+			if [ -f "$f" ]; then printf '%s  %s:error\n' "$(sha256sum <"$f" | cut -c1-64)" "${f##*/}"; fi
+		done
+	} | LC_ALL=C sort -t ' ' -k3
+}
+
 # checksums.txt lines sorted by version (sort -V), then test (byte order).
 sortsums() {
 	awk '{ i = index($2, "/"); print substr($2, 1, i - 1), substr($2, i + 1), $1 }' |
@@ -102,16 +175,38 @@ sortsums() {
 rm -rf "${gen:?}"
 mkdir -p "$gen"
 
+nerr=0
 for test in "${tests[@]}"; do
 	input=testdata/proto/$test
 	[ -d "$input" ] || { echo "$input: not found" >&2; exit 1; }
 	echo "$name $version: $test" >&2
-	generate "$input" "$tmp/ref/$test"
-	echo "$(filesums "$tmp/ref/$test" | sha256sum | cut -c1-64)  $version/$test" >>"$tmp/sums"
+	out=$tmp/ref/$test errors=$tmp/errors/$test
+	if ! generate "$template" "$input" "$out"; then
+		# A plugin failed: generate each group alone (see "Expected errors" above).
+		mkdir -p "$out" "$errors"
+		for k in $(seq "${#groups[@]}"); do
+			entry "$k" "$template" >"$tmp/entry.yaml"
+			g=$(sed -nE 's/^[[:space:]]*-?[[:space:]]*out:[[:space:]]*([^[:space:]#]+).*/\1/p' "$tmp/entry.yaml")
+			if generate "$tmp/entry.yaml" "$input" "$tmp/one"; then
+				if [ -d "$tmp/one/$g" ]; then mv "$tmp/one/$g" "$out/$g"; fi
+			elif errtext "buf.build/$name:$version" "$tmp/stderr" >"$errors/$g"; then
+				echo "  $g: error: $(head -n 1 "$errors/$g")" >&2
+				nerr=$((nerr + 1))
+			else
+				echo "$test, group $g:" >&2
+				cat "$tmp/stderr" >&2
+				exit 1
+			fi
+		done
+	fi
+	echo "$(testsums "$out" "$errors" | sha256sum | cut -c1-64)  $version/$test" >>"$tmp/sums"
 	for g in "${groups[@]}"; do
-		if [ -d "$tmp/ref/$test/$g" ]; then
+		if [ -d "$out/$g" ]; then
 			mkdir -p "$gen/$g"
-			mv "$tmp/ref/$test/$g" "$gen/$g/$test"
+			mv "$out/$g" "$gen/$g/$test"
+		elif [ -f "$errors/$g" ]; then
+			mkdir -p "$gen/$g"
+			mv "$errors/$g" "$gen/$g/$test"
 		fi
 	done
 done
@@ -124,4 +219,4 @@ sums=$d/checksums.txt
 } | sortsums >"$sums.tmp"
 mv "$sums.tmp" "$sums"
 
-echo "done: $sums ($version: ${#tests[@]} tests, $(find "$gen" -type f | wc -l | tr -d ' ') files), upstream output: $gen" >&2
+echo "done: $sums ($version: ${#tests[@]} tests, $(find "$gen" -type f | wc -l | tr -d ' ') files, $nerr expected errors), upstream output: $gen" >&2

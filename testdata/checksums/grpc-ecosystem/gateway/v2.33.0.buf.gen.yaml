@@ -1,0 +1,87 @@
+# Golden config for grpc-ecosystem/gateway v2.33.0: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Inputs set no go_package: managed mode adds go_package_prefix.
+# Only files with services with HTTP bindings produce output, except with generate_unbound_methods.
+# http-gateway covers the path templates, bodies, bindings and methods; http-gateway-delete-body
+# tests the error for a DELETE binding with a body (allowed in groups "opaque" and "module");
+# http-gateway-scalar-body the error of use_opaque_api (group "opaque") for a scalar body field
+# (http-gateway-delete-body has one too); http-gateway-paths the other path parameter, body and
+# response body forms (oneofs, enums, nested and proto2/editions fields, odd templates, a Go package
+# named "runtime", snake_case names); http-gateway-bytes-path the template error of a proto2 bytes
+# path parameter.
+# Groups: paths=source_relative; standalone with separate_package (buf patch: <pkg>gateway package,
+# alias file) and source_relative; standalone with import paths; generate_unbound_methods with
+# register_func_suffix, request_context=false, allow_patch_feature=false and omit_package_doc;
+# use_opaque_api with allow_delete_body, repeated_path_param_separator=ssv, strict_deep_wildcard and
+# the options without effect on the output (warn_on_unbound_methods, allow_repeated_fields_in_body,
+# logtostderr); module= with repeated_path_param_separator=pipes and allow_delete_body; errors:
+# separate_package without standalone, an unknown separator, an invalid boolean value, an unknown
+# option, grpc_api_configuration (a local file the remote plugin cannot read).
+# Regenerate: scripts/gen-testdata.sh grpc-ecosystem/gateway v2.33.0
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: example.com/gen
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-case
+  - directory: testdata/proto/services-editions
+  - directory: testdata/proto/services-editions2024
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/services-connect
+  - directory: testdata/proto/http-gateway
+  - directory: testdata/proto/http-gateway-delete-body
+  - directory: testdata/proto/http-gateway-scalar-body
+  - directory: testdata/proto/http-gateway-paths
+  - directory: testdata/proto/http-gateway-bytes-path
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/grpc-ecosystem/gateway:v2.33.0
+    out: source-relative
+    opt: [paths=source_relative]
+  - remote: buf.build/grpc-ecosystem/gateway:v2.33.0
+    out: separate
+    opt: [paths=source_relative, standalone=true, separate_package=true]
+  - remote: buf.build/grpc-ecosystem/gateway:v2.33.0
+    out: standalone
+    opt: [standalone=true]
+  - remote: buf.build/grpc-ecosystem/gateway:v2.33.0
+    out: options
+    opt: [generate_unbound_methods=true, register_func_suffix=Gw, request_context=false, allow_patch_feature=false, omit_package_doc=true]
+  - remote: buf.build/grpc-ecosystem/gateway:v2.33.0
+    out: opaque
+    opt: [use_opaque_api=true, allow_delete_body=true, repeated_path_param_separator=ssv, strict_deep_wildcard=true, warn_on_unbound_methods=true, allow_repeated_fields_in_body=false, logtostderr=true]
+  - remote: buf.build/grpc-ecosystem/gateway:v2.33.0
+    out: module
+    opt: [module=example.com/gen, repeated_path_param_separator=pipes, allow_delete_body=true]
+  - remote: buf.build/grpc-ecosystem/gateway:v2.33.0
+    out: error-separate
+    opt: [separate_package=true]
+  - remote: buf.build/grpc-ecosystem/gateway:v2.33.0
+    out: error-separator
+    opt: [repeated_path_param_separator=foo]
+  - remote: buf.build/grpc-ecosystem/gateway:v2.33.0
+    out: error-value
+    opt: [standalone=yes]
+  - remote: buf.build/grpc-ecosystem/gateway:v2.33.0
+    out: error-unknown
+    opt: [foo=bar]
+  - remote: buf.build/grpc-ecosystem/gateway:v2.33.0
+    out: error-config
+    opt: [grpc_api_configuration=gateway.yaml]

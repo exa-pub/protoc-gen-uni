@@ -60,6 +60,14 @@ static int compile_pattern(const char *p, bool glob, Tok *t)
 	return n;
 }
 
+/* The regular expression "." matches anything but a line terminator: \n, \r, U+2028, U+2029.
+ * The string is valid UTF-8 (decode_utf8), so the first byte of U+2028 decides. */
+static bool line_terminator(const char *s)
+{
+	const unsigned char *p = (const unsigned char *)s;
+	return p[0] == '\n' || p[0] == '\r' || (p[0] == 0xe2 && p[1] == 0x80 && (p[2] == 0xa8 || p[2] == 0xa9));
+}
+
 /* Adds the states reachable without input; all such edges go forward. */
 static void closure(const Tok *t, int n, bool *set)
 {
@@ -91,7 +99,7 @@ bool import_pattern_match(const char *pattern, const char *s, bool glob)
 			switch (t[i].kind) {
 			case T_LIT: to = c == t[i].c ? i + 1 : -1; break;
 			case T_STAR: to = c != '/' ? i : -1; break;
-			case T_ANY: to = c != '\n' ? i : -1; break;
+			case T_ANY: to = !line_terminator(s) ? i : -1; break;
 			case T_SEG_START: to = c != '/' ? i + 1 : -1; break;
 			case T_SEG_IN: to = c != '/' ? i : i - 1; break;
 			}
@@ -108,7 +116,7 @@ bool import_pattern_match(const char *pattern, const char *s, bool glob)
 }
 
 /* Applies rewrite_imports to an import path, and changes the .js extension of relative import
- * paths to the import_extension. */
+ * paths (v2.13.0: of all import paths) to the import_extension. */
 const char *rewrite_import_path(const Schema *sc, const char *path)
 {
 	for (int i = 0; i < sc->opts.rewrite_imports.n; i++) {
@@ -123,7 +131,7 @@ const char *rewrite_import_path(const Schema *sc, const char *path)
 			break;
 		}
 	}
-	if (is_relative_path(path) && has_suffix(path, ".js")) {
+	if ((V2_13(sc) || is_relative_path(path)) && has_suffix(path, ".js")) {
 		const char *ext = sc->opts.import_extension;
 		if (str_eq(ext, "none"))
 			return xstrndup(path, strlen(path) - 3);

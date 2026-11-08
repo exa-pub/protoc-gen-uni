@@ -152,9 +152,9 @@ static COLD void gen_import(PgPlugin *gen, PgGeneratedFile *g, FileInfo *f, cons
 		pg_plugin_error(gen, err);
 		return;
 	}
-	go1_26_5_forward *decls;
+	go_std_forward *decls;
 	size_t nd;
-	const char *perr = go1_26_5_forward_decls(b.p, b.n, &decls, &nd);
+	const char *perr = go_std_forward_decls(b.p, b.n, &decls, &nd);
 	if (perr) {
 		pg_plugin_error(gen, str_c(perr));
 		return;
@@ -167,7 +167,7 @@ static COLD void gen_import(PgPlugin *gen, PgGeneratedFile *g, FileInfo *f, cons
 		uint32_t r = 0xfffd;
 		if (*name)
 			utf8_decode(name, strlen(name), &r);
-		if (!go1_26_5_is_upper((int32_t)r))
+		if (!go_std_is_upper((int32_t)r))
 			continue;
 		/* Don't import the FileDescriptor. */
 		if (str_eq(name, imp_file->GoDescriptorIdent.GoName))
@@ -510,7 +510,7 @@ static COLD void gen_message_default_decls(PgGeneratedFile *g, FileInfo *f, Mess
 					fn = pg_qualified_go_ident(g, ID(mathPackage, "Inf")), arg = v < 0 ? "-1" : "+1";
 				vec_push(&vars, xcat(name, " = ", go_type, "(", fn, "(", arg, "))"));
 			} else {
-				vec_push(&consts, xcat(name, " = ", go_type, "(", go1_26_5_format_float(v, 'g', -1, 64), ")"));
+				vec_push(&consts, xcat(name, " = ", go_type, "(", go_std_format_float(v, 'g', -1, 64), ")"));
 			}
 			break;
 		}

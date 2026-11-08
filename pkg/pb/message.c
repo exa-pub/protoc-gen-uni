@@ -119,8 +119,10 @@ static void add_unknown_enum(PbMsg *m, uint32_t num, uint64_t v)
 /* depth: nesting level of m, 1 for the top-level message (protobuf-es BinaryReadContext). */
 static bool decode(PbMsg *m, const uint8_t *p, size_t n, int depth)
 {
-	if (depth > PB_MAX_DEPTH)
+	if (depth > PB_MAX_DEPTH) {
+		pb_too_deep = true;
 		return false;
+	}
 	PbReader r = {p, p + n};
 	while (r.p < r.end) {
 		const uint8_t *start = r.p;
@@ -191,7 +193,13 @@ static bool decode(PbMsg *m, const uint8_t *p, size_t n, int depth)
 	return true;
 }
 
-bool pb_decode(PbMsg *m, const uint8_t *p, size_t n) { return decode(m, p, n, 1); }
+bool pb_too_deep;
+
+bool pb_decode(PbMsg *m, const uint8_t *p, size_t n)
+{
+	pb_too_deep = false;
+	return decode(m, p, n, 1);
+}
 
 static void put_scalar(Buf *b, int type, uint64_t v)
 {

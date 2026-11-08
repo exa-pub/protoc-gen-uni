@@ -1,0 +1,43 @@
+# Golden config for connectrpc/dart v2.0.1: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Groups: default; keep_empty_files (empty value = true); keep_empty_files=false; errors: a bool
+# value that bool.tryParse rejects (case-sensitive), an unsupported option.
+# Regenerate: scripts/gen-testdata.sh connectrpc/dart v2.0.1
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-case
+  - directory: testdata/proto/services-editions
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/services-connect
+  - directory: testdata/proto/services-editions2024
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/connectrpc/dart:v2.0.1
+    out: default
+  - remote: buf.build/connectrpc/dart:v2.0.1
+    out: keep-empty
+    opt: [keep_empty_files]
+  - remote: buf.build/connectrpc/dart:v2.0.1
+    out: keep-empty-false
+    opt: [keep_empty_files=false]
+  - remote: buf.build/connectrpc/dart:v2.0.1
+    out: error-bool
+    opt: [keep_empty_files=True]
+  - remote: buf.build/connectrpc/dart:v2.0.1
+    out: error-unknown
+    opt: [foo=bar]

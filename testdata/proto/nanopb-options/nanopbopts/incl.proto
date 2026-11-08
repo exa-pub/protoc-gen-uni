@@ -1,0 +1,32 @@
+syntax = "proto3";
+package nanopbopts.incl;
+import "nanopb.proto";
+import "nanopbopts/other.proto";
+
+option (nanopb_fileopt).include = "<stdio.h>";
+option (nanopb_fileopt).include = "custom/header.h";
+option (nanopb_fileopt).exclude = "nanopbopts/other.proto";
+option (nanopb_fileopt).package = "np_incl";
+option (nanopb_fileopt).msgid = 7;
+
+// A message with a custom callback type.
+message WithCallbacks {
+  option (nanopb_msgopt).callback_function = "my_callback";
+  option (nanopb_msgopt).msgid = 42;
+  string text = 1 [(nanopb).callback_datatype = "struct my_text"];
+  repeated other.O items = 2;
+  bytes blob = 3 [(nanopb).max_size = 300, (nanopb).proto3 = false];
+  int32 forced = 4 [(nanopb).label_override = LABEL_REQUIRED];
+  sint64 small = 5 [(nanopb).int_size = IS_16];
+  Kind kind = 6;
+  repeated Kind kinds = 7 [(nanopb).max_count = 3];
+  map<string, string> attrs = 8 [(nanopb).type = FT_IGNORE];
+  int64 deprecated_field = 9 [deprecated = true, (nanopb).discard_deprecated = true];
+  optional uint32 has_default = 10 [(nanopb).default_has = true];
+  repeated string names = 11 [(nanopb).max_count = 2, (nanopb).max_length = 5];
+}
+
+enum Kind {
+  KIND_UNKNOWN = 0;
+  KIND_A = 1;
+}

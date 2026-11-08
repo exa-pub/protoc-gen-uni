@@ -1,0 +1,33 @@
+// Test: grpc-gateway path parameters of an editions file (explicit presence, a delimited message
+// field, a required field): grpc-gateway treats editions like proto3.
+edition = "2023";
+
+package test.paths.ed.v1;
+
+import "google/api/annotations.proto";
+
+option features.field_presence = IMPLICIT;
+
+message EdReq {
+  string id = 1 [features.field_presence = EXPLICIT];
+  int32 num = 2;
+  Sub sub = 3 [features.message_encoding = DELIMITED];
+  message Sub {
+    string name = 1;
+  }
+  repeated string tags = 4;
+  int64 req = 5 [features.field_presence = LEGACY_REQUIRED];
+}
+
+service EdSvc {
+  rpc Get(EdReq) returns (EdReq) {
+    option (google.api.http) = {get: "/ed/{id}/{num}/{tags}/{req}"};
+  }
+  rpc Nested(EdReq) returns (EdReq) {
+    option (google.api.http) = {
+      post: "/ed/{sub.name}"
+      body: "sub"
+      response_body: "sub"
+    };
+  }
+}

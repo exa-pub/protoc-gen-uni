@@ -51,8 +51,10 @@ static const char *gen_ab(PbMsg *req, Str raw, Buf *out)
 	return NULL;
 }
 
-static const UniGenerator g1 = {"a/b", "v1.0.0", gen_ab}, g2 = {"a/b", "v1.1.0", gen_ab},
-			  g3 = {"c/d", "v1.0.0", gen_ab}, g0 = {"0/z", "v2.0.0", gen_ab};
+static const UniGenerator g1 = {.name = "a/b", .version = "v1.0.0", .generate = gen_ab},
+			  g2 = {.name = "a/b", .version = "v1.1.0", .generate = gen_ab},
+			  g3 = {.name = "c/d", .version = "v1.0.0", .generate = gen_ab},
+			  g0 = {.name = "0/z", .version = "v2.0.0", .generate = gen_ab};
 /* deliberately unsorted: errors list sorted names and versions */
 static const UniGenerator *const gens[] = {&g2, &g3, &g1, &g0};
 
@@ -136,7 +138,8 @@ static void test_main(void)
 	CHECK(out.n == 0);
 	/* a generator with parses_raw gets the parameter (the last one, after groups nested deeper
 	 * than PB_MAX_DEPTH) and the raw request */
-	static const UniGenerator raw_ab = {"a/b", "v1.1.0", gen_ab, true};
+	static const UniGenerator raw_ab = {
+		.name = "a/b", .version = "v1.1.0", .generate = gen_ab, .parses_raw = true};
 	static const UniGenerator *const raw_gens[] = {&g1, &raw_ab};
 	Buf group = {0};
 	for (int i = 0; i < 150; i++)

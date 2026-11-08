@@ -45,4 +45,8 @@ static const char *generate(PbMsg *req, Str raw, Buf *out)
 	return NULL;
 }
 
-const UniGenerator gen_bufbuild_es_v2_17_0 = {"bufbuild/es", "v2.17.0", generate};
+const UniGenerator gen_bufbuild_es_v2_17_0 = {
+	.name = "bufbuild/es",
+	.version = "v2.17.0",
+	.generate = generate,
+};

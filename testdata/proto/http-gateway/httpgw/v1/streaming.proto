@@ -1,0 +1,69 @@
+// Test: HTTP annotations on streaming methods.
+//
+// Server, client and bidi streaming methods bound to HTTP, a deprecated
+// streaming method, streaming and unary methods without an HTTP binding
+// (generate_unbound_methods) and a service whose methods have no binding.
+syntax = "proto3";
+
+package test.httpgw.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "httpgw/v1/library.proto";
+
+message ChatMessage {
+  string text = 1;
+  int64 sent_at_unix = 2;
+}
+
+message WatchShelfRequest {
+  // Resource name of the shelf to watch.
+  string name = 1;
+  int32 max_events = 2;
+}
+
+// StreamService streams books over HTTP.
+service StreamService {
+  // WatchShelf streams the books of a shelf (server streaming).
+  rpc WatchShelf(WatchShelfRequest) returns (stream Book) {
+    option (google.api.http) = {get: "/v1/stream/{name=shelves/*}/books"};
+  }
+
+  // ImportBooks reads books from the client (client streaming).
+  rpc ImportBooks(stream Book) returns (ImportBooksResponse) {
+    option (google.api.http) = {
+      post: "/v1/stream/books:import"
+      body: "*"
+    };
+  }
+
+  // Chat is a bidi stream.
+  rpc Chat(stream ChatMessage) returns (stream ChatMessage) {
+    option (google.api.http) = {
+      post: "/v1/stream/chat"
+      body: "*"
+    };
+  }
+
+  // OldWatch is deprecated.
+  rpc OldWatch(WatchShelfRequest) returns (stream Book) {
+    option deprecated = true;
+    option (google.api.http) = {get: "/v1/stream/old/{name=shelves/*}"};
+  }
+
+  // Unbound streams without an HTTP binding.
+  rpc Unbound(stream ChatMessage) returns (stream ChatMessage);
+
+  // UnboundUnary has no HTTP binding.
+  rpc UnboundUnary(WatchShelfRequest) returns (google.protobuf.Empty);
+}
+
+message ImportBooksResponse {
+  int32 imported = 1;
+}
+
+// Unannotated has no HTTP bindings at all.
+service Unannotated {
+  rpc Ping(ChatMessage) returns (ChatMessage);
+  rpc PingStream(ChatMessage) returns (stream ChatMessage);
+}

@@ -130,6 +130,13 @@ typedef struct {
 
 static void reg_add(Registry *r, Desc *d, const char *type_name) { map_put(&r->types, type_name, d); }
 
+/* Appends d to a list of its parent (file->messages, ...) and records its position there. */
+static void push_pos(Vec *list, void *d)
+{
+	((Desc *)d)->pos = list->n;
+	vec_push(list, d);
+}
+
 static Desc *reg_get(Registry *r, const char *type_name, int kind)
 {
 	Desc *d = map_get(&r->types, type_name);
@@ -178,11 +185,17 @@ static Str find_enum_value_json_name(const PbMsg *proto)
 	while (pb_next_field(&r, &f)) {
 		if (f.num != 998 || f.wt != WT_LEN)
 			continue;
+		/* Occurrences of a message field are merged, so the last value wins. */
 		PbReader s = {f.val, f.val + f.vlen};
 		PbRawField g;
-		while (pb_next_field(&s, &g))
+		while (s.p < s.end) {
+			/* upstream throws on what pkg/pb rejects, with BinaryReader's own errors */
+			if (!pb_next_field(&s, &g))
+				fail("unsupported by protoc-gen-uni: malformed option (pb.enumvalue.json) of enum value %s",
+				     pb_str(proto, EVDP_NAME));
 			if (g.num == 1 && g.wt == WT_LEN)
-				json = (Str){xstrndup((const char *)g.val, g.vlen), g.vlen};
+				json = decode_utf8((Str){xstrndup((const char *)g.val, g.vlen), g.vlen});
+		}
 	}
 	return json;
 }
@@ -211,7 +224,7 @@ static void add_enum(PbMsg *proto, int index, DescFile *file, DescMessage *paren
 			v->json_name = str_c(v->name);
 		vec_push(&d->values, v);
 	}
-	vec_push(parent ? &parent->nested_enums : &file->enums, d);
+	push_pos(parent ? &parent->nested_enums : &file->enums, d);
 }
 
 static void add_message(PbMsg *proto, int index, DescFile *file, DescMessage *parent, Registry *reg, MapEntries *entries)
@@ -227,7 +240,7 @@ static void add_message(PbMsg *proto, int index, DescFile *file, DescMessage *pa
 			vec_push(&entries->order, d);
 		map_put(&entries->by_name, d->type_name, d);
 	} else {
-		vec_push(parent ? &parent->nested_messages : &file->messages, d);
+		push_pos(parent ? &parent->nested_messages : &file->messages, d);
 		reg_add(reg, &d->h, d->type_name);
 	}
 	for (int i = 0; i < pb_count(proto, DP_ENUM_TYPE); i++)
@@ -243,7 +256,7 @@ static void add_service(PbMsg *proto, int index, DescFile *file, Registry *reg)
 	d->file = file;
 	d->name = pb_str(proto, SDP_NAME);
 	d->type_name = make_type_name(d->name, NULL, file);
-	vec_push(&file->services, d);
+	push_pos(&file->services, d);
 	reg_add(reg, &d->h, d->type_name);
 	for (int i = 0; i < pb_count(proto, SDP_METHOD); i++) {
 		PbMsg *p = pb_msg_at(proto, SDP_METHOD, i);
@@ -406,7 +419,7 @@ static DescField *new_extension(PbMsg *proto, int index, DescFile *file, DescMes
 static void add_message_extensions(DescMessage *m, Registry *reg)
 {
 	for (int i = 0; i < pb_count(m->h.proto, DP_EXTENSION); i++)
-		vec_push(&m->nested_extensions, new_extension(pb_msg_at(m->h.proto, DP_EXTENSION, i), i, m->file, m, reg));
+		push_pos(&m->nested_extensions, new_extension(pb_msg_at(m->h.proto, DP_EXTENSION, i), i, m->file, m, reg));
 	for (int i = 0; i < m->nested_messages.n; i++)
 		add_message_extensions(m->nested_messages.v[i], reg);
 }
@@ -464,7 +477,7 @@ static void add_fields(DescMessage *m, Registry *reg, MapEntries *entries)
 		add_fields(m->nested_messages.v[i], reg, entries);
 }
 
-static int file_edition(const PbMsg *proto)
+static int file_edition(const PbMsg *proto, int max_edition)
 {
 	const char *syntax = pb_str(proto, FDP_SYNTAX);
 	if (!*syntax || str_eq(syntax, "proto2"))
@@ -474,19 +487,19 @@ static int file_edition(const PbMsg *proto)
 	if (str_eq(syntax, "editions")) {
 		int64_t e = pb_int(proto, FDP_EDITION, 0);
 		if (e == ED_UNSTABLE)
-			return ED_MAXIMUM;
-		if (feature_defaults((int)e))
+			return max_edition;
+		if (e <= max_edition && feature_defaults((int)e))
 			return (int)e;
 		fail("%s: unsupported edition", pb_str(proto, FDP_NAME));
 	}
 	fail("%s: unsupported syntax \"%s\"", pb_str(proto, FDP_NAME), syntax);
 }
 
-static void add_file(PbMsg *proto, Registry *reg)
+static void add_file(PbMsg *proto, Registry *reg, int max_edition)
 {
 	DescFile *file = xalloc(sizeof *file);
 	init_desc(&file->h, DK_FILE, proto, 0);
-	file->edition = file_edition(proto);
+	file->edition = file_edition(proto, max_edition);
 	file->name = str_trim_suffix(pb_str(proto, FDP_NAME), ".proto");
 	for (int i = 0; i < pb_count(proto, FDP_DEPENDENCY); i++) {
 		const char *dep = pb_str_at(proto, FDP_DEPENDENCY, i);
@@ -503,32 +516,35 @@ static void add_file(PbMsg *proto, Registry *reg)
 	for (int i = 0; i < pb_count(proto, FDP_SERVICE); i++)
 		add_service(pb_msg_at(proto, FDP_SERVICE, i), i, file, reg);
 	for (int i = 0; i < pb_count(proto, FDP_EXTENSION); i++)
-		vec_push(&file->extensions, new_extension(pb_msg_at(proto, FDP_EXTENSION, i), i, file, NULL, reg));
+		push_pos(&file->extensions, new_extension(pb_msg_at(proto, FDP_EXTENSION, i), i, file, NULL, reg));
 	for (int i = 0; i < entries.order.n; i++)
 		add_fields(entries.order.v[i], reg, &entries);
 	for (int i = 0; i < file->messages.n; i++) {
 		add_fields(file->messages.v[i], reg, &entries);
 		add_message_extensions(file->messages.v[i], reg);
 	}
+	/* files.set(name, file): a file with the same name keeps its position */
 	const char *name = pb_str(proto, FDP_NAME);
-	if (map_has(&reg->file_names, name)) {
-		for (int i = 0; i < reg->files.n; i++)
-			if (str_eq(pb_str(((DescFile *)reg->files.v[i])->h.proto, FDP_NAME), name))
-				reg->files.v[i] = file;
-	} else {
+	DescFile *prev = map_get(&reg->file_names, name);
+	if (prev)
+		reg->files.v[prev->h.pos] = file;
+	else
 		vec_push(&reg->files, file);
-	}
+	file->h.pos = prev ? prev->h.pos : reg->files.n - 1;
 	map_put(&reg->file_names, name, file);
 }
 
-Registry *registry_create(PbMsg **files, int n)
+Registry *registry_create_opts(PbMsg **files, int n, bool check, int max_edition)
 {
 	Registry *reg = xalloc(sizeof *reg);
 	for (int i = 0; i < n; i++) {
-		const char *err = assert_valid_names(files[i]);
+		const char *err = check ? assert_valid_names(files[i]) : NULL;
 		if (err)
 			fail("%s", err);
-		add_file(files[i], reg);
+		add_file(files[i], reg, max_edition);
 	}
 	return reg;
 }
+
+Registry *registry_create(PbMsg **files, int n) { return registry_create_opts(files, n, true, ED_MAXIMUM); }
+Registry *registry_create_unchecked(PbMsg **files, int n) { return registry_create_opts(files, n, false, ED_MAXIMUM); }

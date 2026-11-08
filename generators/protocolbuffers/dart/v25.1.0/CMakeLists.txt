@@ -1,0 +1,1 @@
+uni_generator(LIBRARIES dart_protoc_plugin)

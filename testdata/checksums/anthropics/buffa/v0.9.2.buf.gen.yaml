@@ -17,6 +17,7 @@ inputs:
   - directory: testdata/proto/real-otel
   - directory: testdata/proto/real-protovalidate
   - directory: testdata/proto/real-protovalidate-editions
+  - directory: testdata/proto/rust-long
 plugins:
   - remote: buf.build/anthropics/buffa:v0.9.2
     out: default
@@ -29,3 +30,15 @@ plugins:
   - remote: buf.build/anthropics/buffa:v0.9.2
     out: reflect
     opt: [reflect_mode=vtable, file_per_package=true, idiomatic_imports=true, idiomatic_field_names=true, unbox_oneof=true]
+  - remote: buf.build/anthropics/buffa:v0.9.2
+    out: gated
+    opt: [json=true, text=true, reflect_mode=vtable, gate_impls=true, arbitrary=true, open_enums_in=., type_name_prefix=Pb]
+  - remote: buf.build/anthropics/buffa:v0.9.2
+    out: bridge
+    opt: [reflect_mode=bridge, shared_descriptor_pool=true, views=false, strict_utf8_mapping=true, allow_message_set=true, extern_path=.google.protobuf=::my_wkt::protobuf]
+  - remote: buf.build/anthropics/buffa:v0.9.2
+    out: lazy
+    opt: [lazy_views=true, json=true]
+  - remote: buf.build/anthropics/buffa:v0.9.2
+    out: lazy-lean
+    opt: [lazy_views=true, unknown_fields=false, gate_impls=true, open_enums_in=., file_per_package=true, idiomatic_imports=true]

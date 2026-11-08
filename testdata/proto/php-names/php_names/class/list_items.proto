@@ -1,0 +1,64 @@
+// php-names: PHP names of the protoc PHP generator. A package and directories that are PHP
+// reserved words (PhpName and GeneratedMetadataFileName prefix them with PB), reserved message,
+// nested message and enum names (ReservedNamePrefix), reserved enum value names (ConstantNamePrefix
+// and its list of valid constant names), and proto2 defaults (absl::StrCat of floats: 6 digits).
+syntax = "proto2";
+
+package test.php.class.list;
+
+message Empty {
+  optional int32 x = 1;
+}
+
+message Function {
+  message List {
+    message Print {
+      optional string s = 1;
+    }
+    optional Print print = 1;
+  }
+  optional List list = 1;
+  repeated List lists = 2 [deprecated = true];
+  map<string, List> by_name = 3 [deprecated = true];
+  oneof Choice {
+    string echo = 4 [deprecated = true];
+    List other = 5;
+  }
+  optional int32 deprecated_scalar = 6 [deprecated = true];
+  optional Empty deprecated_message = 7 [deprecated = true];
+}
+
+message Defaults {
+  optional double d_tiny = 1 [default = 1e-300];
+  optional double d_pi = 2 [default = 3.14159265358979];
+  optional double d_big = 3 [default = 123456789];
+  optional double d_small = 4 [default = 0.0001];
+  optional double d_smaller = 5 [default = 0.00001234];
+  optional double d_inf = 6 [default = inf];
+  optional double d_neg_inf = 7 [default = -inf];
+  optional double d_nan = 8 [default = nan];
+  optional double d_neg_zero = 9 [default = -0.0];
+  optional double d_round = 10 [default = 999999.5];
+  optional double d_tie = 11 [default = 100000.5];
+  optional double d_max = 12 [default = 1.7976931348623157e308];
+  optional double d_min = 13 [default = 4.9e-324];
+  optional float f_pi = 14 [default = 3.14159265];
+  optional float f_big = 15 [default = 3.4e38];
+  optional float f_inf = 16 [default = -inf];
+  optional float f_small = 17 [default = 1.5e-45];
+  optional double d_int = 18 [default = 12345];
+  optional double d_frac = 19 [default = 1234.5678];
+  optional int32 i32 = 20 [default = -2147483648];
+  optional int64 i64 = 21 [default = -9223372036854775808];
+  optional uint32 u32 = 22 [default = 4294967295];
+  optional uint64 u64 = 23 [default = 18446744073709551615];
+  optional sint64 s64 = 24 [default = 42];
+  optional fixed64 f64 = 25 [default = 7];
+  optional sfixed32 sf32 = 26 [default = -7];
+  optional bool b = 27 [default = true];
+  optional string str = 28 [default = "it's \"quoted\" \\ back\nslash\t\001 h\303\251"];
+  optional bytes bin = 29 [default = "\000\001\377'$"];
+  optional string empty_str = 30 [default = ""];
+  optional double d_plain = 31;
+  optional int64 i64_plain = 32;
+}

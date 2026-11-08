@@ -1,0 +1,20 @@
+// Test: Rust line lengths, proto3 part: references across a long package path,
+// optional fields (setters with impl Into), maps with message values and
+// a oneof of messages from another package.
+syntax = "proto3";
+
+package test.rust_long.another_package_with_a_long_name.v1;
+
+import "rust_long/long_names_and_defaults.proto";
+
+message AProto3MessageReferencingTheLongMessageAcrossPackages {
+  test.rust_long.a_rather_long_package_name_that_makes_relative_paths_long.AVeryLongMessageNameThatIsCloseToTheOneHundredColumnPageWidthOfPrettyplease the_long_message_from_another_package = 1;
+  optional string an_optional_proto3_string_field_with_a_long_name = 2;
+  map<string, test.rust_long.a_rather_long_package_name_that_makes_relative_paths_long.AVeryLongMessageNameThatIsCloseToTheOneHundredColumnPageWidthOfPrettyplease> a_map_of_long_messages_from_another_package = 4;
+  repeated test.rust_long.a_rather_long_package_name_that_makes_relative_paths_long.AVeryLongMessageNameThatIsCloseToTheOneHundredColumnPageWidthOfPrettyplease.ANestedMessageWithAnotherLongNameToMakeTheStructNameEvenLonger nested_messages = 5;
+  oneof choice_between_long_messages {
+    test.rust_long.a_rather_long_package_name_that_makes_relative_paths_long.AVeryLongMessageNameThatIsCloseToTheOneHundredColumnPageWidthOfPrettyplease first_choice = 6;
+    AProto3MessageReferencingTheLongMessageAcrossPackages second_choice_recursive = 7;
+    double third_choice_double = 8;
+  }
+}

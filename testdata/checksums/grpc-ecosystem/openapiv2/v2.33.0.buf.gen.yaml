@@ -1,0 +1,93 @@
+# Golden config for grpc-ecosystem/openapiv2 v2.33.0: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Inputs set no go_package: managed mode adds go_package_prefix.
+# http-gateway covers the path templates, bodies, bindings, methods, query parameters, visibility
+# rules, field behaviors and the openapiv2 options; http-gateway-delete-body tests the error for a
+# DELETE binding with a body (allowed in group "package").
+# Groups: default (JSON per file); allow_merge with merge_file_name and output_format=yaml;
+# naming strategy simple with json_names_for_fields=false, simple_operation_ids, enums_as_ints,
+# disable_default_errors, omit_enum_default_value; the schema/semantics options
+# (generate_unbound_methods, use_allof_for_refs, preserve_rpc_order, enable_rpc_deprecation,
+# enable_field_deprecation, proto3_optional_nullable, use_proto3_field_semantics,
+# include_package_in_tags, generate_x_go_type, remove_internal_comments);
+# expand_slashed_path_patterns with naming strategy fqn (not with use_proto3_field_semantics:
+# upstream panics on real-googleapis, a Go panic trace is not reproducible); naming strategy package
+# with ignore_comments, disable_service_tags, disable_default_responses,
+# omit_array_item_type_when_ref_sibling, allow_patch_feature=false, allow_delete_body,
+# repeated_path_param_separator=pipes, visibility_restriction_selectors;
+# the deprecated fqn_for_openapi_name with allow_merge, recursive-depth, import_prefix and
+# ignore_go_package_option; errors: an invalid naming strategy, ignore_comments with
+# use_go_templates, go_template_args without use_go_templates, an unknown separator, an unknown
+# output format.
+# Not tested: grpc_api_configuration and openapi_configuration (local files), file (reads a file
+# instead of stdin), use_go_templates (comments as Go templates), errors that upstream reports with
+# grpclog.Fatal (an unknown option, fqn_for_openapi_name with openapi_naming_strategy: the message
+# carries a timestamp).
+# Regenerate: scripts/gen-testdata.sh grpc-ecosystem/openapiv2 v2.33.0
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: example.com/gen
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-case
+  - directory: testdata/proto/services-editions
+  - directory: testdata/proto/services-editions2024
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/services-connect
+  - directory: testdata/proto/http-gateway
+  - directory: testdata/proto/http-gateway-delete-body
+  - directory: testdata/proto/http-gateway-scalar-body
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/grpc-ecosystem/openapiv2:v2.33.0
+    out: default
+  - remote: buf.build/grpc-ecosystem/openapiv2:v2.33.0
+    out: merge
+    opt: [allow_merge=true, merge_file_name=api, output_format=yaml]
+  - remote: buf.build/grpc-ecosystem/openapiv2:v2.33.0
+    out: naming
+    opt: [json_names_for_fields=false, openapi_naming_strategy=simple, simple_operation_ids=true, enums_as_ints=true, disable_default_errors=true, omit_enum_default_value=true]
+  - remote: buf.build/grpc-ecosystem/openapiv2:v2.33.0
+    out: semantics
+    opt: [generate_unbound_methods=true, use_allof_for_refs=true, preserve_rpc_order=true, enable_rpc_deprecation=true, enable_field_deprecation=true, proto3_optional_nullable=true, use_proto3_field_semantics=true, include_package_in_tags=true, generate_x_go_type=true, remove_internal_comments=true]
+  - remote: buf.build/grpc-ecosystem/openapiv2:v2.33.0
+    out: expand
+    opt: [expand_slashed_path_patterns=true, openapi_naming_strategy=fqn]
+  - remote: buf.build/grpc-ecosystem/openapiv2:v2.33.0
+    out: package
+    opt: [openapi_naming_strategy=package, ignore_comments=true, disable_service_tags=true, disable_default_responses=true, omit_array_item_type_when_ref_sibling=true, allow_patch_feature=false, allow_delete_body=true, repeated_path_param_separator=pipes, visibility_restriction_selectors=PREVIEW, visibility_restriction_selectors=INTERNAL]
+  - remote: buf.build/grpc-ecosystem/openapiv2:v2.33.0
+    out: fqn
+    opt: [fqn_for_openapi_name=true, allow_merge=true, recursive-depth=2, import_prefix=example.com/prefix, ignore_go_package_option=true]
+  - remote: buf.build/grpc-ecosystem/openapiv2:v2.33.0
+    out: error-naming
+    opt: [openapi_naming_strategy=foo]
+  - remote: buf.build/grpc-ecosystem/openapiv2:v2.33.0
+    out: error-comments
+    opt: [use_go_templates=true, ignore_comments=true]
+  - remote: buf.build/grpc-ecosystem/openapiv2:v2.33.0
+    out: error-template-args
+    opt: [go_template_args=a=b]
+  - remote: buf.build/grpc-ecosystem/openapiv2:v2.33.0
+    out: error-separator
+    opt: [repeated_path_param_separator=foo]
+  - remote: buf.build/grpc-ecosystem/openapiv2:v2.33.0
+    out: error-format
+    opt: [output_format=xml]

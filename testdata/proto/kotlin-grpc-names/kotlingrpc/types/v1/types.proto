@@ -1,0 +1,18 @@
+// Messages named like the classes and members that grpc/kotlin imports (KotlinPoet import aliases
+// and member imports).
+syntax = "proto3";
+
+package kotlingrpc.types.v1;
+
+option java_multiple_files = true;
+
+message Flow {}
+message Metadata {}
+message Status {}
+message String {}
+message Channel {}
+message DEFAULT {}
+message builder {}
+message unaryRpc {}
+message UNIMPLEMENTED {}
+message Deprecated {}

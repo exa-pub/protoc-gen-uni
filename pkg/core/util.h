@@ -28,6 +28,16 @@ char *xstrndup(const char *s, size_t n);
 char *xstrdup(const char *s);
 /* Frees everything allocated so far (all pointers become invalid). */
 void arena_reset(void);
+/* Scoped allocation, for generators that produce independent outputs one after the other: the
+ * memory allocated after arena_mark() is freed by arena_release() of that mark (pointers into it
+ * become invalid), except what xalloc_keep() allocated, which lives until arena_reset(). */
+typedef struct {
+	void *chunks;
+	char *p, *end;
+} ArenaMark;
+ArenaMark arena_mark(void);
+void arena_release(ArenaMark m);
+void *xalloc_keep(size_t n); /* zeroed, never NULL; survives arena_release() */
 
 /* ---- buf.c ---- */
 
@@ -104,6 +114,8 @@ Str buf_view(Buf *b); /* the content as Str (b keeps owning it) */
 /* Decodes one UTF-8 sequence like Go's utf8.DecodeRune: invalid or truncated input yields
  * U+FFFD with width 1, n must be > 0. Returns the width. */
 int utf8_decode(const char *p, size_t n, uint32_t *rune);
+/* Go's unicode.IsSpace. */
+bool go_is_space(uint32_t r);
 /* Go's strings.TrimSpace (unicode.IsSpace). */
 COLD Str go_trim_space(Str s);
 

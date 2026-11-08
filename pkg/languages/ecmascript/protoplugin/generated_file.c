@@ -136,18 +136,30 @@ static void on_set(OrderedNames *m, const char *name, const char *alias)
 	n->alias = alias;
 }
 
-/* Stable sort by name with localeCompare. */
+/* Stable sort by name with localeCompare (Array.prototype.sort is stable): a merge sort of
+ * v[lo:hi] using tmp. */
+static void merge_sort(void **v, void **tmp, int lo, int hi)
+{
+	if (hi - lo < 2)
+		return;
+	int mid = lo + (hi - lo) / 2;
+	merge_sort(v, tmp, lo, mid);
+	merge_sort(v, tmp, mid, hi);
+	int i = lo, j = mid, k = lo;
+	while (i < mid && j < hi)
+		tmp[k++] = locale_compare(((ImportName *)v[j])->name, ((ImportName *)v[i])->name) < 0 ? v[j++] : v[i++];
+	while (i < mid)
+		tmp[k++] = v[i++];
+	while (j < hi)
+		tmp[k++] = v[j++];
+	for (k = lo; k < hi; k++)
+		v[k] = tmp[k];
+}
+
 static void sort_names(Vec *v)
 {
-	for (int i = 1; i < v->n; i++) {
-		void *x = v->v[i];
-		int j = i - 1;
-		while (j >= 0 && locale_compare(((ImportName *)v->v[j])->name, ((ImportName *)x)->name) > 0) {
-			v->v[j + 1] = v->v[j];
-			j--;
-		}
-		v->v[j + 1] = x;
-	}
+	if (v->n > 1)
+		merge_sort(v->v, xalloc(sizeof(void *) * (size_t)v->n), 0, v->n);
 }
 
 typedef struct {

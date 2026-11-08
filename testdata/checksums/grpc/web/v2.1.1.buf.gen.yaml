@@ -1,0 +1,61 @@
+# Golden config for grpc/web v2.1.1: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Groups: import_style commonjs+dts, typescript, closure (with goog_promise), commonjs (with
+# plugins); mode grpcweb, grpcwebtext, jspb, binary; errors: no mode, an unsupported option, an
+# invalid import_style, an invalid mode.
+# Not tested: multiple_files=True and import_style=experimental_closure_es6 (upstream aborts on
+# every file with services: printer check failure "undefined variable: version" with a stack
+# trace); out= (one output name for all files).
+# Inputs left out: naming: upstream returns neither files nor an error when the request contains
+# naming/legacy.proto (JSON name conflict).
+# Regenerate: scripts/gen-testdata.sh grpc/web v2.1.1
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-case
+  - directory: testdata/proto/services-editions
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/grpc/web:v2.1.1
+    out: commonjs-dts
+    opt: [import_style=commonjs+dts, mode=grpcweb]
+  - remote: buf.build/grpc/web:v2.1.1
+    out: typescript
+    opt: [import_style=typescript, mode=grpcwebtext]
+  - remote: buf.build/grpc/web:v2.1.1
+    out: closure
+    opt: [import_style=closure, mode=grpcweb, goog_promise=True]
+  - remote: buf.build/grpc/web:v2.1.1
+    out: commonjs
+    opt: [import_style=commonjs, mode=grpcwebtext, plugins=foo]
+  - remote: buf.build/grpc/web:v2.1.1
+    out: jspb
+    opt: [mode=jspb, goog_promise=True]
+  - remote: buf.build/grpc/web:v2.1.1
+    out: binary
+    opt: [import_style=commonjs, mode=binary]
+  - remote: buf.build/grpc/web:v2.1.1
+    out: error-no-mode
+  - remote: buf.build/grpc/web:v2.1.1
+    out: error-unknown
+    opt: [mode=grpcweb, foo=bar]
+  - remote: buf.build/grpc/web:v2.1.1
+    out: error-import-style
+    opt: [mode=grpcweb, import_style=es6]
+  - remote: buf.build/grpc/web:v2.1.1
+    out: error-mode
+    opt: [mode=grpc]

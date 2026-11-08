@@ -16,12 +16,17 @@
 
 /* ---- helpers ---- */
 
-/* internal/errors.New: the "proto: " prefix (regular spaces; protobuf-go may choose no-break
- * spaces per binary). */
+bool go_detrand;
+bool go_protobuf_v1_36_11;
+
+/* "proto:" and a no-break space (U+00A0, UTF-8) or a space */
+COLD const char *go_err_prefix(void) { return go_detrand ? "proto:\xc2\xa0" : "proto: "; }
+
+/* internal/errors.New: the "proto: " prefix (go_err_prefix) and the text. */
 COLD const char *go_err(const char *fmt, ...)
 {
 	Buf b = {0};
-	buf_adds(&b, "proto: ");
+	buf_adds(&b, go_err_prefix());
 	va_list ap;
 	va_start(ap, fmt);
 	buf_vfmt(&b, fmt, ap);
@@ -598,11 +603,27 @@ static COLD const char *find_target(Ctx *c, GoField *f, const char *scope, Str r
 
 /* ---- default values (defval.Unmarshal, Descriptor format) ---- */
 
-/* strconv.ParseInt/ParseUint with base 0 and the given bit size. */
+/* strconv.ParseInt/ParseUint with base 0 (v1.36.11: base 10) and the given bit size. */
 static COLD bool parse_uint_base0(const char *s, int bits, uint64_t *out)
 {
 	if (!*s)
 		return false;
+	uint64_t max = bits == 64 ? UINT64_MAX : ((uint64_t)1 << bits) - 1;
+	if (go_protobuf_v1_36_11) {
+		uint64_t v = 0;
+		for (const char *q = s; *q; q++) {
+			if (*q < '0' || *q > '9')
+				return false;
+			uint64_t d = (uint64_t)(*q - '0');
+			if (v > (UINT64_MAX - d) / 10)
+				return false;
+			v = v * 10 + d;
+			if (v > max)
+				return false;
+		}
+		*out = v;
+		return true;
+	}
 	int base = 10;
 	const char *p = s;
 	bool prefixed = false;
@@ -619,7 +640,6 @@ static COLD bool parse_uint_base0(const char *s, int bits, uint64_t *out)
 	(void)prefixed;
 	/* underscores: only allowed with a base prefix, between digits (underscoreOK) */
 	bool underscores = false;
-	uint64_t max = bits == 64 ? UINT64_MAX : ((uint64_t)1 << bits) - 1;
 	uint64_t v = 0;
 	bool any = base == 8 && p == s + 1; /* "0" alone */
 	for (; *p; p++) {
@@ -895,7 +915,11 @@ static COLD const char *unmarshal_default(GoField *f, Str s)
 }
 
 /* strips the "proto: " prefix of a nested error (internal/errors format chaining) */
-static const char *inner(const char *err) { return has_prefix(err, "proto: ") ? err + 7 : err; }
+static const char *inner(const char *err)
+{
+	const char *p = go_err_prefix();
+	return has_prefix(err, p) ? err + strlen(p) : err;
+}
 
 static COLD const char *resolve_extensions(Ctx *c, GoField **xs, int n)
 {

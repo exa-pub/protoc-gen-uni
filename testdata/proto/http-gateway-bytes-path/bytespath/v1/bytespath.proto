@@ -1,0 +1,18 @@
+// Test: a proto2 bytes field as a path parameter. grpc-gateway has no converter for it and fails
+// with the error of its template (text/template position of the call).
+syntax = "proto2";
+
+package test.bytespath.v1;
+
+import "google/api/annotations.proto";
+
+message Req {
+  optional string id = 1;
+  optional bytes data = 2;
+}
+
+service BytesService {
+  rpc Get(Req) returns (Req) {
+    option (google.api.http) = {get: "/v1/{id}/{data}"};
+  }
+}

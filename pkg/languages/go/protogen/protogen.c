@@ -3,7 +3,8 @@
  * license that can be found in the LICENSE file. */
 
 /* Ported from google.golang.org/protobuf v1.36.12 compiler/protogen/protogen.go (Options.New,
- * the descriptor wrappers and their naming), protogen_apilevel.go and protogen_opaque.go. */
+ * the descriptor wrappers and their naming), protogen_apilevel.go and protogen_opaque.go. Where
+ * v1.31.0 differs, the code tests PgOptions.Version (protogen_v1.31.0.c). */
 #include "internal.h"
 
 #include <string.h>
@@ -85,8 +86,15 @@ static COLD const char *path_ext(const char *path)
 	return "";
 }
 
+/* path.Dir */
+COLD const char *pg_path_dir(const char *path)
+{
+	const char *slash = strrchr(path, '/');
+	return pg_path_clean(slash ? xstrndup(path, (size_t)(slash - path + 1)) : "");
+}
+
 /* path.Join of two elements */
-static COLD const char *path_join(const char *a, const char *b)
+COLD const char *pg_path_join(const char *a, const char *b)
 {
 	if (!*a && !*b)
 		return "";
@@ -341,7 +349,7 @@ static COLD PgEnumValue *new_enum_value(PgPlugin *gen, PgFile *f, PgMessage *mes
 	const char *name = xcat(parent_ident.GoName, "_", desc->d.name);
 	const char *prefixed_name = NULL;
 	PgLocation loc = pg_location_append(e->Location, GENID_EnumDescriptorProto_Value_field_number, desc->d.index);
-	{
+	if (PG_V1_36(gen->opts.Version)) { /* v1.31.0: no strip_enum_prefix */
 		Buf pb = {0};
 		for (const char *s = e->Desc->d.name; *s; s++)
 			if (*s != '_')
@@ -646,13 +654,17 @@ static COLD const char *new_file(PgPlugin *gen, PbMsg *p, const char *package_na
 			    PgFile **out)
 {
 	const char *err;
+	if (gen->opts.Version && (err = gen->opts.Version->check_file(p)))
+		return err;
 	GoFile *desc = go_registry_new_file(gen->fileReg, p, &err);
 	if (!desc)
-		return err;
+		return gen->opts.Version ? gen->opts.Version->new_file_error(err) : err;
 	int def = default_api_level(gen);
 	if (api_level != PG_API_LEVEL_UNSPECIFIED)
 		def = api_level;
 	if ((err = default_features_check(desc)))
+		return err;
+	if (gen->opts.Version && (err = gen->opts.Version->validate_file(desc)))
 		return err;
 	PgFile *f = xalloc(sizeof *f);
 	f->Desc = desc;
@@ -670,7 +682,7 @@ static COLD const char *new_file(PgPlugin *gen, PbMsg *p, const char *package_na
 		prefix = xstrndup(prefix, strlen(prefix) - strlen(ext));
 	if (gen->pathType == PATH_TYPE_IMPORT) {
 		/* If paths=import, the output filename is derived from the Go import path. */
-		prefix = path_join(f->GoImportPath, pg_path_base(prefix));
+		prefix = pg_path_join(f->GoImportPath, pg_path_base(prefix));
 	}
 	f->GoDescriptorIdent = pg_ident(f->GoImportPath, xcat("File_", strs_go_sanitized(desc->d.name, strlen(desc->d.name))));
 	f->GeneratedFilenamePrefix = prefix;
@@ -722,11 +734,11 @@ static COLD void td_add(Map *files, Map *deps, Vec *sorted, const char *name)
 	vec_push(sorted, f);
 }
 
-static COLD Vec gather_transitive_dependencies(PbMsg *req)
+static COLD Vec gather_transitive_dependencies(PbMsg *req, bool all)
 {
 	Vec out = {0};
 	int nf = pb_count(req, GENID_CodeGeneratorRequest_ProtoFile_field_number);
-	if (!pb_count(req, GENID_CodeGeneratorRequest_FileToGenerate_field_number)) {
+	if (all || !pb_count(req, GENID_CodeGeneratorRequest_FileToGenerate_field_number)) {
 		for (int i = 0; i < nf; i++)
 			vec_push(&out, pb_msg_at(req, GENID_CodeGeneratorRequest_ProtoFile_field_number, i));
 		return out;
@@ -804,7 +816,7 @@ static COLD Str options_new(PgPlugin *gen, PgOptions opts)
 				gen->annotateCode = true;
 			else if (!str_eqc(vs, "false"))
 				return ERR(xcat("bad value for parameter ", quote_go(ps), ": want \"true\" or \"false\""));
-		} else if (str_eq(p, "default_api_level")) {
+		} else if (PG_V1_36(opts.Version) && str_eq(p, "default_api_level")) { /* v1.31.0: ParamFunc */
 			int level = memchr(vs.p, 0, vs.n) ? -1 : parse_api_level(value);
 			if (level < 0)
 				return ERR(xcat("unknown API level ", quote_go(vs), " for parameter ", quote_go(ps),
@@ -819,7 +831,7 @@ static COLD Str options_new(PgPlugin *gen, PgOptions opts)
 				omap_put(&package_names, file, (void *)pkg);
 			if (*imp)
 				omap_put(&import_paths, file, (void *)imp);
-		} else if (str_has_prefix(ps, STR_LIT("apilevelM"))) {
+		} else if (PG_V1_36(opts.Version) && str_has_prefix(ps, STR_LIT("apilevelM"))) {
 			int level = memchr(vs.p, 0, vs.n) ? -1 : parse_api_level(value);
 			if (level < 0)
 				return ERR(xcat("unknown API level ", quote_go(vs), " for parameter ", quote_go(ps),
@@ -837,7 +849,8 @@ static COLD Str options_new(PgPlugin *gen, PgOptions opts)
 	if (gen->module.n && gen->pathType == PATH_TYPE_SOURCE_RELATIVE)
 		return ERR("cannot use module= with paths=source_relative");
 
-	Vec files = gather_transitive_dependencies(req);
+	/* v1.31.0, v1.36.7: every ProtoFile */
+	Vec files = gather_transitive_dependencies(req, opts.Version != NULL);
 
 	/* Figure out the import path and package name for each file. */
 	for (int i = 0; i < files.n; i++) {
@@ -920,8 +933,12 @@ static COLD Str options_new(PgPlugin *gen, PgOptions opts)
 		/* registerAllExtensionsFromFile: the top-level extensions only */
 		for (int k = 0; k < f->Desc->n_extensions; k++) {
 			GoField *xd = f->Desc->extensions[k];
-			if (str_eq(xd->d.full_name, "pb.go"))
-				continue; /* already in protoregistry.GlobalTypes */
+			/* already in protoregistry.GlobalTypes: pb.go (v1.31.0: none) and the plugin's */
+			bool linked = PG_V1_36(gen->opts.Version) && str_eq(xd->d.full_name, "pb.go");
+			for (const char *const *l = gen->opts.LinkedExtensions; l && *l && !linked; l++)
+				linked = str_eq(xd->d.full_name, *l);
+			if (linked)
+				continue;
 			for (int j = 0; j < novel.n; j++) {
 				GoField *prev = novel.v[j];
 				if (prev->number == xd->number && prev->containing == xd->containing)
@@ -979,6 +996,36 @@ COLD PbMsg *pg_parse_request(const uint8_t *req, size_t n, const char **err)
 	PbMsg *m = pb_new(&rd->pb);
 	*err = gopb_decode(m, req, n);
 	return *err ? NULL : m;
+}
+
+static bool has_nul(Str s) { return s.n && memchr(s.p, 0, s.n); }
+
+COLD const char *pg_unsupported(const PbMsg *req)
+{
+#define UNSUPPORTED "unsupported by protoc-gen-uni: "
+	enum { FILE_OPTIONS_GO_PACKAGE = 11 };
+	for (int i = 0; i < pb_count(req, CGR_PROTO_FILE); i++) {
+		const PbMsg *fd = pb_msg_at(req, CGR_PROTO_FILE, i);
+		Str name = pb_bytes(fd, FDP_NAME);
+		if (has_nul(name))
+			return xcat(UNSUPPORTED "NUL byte in file name ", quote_go(name));
+		for (int j = 0; j < pb_count(fd, FDP_DEPENDENCY); j++) {
+			Str dep = pb_bytes_at(fd, FDP_DEPENDENCY, j);
+			if (has_nul(dep))
+				return xcat(UNSUPPORTED "NUL byte in file name ", quote_go(dep));
+		}
+		Str pkg = pb_bytes(pb_msg(fd, FDP_OPTIONS), FILE_OPTIONS_GO_PACKAGE);
+		if (has_nul(pkg))
+			return xcat(UNSUPPORTED "NUL byte in go_package ", quote_go(pkg), " of ", quote_go(name));
+	}
+	/* the parameter elements "M<file>=<import path>" */
+	Str *params;
+	int n = str_split_s(pb_bytes(req, CGR_PARAMETER), ',', &params);
+	for (int i = 0; i < n; i++)
+		if (params[i].n && params[i].p[0] == 'M' && has_nul(params[i]))
+			return xcat(UNSUPPORTED "NUL byte in parameter ", quote_go(params[i]));
+	return NULL;
+#undef UNSUPPORTED
 }
 
 COLD PgPlugin *pg_options_new(const PgOptions *opts, PbMsg *req, Str *err)

@@ -13,9 +13,7 @@
  * limitations under the License. */
 
 /* Ported from packages/protobuf/src/codegenv2/embed.ts (embedFileDesc, pathInFileDesc,
- * createFileDescriptorProtoBoot). Like the Go port, the boot functions do not repeat the
- * assertions of upstream: they only run for google/protobuf/descriptor.proto as compiled by
- * protoc or buf. */
+ * createFileDescriptorProtoBoot). */
 #include "protobuf.h"
 
 /* ---- base64 ---- */
@@ -91,10 +89,18 @@ COLD static const char *json_array(const PbMsg *m, uint32_t num, const char *(*f
 	return buf_str(&b);
 }
 
+/* Assert that condition is truthy or throw error (new Error(): an empty message). */
+COLD static void boot_assert(bool cond)
+{
+	if (!cond)
+		fail("%s", "");
+}
+
 static const char *enum_boot(const PbMsg *e);
 
 COLD static const char *range_boot(const PbMsg *r)
 {
+	boot_assert(!pb_has(r, 3)); /* options */
 	JsonObj o = {0};
 	json_num(&o, "start", (int32_t)pb_int(r, ER_START, 0));
 	json_num(&o, "end", (int32_t)pb_int(r, ER_END, 0));
@@ -112,10 +118,13 @@ COLD static const char *edition_default_boot(const PbMsg *d)
 COLD static const char *field_options_boot(const PbMsg *opts)
 {
 	JsonObj o = {0};
+	boot_assert(!pb_has(opts, 1)); /* ctype */
 	if (pb_has(opts, FO_PACKED))
 		json_raw(&o, "packed", pb_int(opts, FO_PACKED, 0) ? "true" : "false");
+	boot_assert(!pb_has(opts, FO_JSTYPE) && !pb_has(opts, 5) && !pb_has(opts, 15)); /* jstype, lazy, unverified_lazy */
 	if (pb_has(opts, FO_DEPRECATED))
 		json_raw(&o, "deprecated", pb_int(opts, FO_DEPRECATED, 0) ? "true" : "false");
+	boot_assert(!pb_has(opts, 10) && !pb_has(opts, 16)); /* weak, debug_redact */
 	if (pb_has(opts, FO_RETENTION))
 		json_num(&o, "retention", (int32_t)pb_int(opts, FO_RETENTION, 0));
 	if (pb_has(opts, FO_TARGETS)) {
@@ -128,11 +137,16 @@ COLD static const char *field_options_boot(const PbMsg *opts)
 	}
 	if (pb_has(opts, FO_EDITION_DEFAULTS))
 		json_raw(&o, "editionDefaults", json_array(opts, FO_EDITION_DEFAULTS, edition_default_boot));
+	boot_assert(!pb_has(opts, 21) && !pb_has(opts, 999)); /* features, uninterpreted_option */
 	return json_end(&o);
 }
 
 COLD static const char *field_boot(const PbMsg *f)
 {
+	boot_assert(pb_has(f, FD_NAME) && pb_has(f, FD_NUMBER) && pb_has(f, FD_TYPE) && !pb_has(f, FD_ONEOF_INDEX));
+	/* json_name is stripped if it is the default (stripJsonNames) */
+	boot_assert(!pb_has(f, FD_JSON_NAME) ||
+		    str_eqc(pb_bytes(f, FD_JSON_NAME), proto_camel_case(pb_str(f, FD_NAME))));
 	JsonObj o = {0};
 	json_str(&o, "name", pb_bytes(f, FD_NAME));
 	json_num(&o, "number", (int32_t)pb_int(f, FD_NUMBER, 0));
@@ -152,6 +166,7 @@ COLD static const char *field_boot(const PbMsg *f)
 
 COLD static const char *descriptor_boot(const PbMsg *m)
 {
+	boot_assert(!pb_has(m, DP_EXTENSION) && !pb_has(m, DP_ONEOF_DECL) && !pb_has(m, DP_OPTIONS) && !pb_has(m, 11));
 	JsonObj o = {0};
 	json_str(&o, "name", pb_bytes(m, DP_NAME));
 	if (pb_has(m, DP_FIELD))
@@ -167,6 +182,7 @@ COLD static const char *descriptor_boot(const PbMsg *m)
 
 COLD static const char *enum_value_boot(const PbMsg *v)
 {
+	boot_assert(!pb_has(v, EVDP_OPTIONS));
 	JsonObj o = {0};
 	json_str(&o, "name", pb_bytes(v, EVDP_NAME));
 	json_num(&o, "number", (int32_t)pb_int(v, EVDP_NUMBER, 0));
@@ -175,6 +191,7 @@ COLD static const char *enum_value_boot(const PbMsg *v)
 
 COLD static const char *enum_boot(const PbMsg *e)
 {
+	boot_assert(!pb_has(e, EDP_OPTIONS) && !pb_has(e, 6)); /* visibility */
 	JsonObj o = {0};
 	json_str(&o, "name", pb_bytes(e, EDP_NAME));
 	json_raw(&o, "value", json_array(e, EDP_VALUE, enum_value_boot));
@@ -183,6 +200,15 @@ COLD static const char *enum_boot(const PbMsg *e)
 
 const char *embed_boot(const PbMsg *file)
 {
+	/* the name is google/protobuf/descriptor.proto (embed_bootable); dependency and
+	 * source_code_info are cleared by embedFileDesc */
+	const char *syntax = pb_str(file, FDP_SYNTAX);
+	boot_assert(str_eqc(pb_bytes(file, FDP_PACKAGE), "google.protobuf"));
+	boot_assert(!pb_has(file, FDP_PUBLIC_DEPENDENCY) && !pb_has(file, FDP_WEAK_DEPENDENCY) && !pb_has(file, 15));
+	boot_assert(!pb_has(file, FDP_SERVICE) && !pb_has(file, FDP_EXTENSION));
+	boot_assert(!*syntax || str_eq(syntax, "proto2"));
+	boot_assert(!pb_has(pb_msg(file, FDP_OPTIONS), 50)); /* we're dropping file options */
+	boot_assert(pb_int(file, FDP_EDITION, 0) == 0);
 	JsonObj o = {0};
 	json_str(&o, "name", pb_bytes(file, FDP_NAME));
 	json_str(&o, "package", pb_bytes(file, FDP_PACKAGE));
@@ -197,34 +223,21 @@ Vec path_in_file_desc(const Desc *d)
 {
 	Vec path = {0};
 	if (d->kind == DK_SERVICE) {
-		const DescService *s = (const DescService *)d;
-		vec_push(&path, (void *)(intptr_t)vec_index(&s->file->services, s));
+		vec_push(&path, (void *)(intptr_t)d->pos);
 		return path;
 	}
 	DescMessage *parent = NULL;
-	DescFile *file = desc_file_of(d);
-	const Vec *top = NULL;
 	if (d->kind == DK_ENUM)
-		parent = ((const DescEnum *)d)->parent, top = &file->enums;
+		parent = ((const DescEnum *)d)->parent;
 	else if (d->kind == DK_MESSAGE)
-		parent = ((const DescMessage *)d)->parent, top = &file->messages;
+		parent = ((const DescMessage *)d)->parent;
 	else if (d->kind == DK_FIELD)
-		parent = ((const DescField *)d)->parent, top = &file->extensions;
-	if (!parent) {
-		vec_push(&path, (void *)(intptr_t)(top ? vec_index(top, d) : -1));
-		return path;
-	}
-	Vec chain = {0}; /* parent, its parent, ... (innermost first) */
+		parent = ((const DescField *)d)->parent;
+	Vec chain = {0}; /* d, its parent, ... (innermost first) */
+	vec_push(&chain, (void *)d);
 	for (DescMessage *p = parent; p; p = p->parent)
 		vec_push(&chain, p);
-	DescMessage *outer = chain.v[chain.n - 1];
-	vec_push(&path, (void *)(intptr_t)vec_index(&outer->file->messages, outer));
-	for (int i = chain.n - 2; i >= 0; i--) {
-		DescMessage *c = chain.v[i];
-		vec_push(&path, (void *)(intptr_t)vec_index(&c->parent->nested_messages, c));
-	}
-	const Vec *list = d->kind == DK_FIELD ? &parent->nested_extensions
-			  : d->kind == DK_MESSAGE ? &parent->nested_messages : &parent->nested_enums;
-	vec_push(&path, (void *)(intptr_t)vec_index(list, d));
+	for (int i = chain.n - 1; i >= 0; i--)
+		vec_push(&path, (void *)(intptr_t)((const Desc *)chain.v[i])->pos);
 	return path;
 }

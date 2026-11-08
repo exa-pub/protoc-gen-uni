@@ -28,6 +28,7 @@ typedef struct Desc {
 	PbMsg *proto;
 	bool deprecated;
 	int index; /* index of proto in the parent's repeated field (source paths) */
+	int pos;   /* index in the parent's list (file->messages, ...; pathInFileDesc) */
 	const char *n_shape, *n_desc, *n_json, *n_valid;
 } Desc;
 
@@ -37,6 +38,8 @@ struct DescFile {
 	const char *name; /* without .proto */
 	Vec deps, enums, messages, extensions, services;
 	bool names_done;
+	bool locations_done;
+	Map locations; /* protoplugin: SourceCodeInfo.Location by path ("4,0,2,1"), the first one */
 };
 
 struct DescEnum {
@@ -112,6 +115,16 @@ const char *scalar_name(int scalar); /* "DOUBLE" ... */
 PbMsg *desc_options(const Desc *d);
 PbMsg *desc_features(const Desc *d); /* the FeatureSet of the options, or NULL */
 
+/* ---- from_binary.c (from-binary.ts, wire/text-encoding.ts) ---- */
+
+/* The string as a TextDecoder without fatal decodes it: every maximal subpart of an ill-formed
+ * sequence becomes U+FFFD. Returns s itself if it is well-formed UTF-8. */
+Str decode_utf8(Str s);
+/* Makes a message parsed by pkg/pb what fromBinary of protobuf-es parses (strings decoded with
+ * decode_utf8), recursively. Fails (fail()) on a known field with a mismatching wire type, which
+ * upstream reads by its type. */
+COLD void from_binary(PbMsg *m);
+
 /* ---- registry.c (registry.ts) ---- */
 
 typedef struct {
@@ -122,6 +135,13 @@ typedef struct {
 /* Creates a registry from files in topological order. Fails (fail()) on invalid input, with
  * upstream's error message. */
 Registry *registry_create(PbMsg **files, int n);
+/* createFileRegistry of @bufbuild/protobuf up to at least 2.13.0 (protobuf-ts uses 2.5.2), which does
+ * not validate names. */
+Registry *registry_create_unchecked(PbMsg **files, int n);
+/* createFileRegistry of an older @bufbuild/protobuf: check_names false up to at least
+ * 2.13.0, max_edition
+ * its maximumEdition (2.13.0: ED_2024; files of a later edition are unsupported). */
+Registry *registry_create_opts(PbMsg **files, int n, bool check_names, int max_edition);
 DescMessage *registry_message(Registry *r, const char *type_name);
 /* Returns an error message for invalid names in the file, or NULL. */
 COLD const char *assert_valid_names(const PbMsg *file);
@@ -143,6 +163,7 @@ const char *scalar_ts_type(int scalar, bool long_as_string);
 const char *scalar_json_type(int scalar);
 bool is_wrapper_desc(const DescMessage *m);
 const char *wkt_public_import_path(const char *proto_file_name); /* NULL if not a WKT */
+const char *wkt_public_import_path_v2_13_0(const char *proto_file_name);
 
 /* ---- embed.c (codegenv2/embed.ts) ---- */
 

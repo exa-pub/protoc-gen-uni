@@ -1,0 +1,47 @@
+# Golden config for grpc/csharp v1.85.1: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Groups: default; base_namespace= (empty); base_namespace=Test (an error for files with services
+# outside the Test namespace: services-naming, real-googleapis, real-otel); no_server with
+# internal_access; no_client with file_suffix and append_async_suffix; error: an unknown option.
+# Inputs left out: naming: libprotoc 35.1 rejects naming/legacy.proto (JSON name conflict) and
+# exits with a timestamped log line.
+# Regenerate: scripts/gen-testdata.sh grpc/csharp v1.85.1
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-case
+  - directory: testdata/proto/services-editions
+  - directory: testdata/proto/services-editions2024
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/grpc/csharp:v1.85.1
+    out: default
+  - remote: buf.build/grpc/csharp:v1.85.1
+    out: base-namespace
+    opt: [base_namespace=]
+  - remote: buf.build/grpc/csharp:v1.85.1
+    out: base-test
+    opt: [base_namespace=Test]
+  - remote: buf.build/grpc/csharp:v1.85.1
+    out: no-server
+    opt: [no_server, internal_access]
+  - remote: buf.build/grpc/csharp:v1.85.1
+    out: no-client
+    opt: [no_client, file_suffix=Svc.g.cs, append_async_suffix=true]
+  - remote: buf.build/grpc/csharp:v1.85.1
+    out: error-unknown
+    opt: [foo]

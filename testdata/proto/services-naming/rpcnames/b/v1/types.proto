@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+// Same file name and message names as rpcnames/a/v1/types.proto.
+package test.rpcnames.b.v1;
+
+message Request {
+  string b = 1;
+}
+
+message Response {
+  string b = 1;
+}

@@ -17,6 +17,7 @@ typedef struct {
 	const GoSpecField *f;
 	int n;
 	bool has_ext;
+	const char *const *names; /* field names (for the errors of required fields), or NULL */
 } GoSpecMsg;
 
 typedef struct {

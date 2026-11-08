@@ -1,6 +1,10 @@
 # Golden config for protocolbuffers/js v4.0.3: inputs = tests (testdata/proto/<test>),
 # one plugin entry = one option group (out: <group>).
 # Inputs left out: naming: see cpp.
+# Groups: the four buf SDK styles (commonjs is the default), the other output modes of closure
+# (one file for everything with library=, one file per input file), browser without binary with
+# a bare output directory, annotate_code, and two errors (an option only for closure; an unknown
+# import style, which upstream reports while it still generates).
 # Regenerate: scripts/gen-testdata.sh protocolbuffers/js v4.0.3
 version: v2
 inputs:
@@ -19,6 +23,8 @@ inputs:
   - directory: testdata/proto/real-otel
   - directory: testdata/proto/real-protovalidate
   - directory: testdata/proto/real-protovalidate-editions
+  - directory: testdata/proto/es-bootstrap
+  - directory: testdata/proto/js-wkt
 plugins:
   - remote: buf.build/protocolbuffers/js:v4.0.3
     out: commonjs
@@ -32,3 +38,21 @@ plugins:
   - remote: buf.build/protocolbuffers/js:v4.0.3
     out: closure
     opt: [import_style=closure, binary]
+  - remote: buf.build/protocolbuffers/js:v4.0.3
+    out: closure-library
+    opt: [import_style=closure, library=testlib, testonly, add_require_for_enums, binary]
+  - remote: buf.build/protocolbuffers/js:v4.0.3
+    out: closure-per-file
+    opt: [import_style=closure, one_output_file_per_input_file, extension=.closure.js, namespace_prefix=proto.ns]
+  - remote: buf.build/protocolbuffers/js:v4.0.3
+    out: browser
+    opt: [import_style=browser, gendir, error_on_name_conflict]
+  - remote: buf.build/protocolbuffers/js:v4.0.3
+    out: annotate
+    opt: [import_style=commonjs, binary, annotate_code]
+  - remote: buf.build/protocolbuffers/js:v4.0.3
+    out: error-closure-only
+    opt: [import_style=commonjs, testonly]
+  - remote: buf.build/protocolbuffers/js:v4.0.3
+    out: error-import-style
+    opt: [import_style=amd]

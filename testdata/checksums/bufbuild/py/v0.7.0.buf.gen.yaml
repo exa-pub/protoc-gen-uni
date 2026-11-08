@@ -19,6 +19,8 @@ inputs:
   - directory: testdata/proto/real-otel
   - directory: testdata/proto/real-protovalidate
   - directory: testdata/proto/real-protovalidate-editions
+  - directory: testdata/proto/es-bootstrap
+  - directory: testdata/proto/python-py
 plugins:
   - remote: buf.build/bufbuild/py:v0.7.0
     out: default
@@ -28,3 +30,14 @@ plugins:
   - remote: buf.build/bufbuild/py:v0.7.0
     out: nofmt
     opt: [no_fmt_off=true, escape_module_with_hash=true]
+  # the options of the buf.build SDKs (buf.plugin.yaml registry opts)
+  - remote: buf.build/bufbuild/py:v0.7.0
+    out: registry
+    opt: [init_files=false, "map_imports=**:"]
+  - remote: buf.build/bufbuild/py:v0.7.0
+    out: mapped
+    opt: ["map_imports=imports/**:pkg.sub", "map_imports=*.proto:root", "map_imports=buf/validate/**/*.proto:bv"]
+  # an unknown option: upstream fails with a Python traceback
+  - remote: buf.build/bufbuild/py:v0.7.0
+    out: badopt
+    opt: [foo=bar]

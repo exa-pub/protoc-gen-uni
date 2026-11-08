@@ -5,7 +5,7 @@
 /* Ported from google.golang.org/protobuf v1.36.12 internal/strs/strings.go. */
 #include "strs.h"
 
-#include "go1_26_5.h"
+#include "go_std.h"
 
 #include <string.h>
 
@@ -72,7 +72,7 @@ char *strs_go_sanitized(const char *s, size_t n)
 		uint32_t r;
 		int w = utf8_decode(s + i, n - i, &r);
 		i += (size_t)w;
-		if (go1_26_5_is_letter((int32_t)r) || go1_26_5_is_digit((int32_t)r))
+		if (go_std_is_letter((int32_t)r) || go_std_is_digit((int32_t)r))
 			add_rune(&b, r);
 		else
 			buf_addc(&b, '_');
@@ -82,7 +82,7 @@ char *strs_go_sanitized(const char *s, size_t n)
 	uint32_t r = 0xfffd;
 	if (b.n)
 		utf8_decode(b.p, b.n, &r);
-	if (go1_26_5_is_keyword(b.p ? b.p : "", b.n) || !go1_26_5_is_letter((int32_t)r))
+	if (go_std_is_keyword(b.p ? b.p : "", b.n) || !go_std_is_letter((int32_t)r))
 		return xcat("_", buf_str(&b));
 	return (char *)buf_str(&b);
 }
