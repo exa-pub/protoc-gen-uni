@@ -25,7 +25,6 @@ testdata/
 ├── checksums/<owner>/<plugin>/
 │   ├── <version>.buf.gen.yaml  buf template: test inputs, option groups
 │   └── checksums.txt        upstream output sum per version and test
-├── size-budget.txt          bytes each generator version may add (scripts/size.sh)
 └── gen/                     upstream output for diffs (not committed)
 ```
 

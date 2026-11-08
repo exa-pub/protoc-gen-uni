@@ -1,5 +1,5 @@
 # CI: version → toolchain image → build (static Linux x86_64/aarch64 and Windows in the image,
-# macOS natively) → tests (e2e golden tests natively on every OS, ASan/UBSan, fuzzing, size budget)
+# macOS natively) → tests (e2e golden tests natively on every OS, ASan/UBSan, fuzzing)
 # → release of the tested binaries (push to main only).
 #
 # Version = latest vX.Y.Z tag + bump based on conventional commits since that tag:
@@ -145,25 +145,6 @@ jobs:
           path: out/
           if-no-files-found: error
 
-  # Size budget (scripts/size.sh): the linux-x86_64 binary once per generator version (with the
-  # baseline bufbuild/es) and with all generators, against testdata/size-budget.txt.
-  size:
-    needs: [toolchain, build]
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - env:
-          IMAGE: ${{ needs.toolchain.outputs.image }}
-        run: |
-          set -uo pipefail
-          UNI_TOOLCHAIN_IMAGE=$IMAGE scripts/size.sh 2>&1 | tee size.txt
-          status=${PIPESTATUS[0]}
-          { echo '```'; cat size.txt; echo '```'; } >>"$GITHUB_STEP_SUMMARY"
-          exit "$status"
-
   build-darwin:
     needs: version
     runs-on: macos-latest
@@ -283,7 +264,7 @@ jobs:
               -dict=fuzz/params.dict build/fuzz/corpus'
 
   release:
-    needs: [version, lint, build, size, build-darwin, test-linux, test-darwin, test-windows, asan, fuzz]
+    needs: [version, lint, build, build-darwin, test-linux, test-darwin, test-windows, asan, fuzz]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10

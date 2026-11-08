@@ -112,7 +112,7 @@ generators.
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml): `version` → toolchain image → `lint` +
 `build` (Linux x86_64/aarch64 and Windows in the image, macOS arm64/x86_64 natively; reproducible:
 built twice and compared) → tests (golden tests on Linux x86_64/arm64, macOS and Windows; ASan +
-UBSan; 2 minutes of fuzzing; size budget, `scripts/size.sh`) → `release`.
+UBSan; 2 minutes of fuzzing) → `release`.
 
 - **version** — the target version is fixed at the start of the run: latest `vX.Y.Z` tag + bump based on
   [conventional commits](https://www.conventionalcommits.org/) (`feat!:` / `BREAKING CHANGE:` → major,
