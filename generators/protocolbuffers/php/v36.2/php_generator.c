@@ -501,7 +501,7 @@ static void outdent(LpPrinter *printer)
 /* BinaryToPhpString */
 static char *binary_to_php_string(Str src)
 {
-	static const char symbol[16] = "0123456789ABCDEF";
+	static const char symbol[] = "0123456789ABCDEF";
 	Buf dest = {0};
 	buf_grow(&dest, src.n + src.n / 5 + 1);
 	for (size_t i = 0; i < src.n; i++) {
