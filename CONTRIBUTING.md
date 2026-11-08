@@ -120,7 +120,8 @@ Unicode, strconv and sort changes.
 - **Lint:** `scripts/check-includes.sh` allows only libc headers.
 - **CI** ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) builds every target twice and
   compares the binaries. It also runs the golden tests natively on Linux, macOS and Windows, plus
-  ASan and fuzzing. It releases from `main`.
+  ASan and fuzzing, then builds the `FROM scratch` image ([`docker/scratch.Dockerfile`](docker/scratch.Dockerfile))
+  for linux/amd64 and linux/arm64. It releases the binaries and pushes the image from `main`.
 
 ## Commits
 
