@@ -141,9 +141,10 @@ jobs:
           done
           bin=protoc-gen-uni; [ "$PRESET" != windows-x86_64 ] || bin=protoc-gen-uni.exe
           cmp "build/$PRESET/$bin" "build/$PRESET-again/$bin"
-          # unit tests, registry check and golden tests (aarch64 under qemu; no Wine for Windows)
+          # unit tests and the registry check (aarch64 under qemu; no Wine for Windows); the golden
+          # tests run natively in test-linux, test-darwin and test-windows
           if [ "$PRESET" != windows-x86_64 ]; then
-            UNI_TOOLCHAIN_IMAGE=$IMAGE scripts/docker.sh ctest --test-dir "build/$PRESET" -j "$(nproc)" --output-on-failure
+            UNI_TOOLCHAIN_IMAGE=$IMAGE scripts/docker.sh ctest --test-dir "build/$PRESET" -LE golden -j "$(nproc)" --output-on-failure
           fi
           mkdir -p out && cp "build/$PRESET/$bin" out/
           ls -l out/ | tee -a "$GITHUB_STEP_SUMMARY"
