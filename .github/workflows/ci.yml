@@ -222,10 +222,15 @@ jobs:
           path: out
       - run: chmod +x out/protoc-gen-uni && tests/e2e/all.sh out/protoc-gen-uni
 
+  # Process creation is slow on Windows (~1 minute per generator version): three shards.
   test-windows:
     needs: build
     runs-on: windows-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     defaults:
       run:
         shell: bash
@@ -237,9 +242,11 @@ jobs:
         with:
           name: windows-x86_64
           path: out
-      - run: tests/e2e/all.sh out/protoc-gen-uni.exe
+      - run: UNI_E2E_SHARD=${{ matrix.shard }}/3 tests/e2e/all.sh out/protoc-gen-uni.exe
 
   # Unit and e2e tests under AddressSanitizer + UndefinedBehaviorSanitizer (clang, glibc).
+  # ASan + UBSan without the arena (every object its own allocation) is slow: the tests are split
+  # into three shards (ctest -I <shard>,,3), each with its own build.
   asan:
     needs: toolchain
     runs-on: ubuntu-latest
@@ -247,6 +254,10 @@ jobs:
       contents: read
       packages: read
     timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -257,7 +268,10 @@ jobs:
         run: echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
       - env:
           IMAGE: ${{ needs.toolchain.outputs.image }}
-        run: UNI_TOOLCHAIN_IMAGE=$IMAGE scripts/docker.sh cmake --workflow --preset asan
+          SHARD: ${{ matrix.shard }}
+        run: |
+          UNI_TOOLCHAIN_IMAGE=$IMAGE scripts/docker.sh bash -c \
+            "cmake --preset asan && cmake --build --preset asan && ctest --preset asan -I $SHARD,,3"
 
   # Two minutes of libFuzzer (+ASan/UBSan) on fuzz/fuzz_request.c, seeded with the requests of the
   # golden tests (recorded via buf by scripts/fuzz-corpus.sh).

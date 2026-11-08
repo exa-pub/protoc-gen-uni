@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Runs the e2e golden tests of every generator version in testdata/checksums (tests/e2e/golden.sh)
-# against one binary, UNI_E2E_JOBS versions at a time (default: the number of CPUs), and prints
-# their output in order. Versions the binary does not contain are skipped. Used by CI on runners
-# without the CMake build tree (aarch64, macOS, Windows).
+# against one binary, UNI_E2E_JOBS versions at a time (default: the number of CPUs): a line as each
+# version finishes, then their output in order. Versions the binary does not contain are skipped.
+# UNI_E2E_SHARD=K/N runs every N-th version from the K-th (CI splits slow runners). Used by CI on
+# runners without the CMake build tree (aarch64, macOS, Windows).
 #
 #   tests/e2e/all.sh [--runner CMD] BIN
 set -uo pipefail
@@ -18,8 +19,11 @@ export BUF=${BUF:-$("$root/scripts/get-buf.sh")} || exit 1
 out=$(mktemp -d)
 trap 'rm -rf "$out"' EXIT
 
+shard=${UNI_E2E_SHARD:-1/1} i=0
 versions=()
 for template in "$root"/testdata/checksums/*/*/v*.buf.gen.yaml; do
+	i=$((i + 1))
+	[ $(((i - 1) % ${shard#*/})) -eq $((${shard%/*} - 1)) ] || continue
 	rel=${template#"$root/testdata/checksums/"}
 	versions+=("${rel%/*}" "$(basename "$rel" .buf.gen.yaml)")
 done
@@ -29,7 +33,7 @@ printf '%s\n' "${versions[@]}" | xargs -P "${UNI_E2E_JOBS:-$(nproc 2>/dev/null |
 	name=${*: -2:1} version=${*: -1}
 	log=$0/${name//\//_}_$version
 	"${@:1:$#-2}" "$name" "$version" >"$log" 2>&1
-	case $? in 0 | 77) ;; *) touch "$log.fail" ;; esac
+	case $? in 0 | 77) echo "done $name $version" ;; *) touch "$log.fail"; echo "FAIL $name $version" ;; esac
 ' "$out" "$root/tests/e2e/golden.sh" ${runner[@]+"${runner[@]}"} "$bin"
 
 fail=0
