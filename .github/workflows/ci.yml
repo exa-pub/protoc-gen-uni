@@ -244,16 +244,42 @@ jobs:
           path: out
       - run: UNI_E2E_SHARD=${{ matrix.shard }}/3 tests/e2e/all.sh out/protoc-gen-uni.exe
 
-  # Unit and e2e tests under AddressSanitizer + UndefinedBehaviorSanitizer (clang, glibc).
-  # ASan + UBSan without the arena (every object its own allocation) is slow: the tests are split
-  # into three shards (ctest -I <shard>,,3), each with its own build.
+  # AddressSanitizer + UndefinedBehaviorSanitizer (clang, glibc), without the arena (every object
+  # its own allocation), which makes the golden tests slow: one build with the unit tests, then the
+  # golden tests of its binary in three shards (tests/e2e/all.sh, UNI_E2E_SHARD).
   asan:
     needs: toolchain
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: read
-    timeout-minutes: 40
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: log in to ghcr.io (toolchain image)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - env:
+          IMAGE: ${{ needs.toolchain.outputs.image }}
+        run: |
+          UNI_TOOLCHAIN_IMAGE=$IMAGE scripts/docker.sh bash -c \
+            "cmake --preset asan && cmake --build --preset asan && ctest --preset asan -LE golden"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: asan
+          path: build/asan/protoc-gen-uni
+          if-no-files-found: error
+
+  asan-golden:
+    needs: [toolchain, asan]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -266,12 +292,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: asan
+          path: out
       - env:
           IMAGE: ${{ needs.toolchain.outputs.image }}
           SHARD: ${{ matrix.shard }}
         run: |
-          UNI_TOOLCHAIN_IMAGE=$IMAGE scripts/docker.sh bash -c \
-            "cmake --preset asan && cmake --build --preset asan && ctest --preset asan -I $SHARD,,3"
+          chmod +x out/protoc-gen-uni
+          UNI_TOOLCHAIN_IMAGE=$IMAGE scripts/docker.sh env UNI_E2E_SHARD=$SHARD/3 tests/e2e/all.sh out/protoc-gen-uni
 
   # Two minutes of libFuzzer (+ASan/UBSan) on fuzz/fuzz_request.c, seeded with the requests of the
   # golden tests (recorded via buf by scripts/fuzz-corpus.sh).
@@ -304,7 +334,7 @@ jobs:
   # linux/amd64 and linux/arm64 (there is no scratch base for Windows or macOS). Built on every run;
   # pushed to ghcr.io/<owner>/protoc-gen-uni as <version> and latest on main only.
   docker:
-    needs: [version, lint, build, build-darwin, test-linux, test-darwin, test-windows, asan, fuzz]
+    needs: [version, lint, build, build-darwin, test-linux, test-darwin, test-windows, asan, asan-golden, fuzz]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -341,7 +371,7 @@ jobs:
           echo "### Image: \`$image:$VERSION\`$([ "$PUSH" = true ] || echo ' (built, not pushed)')" >>"$GITHUB_STEP_SUMMARY"
 
   release:
-    needs: [version, lint, build, build-darwin, test-linux, test-darwin, test-windows, asan, fuzz, docker]
+    needs: [version, lint, build, build-darwin, test-linux, test-darwin, test-windows, asan, asan-golden, fuzz, docker]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
