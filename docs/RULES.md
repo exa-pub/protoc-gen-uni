@@ -28,4 +28,7 @@ They apply to every change.
   is a pointer bump and `free` never runs. The price is peak memory: every allocation lives until
   exit, so allocate in proportion to the input.
 - Errors: `fail()` longjmps to the nearest `try_run()`, which works like panic/recover.
+- State lives no longer than the request: the fuzz harness serves many requests per process and
+  frees the arena between them. File-scope variables are set at the generator's entry point.
 - Mark code that runs once per request or declaration with `COLD`; size matters.
+- Never look data up by the address of a constant: `-fmerge-all-constants` may merge equal ones.

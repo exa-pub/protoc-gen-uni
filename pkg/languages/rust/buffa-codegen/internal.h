@@ -52,7 +52,8 @@ typedef struct {
 /* imports::ImportsPhase */
 enum { IMPORTS_OFF, IMPORTS_COLLECTING, IMPORTS_RESOLVING };
 
-/* context::CodeGenContext (one per request: the global `cx`). */
+/* context::CodeGenContext (one per request: the global `cx`, cleared by ctx_init, so no state of
+ * the library outlives the request). */
 typedef struct {
 	const BcConfig *config;
 	const PbMsg **files;
@@ -71,6 +72,11 @@ typedef struct {
 	Vec imports_collected_list;
 	Map imports_resolved;  /* path -> short */
 	Vec imports_bindings;  /* char *[2] pairs (short, path), sorted by short */
+	Map import_bindings;   /* short -> path */
+	/* oneof.rs representation resolution */
+	Map msg_index;      /* "pkg.Msg" -> PbMsg * */
+	Map scc_of;         /* message fqn -> (void *)(component + 1) */
+	Map inlined_fields; /* field fqn -> (void *)1 */
 } Ctx;
 
 static Ctx cx;

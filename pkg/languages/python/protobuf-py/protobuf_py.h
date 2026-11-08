@@ -44,7 +44,10 @@ extern const PbMsgDef pbpy_FileDescriptorProto, pbpy_DescriptorProto, pbpy_Field
 
 /* The names of protobuf-py's descriptor.proto classes, for repr() of their messages: the class
  * __qualname__, per field (in the order of the def) the attribute name, repr() of the value of an
- * unset singular scalar or enum field and the enum class; per enum the member names. */
+ * unset singular scalar or enum field, the enum class and the index of the message type in
+ * pbpy_descriptor_info (-1: not a message); per enum the member names. The message type comes
+ * from the field, never from the address of a PbMsgDef: -fmerge-all-constants merges defs with
+ * the same fields (DescriptorProto.ReservedRange and EnumDescriptorProto.EnumReservedRange). */
 typedef struct {
 	int32_t number;
 	const char *name;
@@ -57,6 +60,7 @@ typedef struct {
 typedef struct {
 	const char *local_name, *default_repr;
 	const PbpyEnumInfo *enm;
+	int msg;
 } PbpyFieldInfo;
 typedef struct {
 	const PbMsgDef *def;

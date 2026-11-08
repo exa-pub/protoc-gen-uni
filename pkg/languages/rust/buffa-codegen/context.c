@@ -520,8 +520,6 @@ static Vec effective_file_extern_paths(const Vec *to_generate)
 
 /* ---- oneof.rs: unboxed variants and inline fields ---- */
 
-static Map msg_index; /* "pkg.Msg" -> PbMsg * */
-
 static void index_messages(const char *prefix, const PbMsg *msg, Vec *order)
 {
 	if (!pb_has(msg, DP_NAME))
@@ -530,9 +528,9 @@ static void index_messages(const char *prefix, const PbMsg *msg, Vec *order)
 	int n = pb_count(msg, DP_NESTED_TYPE);
 	for (int i = 0; i < n; i++)
 		index_messages(fqn, pb_msg_at(msg, DP_NESTED_TYPE, i), order);
-	if (!map_has(&msg_index, fqn))
+	if (!map_has(&cx.msg_index, fqn))
 		vec_push(order, fqn);
-	map_put(&msg_index, fqn, (void *)msg);
+	map_put(&cx.msg_index, fqn, (void *)msg);
 }
 
 static bool is_real_oneof_member(const PbMsg *f) { return fd_has_oneof(f) && !fd_proto3_optional(f); }
@@ -595,8 +593,6 @@ typedef struct {
 	Vec targets; /* const char * */
 } Edges;
 
-static Map scc_of; /* message fqn -> (void *)(component + 1) */
-
 static void collect_edge(void *ctx, const char *path, const char *target)
 {
 	Walk *w = ctx;
@@ -613,7 +609,7 @@ static void compute_sccs(const Vec *order)
 	int **adj = xalloc(sizeof *adj * (size_t)(n + 1));
 	int *deg = xalloc(sizeof *deg * (size_t)(n + 1));
 	for (int i = 0; i < n; i++) {
-		const PbMsg *m = map_get(&msg_index, order->v[i]);
+		const PbMsg *m = map_get(&cx.msg_index, order->v[i]);
 		Walk w = {{0}, &CFG->unboxed_oneof_fields};
 		for_each_message_variant(m, order->v[i], collect_edge, &w);
 		Walk w2 = {{0}, NULL};
@@ -661,7 +657,7 @@ static void compute_sccs(const Vec *order)
 				do {
 					w = stack[--sp];
 					on[w] = false;
-					map_put(&scc_of, order->v[w], (void *)(uintptr_t)(comp + 1));
+					map_put(&cx.scc_of, order->v[w], (void *)(uintptr_t)(comp + 1));
 				} while (w != v);
 				comp++;
 			}
@@ -675,7 +671,7 @@ static void compute_sccs(const Vec *order)
 static bool inline_is_recursive(const Vec *rules, const char *enclosing, const char *target)
 {
 	(void)rules;
-	uintptr_t a = (uintptr_t)map_get(&scc_of, enclosing), b = (uintptr_t)map_get(&scc_of, target);
+	uintptr_t a = (uintptr_t)map_get(&cx.scc_of, enclosing), b = (uintptr_t)map_get(&cx.scc_of, target);
 	return a && a == b;
 }
 
@@ -694,8 +690,6 @@ static void resolve_edge(void *ctx, const char *path, const char *target)
 		map_put(r->out, path, (void *)1);
 }
 
-static Map inlined_fields;
-
 static void resolve_reprs(void)
 {
 	Vec order = {0};
@@ -705,14 +699,13 @@ static void resolve_reprs(void)
 		for (int j = 0; j < n; j++)
 			index_messages(pb_str(file, FDP_PACKAGE), pb_msg_at(file, FDP_MESSAGE_TYPE, j), &order);
 	}
-	memset(&scc_of, 0, sizeof scc_of);
 	compute_sccs(&order);
 	for (int i = 0; i < order.n; i++) {
-		const PbMsg *m = map_get(&msg_index, order.v[i]);
+		const PbMsg *m = map_get(&cx.msg_index, order.v[i]);
 		Resolve r = {order.v[i], &cx.unboxed, true};
 		if (CFG->unboxed_oneof_fields.n)
 			for_each_message_variant(m, order.v[i], resolve_edge, &r);
-		r.out = &inlined_fields;
+		r.out = &cx.inlined_fields;
 		r.variants = false;
 		for_each_singular_message_field(m, order.v[i], resolve_edge, &r);
 	}
@@ -720,7 +713,7 @@ static void resolve_reprs(void)
 
 static bool ctx_oneof_unboxed(const char *variant_fqn) { return map_has(&cx.unboxed, variant_fqn); }
 /* context::pointer_repr: Inline unless recursive (then Box) */
-static bool ctx_field_inline(const char *field_fqn) { return map_has(&inlined_fields, field_fqn); }
+static bool ctx_field_inline(const char *field_fqn) { return map_has(&cx.inlined_fields, field_fqn); }
 
 /* ---- field_names.rs: plan_field_names ---- */
 
@@ -911,13 +904,11 @@ static bool root_bare_referenced(const char *name)
 	return false;
 }
 
-static Map import_bindings; /* short -> path */
-
 static int pair_cmp(const void *a, const void *b) { return strcmp((*(char **const *)a)[0], (*(char **const *)b)[0]); }
 
 static void bind(const char *s, const char *path)
 {
-	map_put(&import_bindings, s, (void *)path);
+	map_put(&cx.import_bindings, s, (void *)path);
 	char **pair = xalloc(2 * sizeof *pair);
 	pair[0] = (char *)s;
 	pair[1] = (char *)path;
@@ -935,7 +926,7 @@ static bool proto_claimable(const char *name, const Map *occupied)
 /* RootImports::assign over the collected paths (sorted) */
 static void imports_assign(const Map *occupied)
 {
-	memset(&import_bindings, 0, sizeof import_bindings);
+	memset(&cx.import_bindings, 0, sizeof cx.import_bindings);
 	memset(&cx.imports_resolved, 0, sizeof cx.imports_resolved);
 	memset(&cx.imports_bindings, 0, sizeof cx.imports_bindings);
 	for (int i = 0; i < 6; i++)
@@ -961,7 +952,7 @@ static void imports_assign(const Map *occupied)
 		char *parent = xstrndup(path, (size_t)(cut - path));
 		const char *leaf = cut + 2;
 		if (proto_claimable(leaf, occupied)) {
-			const char *ex = map_get(&import_bindings, leaf);
+			const char *ex = map_get(&cx.import_bindings, leaf);
 			if (!ex) {
 				bind(leaf, path);
 				map_put(&cx.imports_resolved, path, (void *)leaf);
@@ -977,7 +968,7 @@ static void imports_assign(const Map *occupied)
 			pcut = p;
 		const char *parent_leaf = pcut ? pcut + 2 : parent;
 		if (proto_claimable(parent_leaf, occupied)) {
-			const char *ex = map_get(&import_bindings, parent_leaf);
+			const char *ex = map_get(&cx.import_bindings, parent_leaf);
 			bool claimed = !ex || str_eq(ex, parent);
 			if (!ex)
 				bind(parent_leaf, parent);
@@ -995,8 +986,6 @@ static void imports_assign(const Map *occupied)
 static void ctx_init(const BcConfig *c, const PbMsg *req, const Vec *to_generate)
 {
 	memset(&cx, 0, sizeof cx);
-	memset(&msg_index, 0, sizeof msg_index);
-	memset(&inlined_fields, 0, sizeof inlined_fields);
 	cx.config = c;
 	cx.n_files = pb_count(req, CGR_PROTO_FILE);
 	cx.files = xalloc(sizeof *cx.files * (size_t)(cx.n_files + 1));

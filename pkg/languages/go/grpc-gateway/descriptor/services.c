@@ -307,7 +307,7 @@ Str gw_Registry_loadServices(GwRegistry *r, GwFile *file)
 				optsList[nopts++] = opts;
 			if (nopts == 0 && r->generateUnboundMethods)
 				optsList[nopts++] = defaultAPIOptions(svc, md);
-			GwMethod *meth;
+			GwMethod *meth = NULL;
 			Str err = newMethod(r, svc, md, optsList, nopts, &meth);
 			if (err.p)
 				return err;

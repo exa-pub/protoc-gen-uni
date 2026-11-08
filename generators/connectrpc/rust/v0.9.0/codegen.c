@@ -215,23 +215,6 @@ static int idempotency_level(const PbMsg *m)
 }
 static bool is_no_side_effects(const PbMsg *m) { return idempotency_level(m) == IDEMPOTENCY_NO_SIDE_EFFECTS; }
 
-/* proto_file.iter().find(|f| f.name == name): the first file with the name (indexed once) */
-static Map file_index;
-static bool file_index_built;
-static const PbMsg *find_file(const PbMsg *req, const char *name)
-{
-	if (!file_index_built) {
-		file_index_built = true;
-		int n = pb_count(req, CGR_PROTO_FILE);
-		for (int i = n - 1; i >= 0; i--) {
-			const PbMsg *f = pb_msg_at(req, CGR_PROTO_FILE, i);
-			if (pb_has(f, FDP_NAME))
-				map_put(&file_index, pb_str(f, FDP_NAME), (void *)f);
-		}
-	}
-	return map_get(&file_index, name);
-}
-
 static char *snake(const char *s) { return heck_snake(s); }
 static char *upper_camel(const char *s) { return heck_upper_camel(s); }
 /* str::to_uppercase (identifiers are ASCII here) */
@@ -254,7 +237,26 @@ typedef struct {
 	bool gate_client_feature;
 	const char *client_feature_name;
 	bool all_message_encodable_impls;
+	/* Lookup caches of the port, which live as long as the request: */
+	Map files;           /* see find_file, built on first use */
+	bool files_built;
+	Map comment_indexes; /* see file_comment_index */
 } Batch;
+
+/* proto_file.iter().find(|f| f.name == name): the first file with the name (indexed once) */
+static const PbMsg *find_file(Batch *b, const PbMsg *req, const char *name)
+{
+	if (!b->files_built) {
+		b->files_built = true;
+		int n = pb_count(req, CGR_PROTO_FILE);
+		for (int i = n - 1; i >= 0; i--) {
+			const PbMsg *f = pb_msg_at(req, CGR_PROTO_FILE, i);
+			if (pb_has(f, FDP_NAME))
+				map_put(&b->files, pb_str(f, FDP_NAME), (void *)f);
+		}
+	}
+	return map_get(&b->files, name);
+}
 
 static const char *batch_client_feature_name(const Batch *b)
 {
@@ -270,12 +272,12 @@ static bool alias_collides(const Batch *b, const char *package, const char *fqn)
 }
 
 /* collect_alias_collisions */
-COLD static void collect_alias_collisions(const PbMsg *req, Map *colliding)
+COLD static void collect_alias_collisions(Batch *b, const PbMsg *req)
 {
 	Map first_seen = {0};
 	int nf = pb_count(req, CGR_FILE_TO_GENERATE);
 	for (int i = 0; i < nf; i++) {
-		const PbMsg *file = find_file(req, pb_str_at(req, CGR_FILE_TO_GENERATE, i));
+		const PbMsg *file = find_file(b, req, pb_str_at(req, CGR_FILE_TO_GENERATE, i));
 		if (!file)
 			continue;
 		const char *package = pb_str(file, FDP_PACKAGE);
@@ -293,7 +295,7 @@ COLD static void collect_alias_collisions(const PbMsg *req, Map *colliding)
 					if (!prev)
 						map_put(&first_seen, key, (void *)fqn);
 					else if (!str_eq(prev, fqn))
-						map_put(colliding, key, (void *)1);
+						map_put(&b->colliding_aliases, key, (void *)1);
 				}
 			}
 		}
@@ -460,18 +462,18 @@ typedef struct {
 typedef struct {
 	int si, mi;
 } PathIdx;
-static Map file_indexes; /* file name pointer as key: "%p" */
 
 static const char *opt_name(const PbMsg *m, uint32_t num) { return pb_has(m, num) ? xcat("+", pb_str(m, num)) : "-"; }
 
-static FileIndex *file_comment_index(const PbMsg *file)
+/* Batch.comment_indexes: the file pointer as key ("%llx") */
+static FileIndex *file_comment_index(Batch *b, const PbMsg *file)
 {
 	char *key = xfmt("%llx", (unsigned long long)(uintptr_t)file);
-	FileIndex *x = map_get(&file_indexes, key);
+	FileIndex *x = map_get(&b->comment_indexes, key);
 	if (x)
 		return x;
 	x = xalloc(sizeof *x);
-	map_put(&file_indexes, key, x);
+	map_put(&b->comment_indexes, key, x);
 	const PbMsg *info = pb_msg(file, FDP_SOURCE_CODE_INFO);
 	int n = pb_count(info, SCI_LOCATION);
 	for (int i = 0; i < n; i++) {
@@ -521,17 +523,17 @@ static const char *find_comment(const FileIndex *x, const char *path_key)
 }
 
 /* get_service_comment */
-static const char *get_service_comment(const PbMsg *file, const PbMsg *service)
+static const char *get_service_comment(Batch *b, const PbMsg *file, const PbMsg *service)
 {
-	FileIndex *x = file_comment_index(file);
+	FileIndex *x = file_comment_index(b, file);
 	intptr_t si = (intptr_t)map_get(&x->services, opt_name(service, SDP_NAME));
 	return si ? find_comment(x, xfmt("%d", (int)(si - 1))) : NULL;
 }
 
 /* get_method_comment: the first service with the name that has a method with the name */
-static const char *get_method_comment(const PbMsg *file, const PbMsg *service, const PbMsg *method)
+static const char *get_method_comment(Batch *b, const PbMsg *file, const PbMsg *service, const PbMsg *method)
 {
-	FileIndex *x = file_comment_index(file);
+	FileIndex *x = file_comment_index(b, file);
 	const PathIdx *p = map_get(&x->methods, xcat(opt_name(service, SDP_NAME), "\x01", opt_name(method, MDP_NAME)));
 	return p ? find_comment(x, xfmt("%d.%d", p->si, p->mi)) : NULL;
 }
@@ -627,12 +629,12 @@ static void stream_items_doc(PpNode *item, const PbMsg *m)
 }
 
 /* generate_trait_method */
-static PpNode *generate_trait_method(const PbMsg *file, const PbMsg *service, const PbMsg *m, const char *package)
+static PpNode *generate_trait_method(Batch *b, const PbMsg *file, const PbMsg *service, const PbMsg *m, const char *package)
 {
 	const char *method_name = pb_str(m, MDP_NAME);
 	char *name = method_snake(method_name);
 	PpNode *output = rust_type(method_output(m), package);
-	const char *method_doc = get_method_comment(file, service, m);
+	const char *method_doc = get_method_comment(b, file, service, m);
 	if (!method_doc)
 		method_doc = "";
 	const char *comment = *method_doc ? method_doc : xcat("Handle the ", method_name, " RPC.");
@@ -1209,7 +1211,7 @@ static PpNode *register_sig(const char *name)
 }
 
 /* generate_service */
-COLD static void generate_service(Vec *out, const PbMsg *file, const PbMsg *service, const Batch *b)
+COLD static void generate_service(Vec *out, const PbMsg *file, const PbMsg *service, Batch *b)
 {
 	const char *package = pb_str(file, FDP_PACKAGE);
 	const char *service_name = pb_str(service, SDP_NAME);
@@ -1223,14 +1225,14 @@ COLD static void generate_service(Vec *out, const PbMsg *file, const PbMsg *serv
 	char *server_name = xcat(service_upper, "Server");
 	char *service_name_const = xcat(to_uppercase(snake(service_name)), "_SERVICE_NAME");
 
-	const char *service_doc = get_service_comment(file, service);
+	const char *service_doc = get_service_comment(b, file, service);
 	const char *base_doc = service_doc && *service_doc ? service_doc : xcat("Server trait for ", service_name, ".");
 	char *full_doc = xcat(base_doc, SERVICE_DOC_TAIL);
 
 	int nm = pb_count(service, SDP_METHOD);
 	Vec trait_methods = {0};
 	for (int k = 0; k < nm; k++)
-		vec_push(&trait_methods, generate_trait_method(file, service, pb_msg_at(service, SDP_METHOD, k), package));
+		vec_push(&trait_methods, generate_trait_method(b, file, service, pb_msg_at(service, SDP_METHOD, k), package));
 
 	PpNode *router = pp_e("router");
 	for (int k = 0; k < nm; k++)
@@ -1382,14 +1384,14 @@ typedef struct {
 COLD static void emit_service_files(Vec *out, const PbMsg *req, const Options *o, const char *client_feature_name)
 {
 	Batch b = {0};
-	collect_alias_collisions(req, &b.colliding_aliases);
+	collect_alias_collisions(&b, req);
 	b.gate_client_feature = o->gate_client_feature;
 	b.client_feature_name = client_feature_name;
 	b.all_message_encodable_impls = o->all_messages;
 	int nf = pb_count(req, CGR_FILE_TO_GENERATE);
 	for (int i = 0; i < nf; i++) {
 		const char *file_name = pb_str_at(req, CGR_FILE_TO_GENERATE, i);
-		const PbMsg *file = find_file(req, file_name);
+		const PbMsg *file = find_file(&b, req, file_name);
 		if (!file || !(pb_count(file, FDP_SERVICE) || (b.all_message_encodable_impls && pb_count(file, FDP_MESSAGE_TYPE))))
 			continue;
 		Vec items = {0};

@@ -14,8 +14,11 @@
 #   TEST      tests to run (default: all `inputs:` of the template)
 #   --runner  command that runs BIN, e.g. "qemu-aarch64" for a cross-built binary
 #
-# Env: BUF (default: scripts/get-buf.sh), UNI_E2E_WORK (scratch dir, default: temporary),
-# UNI_DIFF_LINES (diff lines shown per file, default 60).
+# Each group writes a zip archive (`out: <group>.zip`), read by tests/e2e/zipfiles.py: paths that
+# differ only in case stay apart on file systems that do not tell them apart (macOS, Windows).
+#
+# Needs python3 (or python). Env: BUF (default: scripts/get-buf.sh), UNI_E2E_WORK (scratch dir,
+# default: temporary), UNI_DIFF_LINES (diff lines shown per file, default 60).
 #
 # On a mismatch, if testdata/gen/<name>/<version>/ exists (the upstream output written by
 # scripts/gen-testdata.sh), the files are compared with it and differing files are diffed.
@@ -46,6 +49,7 @@ lines=${UNI_DIFF_LINES:-60}
 for f in "$template" "$sums"; do [ -f "$f" ] || { echo "$f: not found" >&2; exit 1; }; done
 [ -x "$bin" ] || [ -f "$bin" ] || { echo "$bin: not found" >&2; exit 1; }
 
+py=$(command -v python3 || command -v python) || { echo "$0: needs python3" >&2; exit 2; }
 # sha256 of stdin, lowercase hex.
 sha256() { if command -v sha256sum >/dev/null; then sha256sum; else shasum -a 256; fi | cut -c1-64; }
 # "<sha256>  <group>/<path>" of the files DIR/<group>/<path>, sorted by "<group>/<path>" in byte order:
@@ -58,11 +62,11 @@ filesums() {
 		done | LC_ALL=C sort -t ' ' -k3
 	)
 }
-# The lines of the test sum: filesums of OUT and "<sha256>  <group>:error" of the error texts
-# ERRORS/<group>, sorted by their third field.
+# The lines of the test sum: the files of the archives OUT/<group>.zip and "<sha256>  <group>:error"
+# of the error texts ERRORS/<group>, sorted by their third field.
 testsums() {
 	{
-		filesums "$1"
+		"$py" -I "$(native "$root/tests/e2e/zipfiles.py")" sums "$(native "$1")"
 		for f in "$2"/*; do
 			if [ -f "$f" ]; then printf '%s  %s:error\n' "$(sha256 <"$f")" "${f##*/}"; fi
 		done
@@ -134,7 +138,8 @@ else
 fi
 
 # The template (stdin) with every `remote:` entry replaced by the local binary, uni-name/uni-version
-# prepended to its options, and `strategy: all` (one request with all files, like remote plugins).
+# prepended to its options, `strategy: all` (one request with all files, like remote plugins) and
+# `out: <group>.zip`.
 # buf names the local plugin by its command words joined by spaces (local_name, for errtext).
 local_cmd='' local_name=''
 for w in ${runner[@]+"${runner[@]}"} "$(native "$bin")"; do
@@ -155,6 +160,7 @@ to_local() {
 			sub(/\[/, "[" uni ", "); print; pending = 0; next
 		}
 		pending && /^[^[:space:]]/ { flush() }
+		/^[[:space:]]*-?[[:space:]]*out:/ { sub(/out:[[:space:]]*[^[:space:]#]+/, "&.zip") }
 		{ print }
 		END { flush() }
 	'
@@ -177,6 +183,7 @@ for test in "$@"; do
 			k=$((k + 1))
 			entry "$k" "$template" | to_local >"$tmpl.$k.yaml"
 			g=$(sed -nE 's/^[[:space:]]*-?[[:space:]]*out:[[:space:]]*([^[:space:]#]+).*/\1/p' "$tmpl.$k.yaml")
+			g=${g%.zip}
 			if "$BUF" generate "testdata/proto/$test" --template "$(native "$tmpl.$k.yaml")" -o "$(native "$out")" >"$work/$test.log" 2>&1; then
 				continue
 			fi
@@ -231,6 +238,9 @@ for test in "$@"; do
 		echo "    $gen is stale (does not match $sums), rerun scripts/gen-testdata.sh $name $version"
 		continue
 	fi
+	files=$work/$test.files
+	rm -rf "$files"
+	"$py" -I "$(native "$root/tests/e2e/zipfiles.py")" extract "$(native "$out")" "$(native "$files")"
 	awk 'NR == FNR { e[$2] = $1; next } { a[$2] = $1 }
 		END {
 			for (p in e) if (!(p in a)) print "missing " p; else if (e[p] != a[p]) print "differs " p
@@ -241,7 +251,7 @@ for test in "$@"; do
 		differs:*:error) diff -u "$gen/${p%:error}/$test" "$errors/${p%:error}" ;;
 		missing:*:error) sed 's/^/  /' "$gen/${p%:error}/$test" ;;
 		extra:*:error) sed 's/^/  /' "$errors/${p%:error}" ;;
-		differs:*) diff -u "$gen/${p%%/*}/$test/${p#*/}" "$out/$p" ;;
+		differs:*) diff -u "$gen/${p%%/*}/$test/${p#*/}" "$files/$p" ;;
 		*) ;;
 		esac | head -n "$lines" | sed 's/^/      /' || true
 	done

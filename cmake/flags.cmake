@@ -8,6 +8,9 @@ option(UNI_HARDENING "stack protector and RELRO (about +10 KB)" OFF)
 option(UNI_WERROR "treat warnings as errors" OFF)
 option(UNI_SANITIZE "AddressSanitizer + UndefinedBehaviorSanitizer, calloc per object" OFF)
 option(UNI_LTO "link-time optimization (release builds)" ON)
+# Check that no output depends on how qsort orders equal elements (upstream sorts that are stable
+# must be ported as stable sorts): tests/e2e/qsort_ties.c replaces qsort (GNU ld --wrap, no LTO).
+option(UNI_QSORT_CHECK "link a qsort that reverses runs of equal elements (tests only)" OFF)
 set(UNI_VERSION "dev" CACHE STRING "version printed by --version")
 
 set(CMAKE_C_STANDARD 11)
@@ -36,7 +39,7 @@ endif()
 
 include(CheckIPOSupported)
 check_ipo_supported(RESULT _uni_lto OUTPUT _uni_lto_output LANGUAGES C)
-if(_uni_lto AND UNI_LTO)
+if(_uni_lto AND UNI_LTO AND NOT UNI_QSORT_CHECK)
   set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 endif()
 

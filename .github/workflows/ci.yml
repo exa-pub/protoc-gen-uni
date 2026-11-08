@@ -1,7 +1,7 @@
-# CI: version → toolchain image → build (static Linux x86_64/aarch64 and Windows in the image,
-# macOS natively) → tests (e2e golden tests natively on every OS, ASan/UBSan, fuzzing)
-# → docker image FROM scratch of the tested Linux binaries → release of the tested binaries and the
-# image (push to main only).
+# CI: version → toolchain image (built by toolchain.yml) → build (static Linux x86_64/aarch64 and
+# Windows in the image, macOS natively) → tests (e2e golden tests natively on every OS, ASan/UBSan,
+# fuzzing) → docker image FROM scratch of the tested Linux binaries → release of the tested binaries
+# and the image (push to main only).
 #
 # Version = latest vX.Y.Z tag + bump based on conventional commits since that tag:
 #   `type!:` / `BREAKING CHANGE:` → major (minor before 1.0), `feat:` → minor, anything else → patch.
@@ -70,12 +70,14 @@ jobs:
 
   # Toolchain image (docker/toolchain.Dockerfile), tagged with the hash of the Dockerfile: pulled
   # from ghcr.io if it exists, otherwise built (~10 minutes) and pushed (not from forks).
+  # Toolchain image (docker/toolchain.Dockerfile): built and pushed by toolchain.yml, which new
+  # pushes do not cancel. This job waits until the tag of the current Dockerfile exists.
   toolchain:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     permissions:
       contents: read
-      packages: write
+      packages: read
     outputs:
       image: ${{ steps.image.outputs.image }}
     steps:
@@ -85,19 +87,17 @@ jobs:
       - id: image
         env:
           GH_TOKEN: ${{ github.token }}
-          FORK: ${{ github.event.pull_request.head.repo.fork }}
         run: |
           set -euo pipefail
           owner=$(tr '[:upper:]' '[:lower:]' <<<"$GITHUB_REPOSITORY_OWNER")
           image=ghcr.io/$owner/protoc-gen-uni-toolchain:$(sha256sum docker/toolchain.Dockerfile | cut -c1-12)
           echo "image=$image" >>"$GITHUB_OUTPUT"
           echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          if docker manifest inspect "$image" >/dev/null 2>&1; then
-            echo "$image exists"
-            exit 0
-          fi
-          docker build -t "$image" -f docker/toolchain.Dockerfile docker
-          if [ "$FORK" != true ]; then docker push "$image"; fi
+          until docker manifest inspect "$image" >/dev/null 2>&1; do
+            echo "waiting for $image (workflow toolchain.yml)"
+            sleep 60
+          done
+          echo "$image exists"
 
   lint:
     runs-on: ubuntu-latest
@@ -260,7 +260,7 @@ jobs:
           UNI_TOOLCHAIN_IMAGE=$IMAGE scripts/docker.sh bash -c '
             set -euo pipefail
             cmake --preset fuzz && cmake --build --preset fuzz
-            scripts/fuzz-corpus.sh
+            UNI_FUZZ_MAX_SEED=65536 scripts/fuzz-corpus.sh
             build/fuzz/fuzz/fuzz_request -max_total_time=120 -timeout=10 -rss_limit_mb=2048 -artifact_prefix=build/fuzz/ \
               -dict=fuzz/params.dict build/fuzz/corpus'
 

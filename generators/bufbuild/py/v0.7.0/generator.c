@@ -698,15 +698,6 @@ static void generate_stub_map(PbpyFile *f, const PbpyDescFile *desc)
 	pbpy_print(f, PS("},"));
 }
 
-/* _repr of a value of protobuf-py's descriptor.proto messages */
-static const PbpyMsgInfo *msg_info(const PbMsgDef *def)
-{
-	for (const PbpyMsgInfo *i = pbpy_descriptor_info; i->def; i++)
-		if (i->def == def)
-			return i;
-	fail("TypeError: no repr for this message"); /* not reached: the schemas are the same */
-}
-
 static void repr_scalar(PbpyEls *l, const PbField *f, const PbpyFieldInfo *fi, PbVal v)
 {
 	switch (f->type) {
@@ -740,9 +731,10 @@ static void repr_scalar(PbpyEls *l, const PbField *f, const PbpyFieldInfo *fi, P
 	}
 }
 
-static void repr_message(PbpyEls *l, const PbMsg *m, uint32_t unset_num)
+/* _repr of a value of protobuf-py's descriptor.proto messages; info names the class of m (the
+ * address of m->def does not: identical defs may be merged) */
+static void repr_message(PbpyEls *l, const PbMsg *m, const PbpyMsgInfo *info, uint32_t unset_num)
 {
-	const PbpyMsgInfo *info = msg_info(m->def);
 	pbpy_els_push(l, PS(info->qualname));
 	pbpy_els_push(l, PS("("));
 	for (int i = 0; i < m->def->n; i++) {
@@ -756,7 +748,7 @@ static void repr_message(PbpyEls *l, const PbMsg *m, uint32_t unset_num)
 			pbpy_els_push(l, PS("["));
 			for (int k = 0; k < s->n; k++) {
 				if (f->type == PT_MESSAGE)
-					repr_message(l, s->v[k].m, 0);
+					repr_message(l, s->v[k].m, &pbpy_descriptor_info[fi->msg], 0);
 				else
 					repr_scalar(l, f, fi, s->v[k]);
 				pbpy_els_push(l, PS(","));
@@ -764,7 +756,7 @@ static void repr_message(PbpyEls *l, const PbMsg *m, uint32_t unset_num)
 			pbpy_els_push(l, PS("]"));
 		} else if (f->type == PT_MESSAGE) {
 			if (set)
-				repr_message(l, s->v[0].m, 0);
+				repr_message(l, s->v[0].m, &pbpy_descriptor_info[fi->msg], 0);
 			else
 				pbpy_els_push(l, PS("None"));
 		} else if (!set) {
@@ -786,7 +778,10 @@ static void generate_boot(PbpyFile *f, const PbpyDescFile *desc)
 	pbpy_scope(f, PS("_DESC = "), PI(I.boot), PS("("));
 	/* the descriptor without source_code_info */
 	PbpyEls *l = els_new();
-	repr_message(l, desc->proto, FDP_SOURCE_CODE_INFO);
+	const PbpyMsgInfo *info = pbpy_descriptor_info;
+	while (!str_eq(info->qualname, "FileDescriptorProto"))
+		info++;
+	repr_message(l, desc->proto, info, FDP_SOURCE_CODE_INFO);
 	pbpy_print(f, PL(l), PS(","));
 	generate_stub_map(f, desc);
 	pbpy_end(f);

@@ -270,6 +270,7 @@ def default_repr(v):
 
 
 enum_infos = {}
+info_names = [cname(full) for full, _ in desc_msgs]
 print()
 print("/* The names that repr() of descriptor.proto messages prints. */")
 infos = []
@@ -290,7 +291,8 @@ for full, fs in desc_msgs:
         dflt = "NULL"
         if l != 3 and t not in (10, 11):
             dflt = cstr(default_repr(inst[member]))
-        rows.append(f"{{{cstr(member.local_name)}, {dflt}, {enm}}}")
+        msg = info_names.index(cname(tn)) if t in (10, 11) else -1
+        rows.append(f"{{{cstr(member.local_name)}, {dflt}, {enm}, {msg}}}")
     infos.append((name, m.type.__qualname__, rows))
 for key, (cn, vals) in enum_infos.items():
     print(f"static const PbpyEnumName {cn}_v[] = {{")

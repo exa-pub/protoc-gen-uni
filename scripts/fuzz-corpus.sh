@@ -10,6 +10,10 @@
 #
 # Needs buf (scripts/get-buf.sh, BUF overrides) and network access for buf dependencies
 # (es-validate; a test whose request cannot be built is skipped with a warning).
+#
+# UNI_FUZZ_MAX_SEED=<bytes> leaves out requests larger than that (the real-project inputs): CI
+# fuzzes with a small corpus, since libFuzzer runs the whole corpus before it starts mutating and
+# the full one (~1 GB) takes about 10 minutes under the sanitizers.
 set -euo pipefail
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$root"
@@ -70,11 +74,15 @@ awk -v dump="$tmp/dump" -v req="$tmp/request.binpb" '
 
 mkdir -p "$out"
 slug=${name//\//-}
+max=${UNI_FUZZ_MAX_SEED:-0}
 n=0
 for test in $(sed -nE 's|^[[:space:]]*-[[:space:]]*directory:[[:space:]]*testdata/proto/([A-Za-z0-9._-]+)[[:space:]]*$|\1|p' "$template"); do
 	rm -f "$tmp/request.binpb"
 	if ! "$BUF" generate "testdata/proto/$test" --template "$tmp/dump.buf.gen.yaml" -o "$tmp/gen" 2>"$tmp/err"; then
 		echo "warning: $name $version: skipped $test: $(head -c 300 "$tmp/err")" >&2
+		continue
+	fi
+	if [ "$max" -gt 0 ] && [ "$(wc -c <"$tmp/request.binpb")" -gt "$max" ]; then
 		continue
 	fi
 	for g in "${groups[@]}"; do
