@@ -52,7 +52,8 @@ endif()
 add_compile_options(-ffunction-sections -fdata-sections -fno-asynchronous-unwind-tables -fno-unwind-tables)
 add_link_options(-s -Wl,--gc-sections)
 if(WIN32)
-  add_link_options(-static)
+  # Reproducible: no link time in the PE header (and so no checksum change).
+  add_link_options(-static -Wl,--no-insert-timestamp)
   return()
 endif()
 
