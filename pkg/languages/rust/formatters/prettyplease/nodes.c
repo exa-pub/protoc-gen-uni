@@ -220,7 +220,8 @@ PpNode *pp_e_call(PpNode *func, ...)
 	PpNode *n = mk(PP_E_CALL, func, NULL, NULL);
 	va_list ap;
 	va_start(ap, func);
-	push_va(n, va_arg(ap, PpNode *), ap);
+	PpNode *first = va_arg(ap, PpNode *);
+	push_va(n, first, ap);
 	va_end(ap);
 	return n;
 }
@@ -230,7 +231,8 @@ PpNode *pp_e_method(PpNode *receiver, const char *method, ...)
 	PpNode *n = mkt(PP_E_METHOD, method, receiver, NULL);
 	va_list ap;
 	va_start(ap, method);
-	push_va(n, va_arg(ap, PpNode *), ap);
+	PpNode *first = va_arg(ap, PpNode *);
+	push_va(n, first, ap);
 	va_end(ap);
 	return n;
 }
@@ -240,7 +242,8 @@ PpNode *pp_e_method_tf(PpNode *receiver, const char *method, PpNode *turbofish, 
 	PpNode *n = mkt(PP_E_METHOD, method, receiver, turbofish);
 	va_list ap;
 	va_start(ap, turbofish);
-	push_va(n, va_arg(ap, PpNode *), ap);
+	PpNode *first = va_arg(ap, PpNode *);
+	push_va(n, first, ap);
 	va_end(ap);
 	return n;
 }
@@ -399,7 +402,8 @@ PpNode *pp_p_tuple_struct(PpNode *path, ...)
 	PpNode *n = mk(PP_P_TUPLE_STRUCT, NULL, path, NULL);
 	va_list ap;
 	va_start(ap, path);
-	push_va(n, va_arg(ap, PpNode *), ap);
+	PpNode *first = va_arg(ap, PpNode *);
+	push_va(n, first, ap);
 	va_end(ap);
 	return n;
 }

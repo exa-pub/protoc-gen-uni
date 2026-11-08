@@ -7,7 +7,8 @@ static Node *reader_call(const char *method, ...)
 {
 	va_list ap;
 	va_start(ap, method);
-	NodeList l = nl_of(va_arg(ap, Node *), ap);
+	Node *first = va_arg(ap, Node *);
+	NodeList l = nl_of(first, ap);
 	va_end(ap);
 	return dts_callv(dts_member(ID("reader"), method), NULL, l);
 }

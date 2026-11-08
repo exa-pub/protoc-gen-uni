@@ -76,7 +76,8 @@ static Node *call(Node *callee, ...)
 {
 	va_list ap;
 	va_start(ap, callee);
-	NodeList l = nl_of(va_arg(ap, Node *), ap);
+	Node *first = va_arg(ap, Node *);
+	NodeList l = nl_of(first, ap);
 	va_end(ap);
 	return dts_callv(callee, NULL, l);
 }
@@ -86,7 +87,8 @@ static Node *mcall(Node *obj, const char *method, ...)
 {
 	va_list ap;
 	va_start(ap, method);
-	NodeList l = nl_of(va_arg(ap, Node *), ap);
+	Node *first = va_arg(ap, Node *);
+	NodeList l = nl_of(first, ap);
 	va_end(ap);
 	return dts_callv(dts_member(obj, method), NULL, l);
 }
@@ -95,7 +97,8 @@ static Node *newx(Node *callee, ...)
 {
 	va_list ap;
 	va_start(ap, callee);
-	NodeList l = nl_of(va_arg(ap, Node *), ap);
+	Node *first = va_arg(ap, Node *);
+	NodeList l = nl_of(first, ap);
 	va_end(ap);
 	Node *e = dts_new_expr(callee, NULL);
 	for (int i = 0; i < l.n; i++) {
@@ -131,7 +134,8 @@ static Node *tref(const char *name, ...)
 {
 	va_list ap;
 	va_start(ap, name);
-	NodeList l = nl_of(va_arg(ap, Node *), ap);
+	Node *first = va_arg(ap, Node *);
+	NodeList l = nl_of(first, ap);
 	va_end(ap);
 	return dts_tref_node(dts_entity(name), l);
 }
