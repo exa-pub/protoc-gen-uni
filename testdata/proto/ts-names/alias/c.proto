@@ -1,0 +1,17 @@
+// Local messages named like the imports of the MessageFns helper and of Long.
+syntax = "proto3";
+
+package alias.c;
+
+message BinaryWriter {
+  int32 x = 1;
+}
+
+message Long {
+  int64 y = 1;
+}
+
+message C {
+  BinaryWriter w = 1;
+  int64 z = 2;
+}

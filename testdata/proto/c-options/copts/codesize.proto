@@ -1,0 +1,48 @@
+// optimize_for = CODE_SIZE and the file options of protobuf-c.proto: c_package, const_strings,
+// gen_pack_helpers (explicit: helpers for nested messages too) and gen_init_helpers.
+syntax = "proto3";
+
+package copts.codesize.v1;
+
+import "protobuf-c/protobuf-c.proto";
+import "copts/defaults.proto";
+
+option optimize_for = CODE_SIZE;
+option (pb_c_file).c_package = "cpkg.inner";
+option (pb_c_file).const_strings = true;
+option (pb_c_file).gen_pack_helpers = true;
+option (pb_c_file).gen_init_helpers = false;
+
+enum Mode {
+  MODE_UNSPECIFIED = 0;
+  MODE_ON = 1;
+  MODE_OFF = 2;
+  MODE_ONE = 1 [deprecated = true];
+  option allow_alias = true;
+}
+
+message Config {
+  string name = 1;
+  repeated string tags = 2;
+  optional string maybe = 3;
+  Mode mode = 4;
+  repeated Mode modes = 5;
+  repeated int32 nums = 6 [packed = false];
+  repeated int32 packed_nums = 7;
+  bytes data = 8;
+  copts.defaults.Labels labels = 9;
+  message Inner {
+    option (pb_c_msg).gen_init_helpers = true;
+    int64 v = 1;
+    message Innermost {
+      bool flag = 1;
+    }
+  }
+  Inner inner = 10;
+  map<string, Inner> by_name = 11;
+}
+
+service Store {
+  rpc Get(Config) returns (Config.Inner);
+  rpc Put(Config.Inner.Innermost) returns (copts.defaults.Empty);
+}

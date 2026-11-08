@@ -1,0 +1,1 @@
+uni_generator(LIBRARIES go_protogen go_std_go1_26_5)

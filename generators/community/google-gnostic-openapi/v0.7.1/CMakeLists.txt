@@ -1,0 +1,1 @@
+uni_generator(LIBRARIES go_protogen_v1_36_7 go_gnostic_models go_genproto)

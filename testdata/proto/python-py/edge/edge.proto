@@ -1,0 +1,32 @@
+// Test: python-py, protobuf-py names and provenance.
+//
+// Covers import aliases (a local Item and TYPE_CHECKING clash with imported ones), reserved class
+// and attribute names (int, self, ext_, _, pb_, keywords), extensions of a renamed message, enum
+// prefix stripping (digits, collisions, empty rest), defaults of every kind with escapes (bytes
+// \x, octal, \u; strings with quotes and triple quotes; floats; hex ints), maps, oneofs, groups.
+syntax = "proto2";
+package edge;
+import "other/o.proto";
+import "edge/sub/class.proto";
+message Item { optional other.Item a = 1; optional sub.Item b = 2; optional Item c = 3; optional other.TYPE_CHECKING t = 4; }
+message TYPE_CHECKING {}
+message int { optional int32 int_ = 1; optional int32 self = 2; optional int32 ext_x = 3; optional int32 _priv = 4; optional int32 pb_x = 5; optional int32 str = 6; optional int32 from = 7; optional int32 none_ = 8;}
+message ext_Foo { extensions 100 to 200; }
+extend ext_Foo { optional int32 bar = 100; repeated int32 baz = 101 [packed = true]; }
+enum MyEnum { MY_ENUM_UNSPECIFIED = 0; MY_ENUM_1X = 1; MY_ENUM_name = 2; MY_ENUM_ = 3; MY_ENUM_MY_ENUM_A = 4; A = 5; MY_ENUM_A = 6; mro = 7; _x = 8; }
+enum HTTPCode { HTTP_CODE_OK = 0; HTTPCODE_BAD = 1; }
+message Defaults {
+  optional bytes b1 = 1 [default = "\x1\x41\101\7\0xffé"];
+  optional bytes b2 = 2 [default = "a\\b\\\\c'\"q"];
+  optional string s1 = 3 [default = "tab\there\\ \"\"\" triple"];
+  optional float f1 = 4 [default = 1e10];
+  optional double f2 = 5 [default = -0.0];
+  optional double f3 = 6 [default = 0.1];
+  optional int64 i1 = 7 [default = -0];
+  optional MyEnum e1 = 8 [default = A];
+  optional uint64 u = 9 [default = 0x10];
+  optional bool bb = 10 [default = true];
+  optional double f4 = 11 [default = 123456789012345678901234567890];
+  optional float f5 = 12 [default = 0.0001];
+}
+message Outer { message Inner { enum E { X = 0; } optional E e = 1; } map<string, Inner> m = 1; map<int32, Inner.E> m2 = 2; oneof o { Inner i = 3; string s = 4; } optional group G = 5 { optional int32 x = 1; } }

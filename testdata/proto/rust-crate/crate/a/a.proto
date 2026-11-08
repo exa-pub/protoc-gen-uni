@@ -1,0 +1,13 @@
+// Two files in one package, references to nested and sibling packages.
+syntax = "proto3";
+
+package test.crate.a;
+
+import "crate/a/b/b.proto";
+import "crate/zeta/zeta.proto";
+
+message A {
+  test.crate.a.b.B b = 1;
+  test.crate.Zeta.Z z = 2;
+  int32 scalar = 3;
+}

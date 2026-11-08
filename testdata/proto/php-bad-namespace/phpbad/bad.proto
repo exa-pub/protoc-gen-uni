@@ -1,0 +1,10 @@
+// php-bad-namespace: a php_namespace with a character that could inject code; upstream fails.
+syntax = "proto3";
+
+package test.phpbad;
+
+option php_namespace = "Foo;Bar";
+
+message Bad {
+  int32 x = 1;
+}

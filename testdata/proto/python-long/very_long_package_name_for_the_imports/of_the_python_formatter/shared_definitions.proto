@@ -1,0 +1,31 @@
+// Long names, long types and long comments: the line splitting of black 24.3.0 (line length
+// 88) in the output of python formatters (betterproto). Lines close to the limit on purpose.
+syntax = "proto3";
+
+package very_long_package_name_for_the_imports.of_the_python_formatter.shared_definitions;
+
+// A message whose name alone fills most of a line, so that the class line has to be split by black.
+message AnExtremelyLongMessageNameThatMakesTheClassLineLongerThanTheLimitOfEightyEight {
+  string value = 1;
+}
+
+// Short enough: the class line is exactly at the limit.
+message MessageNameWhoseClassLineEndsExactlyAtTheEightyEighthColumnOfTheLine {
+  int32 value = 1;
+}
+
+enum AVeryLongEnumerationNameThatAlsoNeedsToBeSplitOverSeveralLinesByTheFormatter {
+  A_VERY_LONG_ENUMERATION_NAME_THAT_ALSO_NEEDS_TO_BE_SPLIT_UNSPECIFIED = 0;
+  // A value whose assignment is longer than the line length, with a negative number.
+  A_VERY_LONG_ENUMERATION_NAME_THAT_ALSO_NEEDS_TO_BE_SPLIT_OVER_SEVERAL_LINES_NEGATIVE = -2147483648;
+}
+
+message Outer {
+  message InnerMessageWithAQuiteLongName {
+    message DeeplyNestedMessageWithAnotherLongName {
+      string payload = 1;
+    }
+    DeeplyNestedMessageWithAnotherLongName nested = 1;
+  }
+  InnerMessageWithAQuiteLongName inner = 1;
+}

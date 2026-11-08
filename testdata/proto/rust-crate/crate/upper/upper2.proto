@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package test.crate.upper;
+
+import "crate/upper/upper.proto";
+
+message Lower {
+  test.crate.Upper.Upper upper = 1;
+}

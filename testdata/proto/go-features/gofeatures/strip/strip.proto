@@ -1,0 +1,47 @@
+edition = "2024";
+
+package test.gofeatures.strip;
+
+import "google/protobuf/go_features.proto";
+
+// Edition 2024 defaults api_level to API_OPAQUE; keep the default here.
+option features.(pb.go).strip_enum_prefix = STRIP_ENUM_PREFIX_GENERATE_BOTH;
+
+// Inherits GENERATE_BOTH from the file.
+enum Both {
+  BOTH_UNSPECIFIED = 0;
+  BOTH_ONE = 1;
+}
+
+enum Stripped {
+  option features.(pb.go).strip_enum_prefix = STRIP_ENUM_PREFIX_STRIP;
+  STRIPPED_UNSPECIFIED = 0;
+  STRIPPED_ONE = 1;
+  // Value-level override.
+  STRIPPED_KEPT = 2 [features.(pb.go).strip_enum_prefix = STRIP_ENUM_PREFIX_KEEP];
+  // Value without the prefix.
+  OTHER = 3;
+}
+
+enum Kept {
+  option features.(pb.go).strip_enum_prefix = STRIP_ENUM_PREFIX_KEEP;
+  KEPT_UNSPECIFIED = 0;
+  KEPT_ONE = 1 [features.(pb.go).strip_enum_prefix = STRIP_ENUM_PREFIX_STRIP];
+}
+
+message Holder {
+  enum Nested {
+    option features.(pb.go).strip_enum_prefix = STRIP_ENUM_PREFIX_STRIP;
+    NESTED_UNSPECIFIED = 0;
+    NESTED_VALUE = 1;
+  }
+  Both both = 1;
+  Stripped stripped = 2;
+  Kept kept = 3;
+  Nested nested = 4;
+}
+
+message OpenHolder {
+  option features.(pb.go).api_level = API_OPEN;
+  Stripped stripped = 1;
+}

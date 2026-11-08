@@ -1,0 +1,6 @@
+// Upper camel case package: its module (zeta) sorts after alpha, its name before.
+syntax = "proto3";
+
+package test.crate.Zeta;
+
+message Z {}

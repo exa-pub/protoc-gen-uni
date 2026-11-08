@@ -1,0 +1,104 @@
+// Test: swift_prefix, MessageSet extensions, extension ranges mixed with
+// fields and oneofs, extension groups and repeated extensions.
+
+// Leading comment of the syntax declaration.
+syntax = "proto2";
+
+package swiftfeatures.prefix;
+
+option swift_prefix = "SFX";
+
+// A MessageSet.
+message Set {
+  option message_set_wire_format = true;
+  extensions 4 to max;
+}
+
+message Item {
+  extend Set {
+    // The usual MessageSet extension: same type as the scope.
+    optional Item item = 10;
+  }
+  optional string text = 1;
+}
+
+message Other {
+  extend Set {
+    optional Item other_item = 11;
+  }
+}
+
+message Ranges {
+  optional int32 a = 1;
+  extensions 2 to 4;
+  optional int32 b = 5;
+  extensions 6 to 7;
+  extensions 8;
+  extensions 100 to 200;
+  oneof o {
+    int32 c = 9;
+    string d = 10;
+  }
+  optional int32 e = 11;
+  oneof p {
+    int32 f = 50;
+    int32 g = 51;
+    int32 h = 300;
+  }
+}
+
+message OnlyRanges {
+  extensions 1 to 10;
+  extensions 20 to 30;
+}
+
+message ManyRanges {
+  extensions 1;
+  extensions 3;
+  extensions 5;
+  extensions 7;
+}
+
+message Required {
+  required int32 id = 1;
+}
+
+message Holder {
+  oneof kind {
+    Required first = 1;
+    Required second = 2;
+    int32 plain = 3;
+  }
+  oneof new_value {
+    int32 x = 4;
+    string y = 5;
+  }
+  repeated Required many = 6;
+  map<string, Required> by_name = 7;
+  optional Ranges ranges = 8;
+}
+
+enum Kind {
+  KIND_ZERO = 0;
+  KIND_ONE = 1;
+}
+
+extend Ranges {
+  optional group ExtGroup = 100 {
+    optional int32 a = 1;
+  }
+  repeated int32 packed_ext = 101 [packed = true];
+  repeated Kind kinds_ext = 102;
+  optional Kind kind_ext = 103 [default = KIND_ONE];
+  optional bytes bytes_ext = 104 [default = "\001\002"];
+}
+
+message Scope {
+  extend Ranges {
+    optional group ScopedGroup = 150 {
+      optional int32 b = 1;
+    }
+    repeated Item items = 151;
+    optional string class = 152;
+  }
+}

@@ -1,0 +1,49 @@
+# Golden config for grpc/swift v1.27.6: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Groups: default; Visibility=Public with FileNaming; Client=false with TestClient, KeepMethodCasing
+# and the module name options; Server=false with ReflectionData and UseAccessLevelOnImports;
+# errors: _V2=true, an invalid value, an unknown parameter.
+# Not tested: ProtoPathModuleMappings (reads a local file).
+# Inputs left out: editions2024 (maximum edition 2023, buf rejects it).
+# Regenerate: scripts/gen-testdata.sh grpc/swift v1.27.6
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-case
+  - directory: testdata/proto/services-editions
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/grpc/swift:v1.27.6
+    out: default
+  - remote: buf.build/grpc/swift:v1.27.6
+    out: public
+    opt: [Visibility=Public, FileNaming=PathToUnderscores]
+  - remote: buf.build/grpc/swift:v1.27.6
+    out: client
+    opt: [Client=false, TestClient=true, KeepMethodCasing=true, GRPCModuleName=G, SwiftProtobufModuleName=S, ExtraModuleImports=X]
+  - remote: buf.build/grpc/swift:v1.27.6
+    out: server
+    opt: [Server=false, ReflectionData=true, UseAccessLevelOnImports=true]
+  - remote: buf.build/grpc/swift:v1.27.6
+    out: error-v2
+    opt: [_V2=true]
+  - remote: buf.build/grpc/swift:v1.27.6
+    out: error-value
+    opt: [Visibility=public]
+  - remote: buf.build/grpc/swift:v1.27.6
+    out: error-unknown
+    opt: [foo=bar]

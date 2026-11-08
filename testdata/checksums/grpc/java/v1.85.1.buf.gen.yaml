@@ -1,0 +1,35 @@
+# Golden config for grpc/java v1.85.1: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Groups: default; lite; noversion with @generated=javax.
+# Inputs left out: naming: libprotoc 36.0 rejects naming/legacy.proto (JSON name conflict) and exits
+# with a timestamped log line.
+# Regenerate: scripts/gen-testdata.sh grpc/java v1.85.1
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-case
+  - directory: testdata/proto/services-editions
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/grpc/java:v1.85.1
+    out: default
+  - remote: buf.build/grpc/java:v1.85.1
+    out: lite
+    opt: [lite]
+  - remote: buf.build/grpc/java:v1.85.1
+    out: noversion
+    opt: [noversion, "@generated=javax"]

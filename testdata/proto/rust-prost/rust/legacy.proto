@@ -1,0 +1,35 @@
+// Test: rust-prost, proto2 part: defaults, labels, packing and groups.
+syntax = "proto2";
+
+package test.rust.legacy;
+
+import "rust/prost.proto";
+
+message Legacy {
+  optional Mode mode = 1 [default = MODE_SELF];
+  optional Mode modely = 2 [default = MODE_MODELY];
+  optional bytes raw = 3 [default = "\x00\xff\"\\'\a\b\f\v\?\101\0123"];
+  optional string text = 4 [default = "tab\there 'q' \"dq\" \\ caf\303\251 \x7f"];
+  optional float f = 5 [default = -inf];
+  required int32 req = 6;
+  repeated int32 unpacked = 7;
+  repeated int32 packed = 8 [packed = true];
+  repeated int32 deprecated_unpacked = 9 [deprecated = true];
+  optional group Grp = 10 {
+    optional int32 g = 11;
+  }
+  optional Legacy self = 12;
+  optional test.rust.Point point = 13;
+  map<string, Mode> modes = 14;
+  extensions 100 to 200;
+}
+
+enum Mode {
+  MODE_UNSPECIFIED = 0;
+  MODE_SELF = 1;
+  MODE_MODELY = 2;
+}
+
+extend Legacy {
+  optional int32 ext = 100;
+}

@@ -1,0 +1,1 @@
+uni_generator(LIBRARIES go_grpc_gateway go_yaml go_protojson)

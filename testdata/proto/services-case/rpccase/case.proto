@@ -1,0 +1,23 @@
+// Test: method names that differ only in case or underscores.
+//
+// They map to the same name in most target languages; some plugins reject
+// them.
+syntax = "proto3";
+
+package test.rpccase;
+
+message Msg {
+  string value = 1;
+}
+
+service Greeter {
+  rpc SayHello(Msg) returns (Msg);
+  rpc say_hello(Msg) returns (Msg);
+  rpc sayHello(stream Msg) returns (Msg);
+  rpc Say_Hello(Msg) returns (stream Msg);
+}
+
+// Service names that differ only in case.
+service greeter {
+  rpc SayHello(Msg) returns (Msg);
+}

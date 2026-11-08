@@ -1,0 +1,25 @@
+// Test: enum aliases (also collapsing to one Swift name) and the pb.enumvalue.json
+// option of protoc-gen-swift (EnumValueOptions extension 998).
+syntax = "proto2";
+
+package swiftfeatures.aliases;
+
+import "pb/enumvalue/json.proto";
+
+enum Status {
+  option allow_alias = true;
+  STATUS_UNKNOWN = 0;
+  STATUS_OK = 1 [(pb.enumvalue.json) = {string: "ok_custom"}];
+  STATUS_FINE = 1 [(pb.enumvalue.json) = {string: "ok_custom"}];
+  STATUS_GOOD = 2;
+  STATUS_Good = 2;
+  STATUS_GOOD_ALIAS = 2;
+  NEG_ONE = -1;
+  NEG__ONE = -2;
+  STATUS_3D = 3 [(pb.enumvalue.json) = {string: "three\"d"}];
+}
+
+message UsesStatus {
+  optional Status s = 1 [default = STATUS_FINE];
+  optional Status t = 2 [default = NEG__ONE];
+}

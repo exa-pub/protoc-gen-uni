@@ -1,0 +1,27 @@
+// Test: HTTP bindings whose body is a scalar field.
+//
+// grpc-gateway rejects them with use_opaque_api.
+syntax = "proto3";
+
+package test.httpscalar.v1;
+
+import "google/api/annotations.proto";
+
+message RenameRequest {
+  string name = 1;
+  string new_name = 2;
+}
+
+message Shelf {
+  string name = 1;
+}
+
+service ShelfService {
+  // Rename renames a shelf. Body: a scalar field.
+  rpc Rename(RenameRequest) returns (Shelf) {
+    option (google.api.http) = {
+      post: "/v1/{name=shelves/*}:rename"
+      body: "new_name"
+    };
+  }
+}

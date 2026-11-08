@@ -1,0 +1,16 @@
+// Test: optimize_for = CODE_SIZE (reflection-based methods).
+syntax = "proto3";
+
+package test.cppcodesize;
+
+option optimize_for = CODE_SIZE;
+
+message Plain {
+  int32 a = 1;
+  repeated string b = 2;
+  map<string, int64> m = 3;
+  oneof o {
+    string s = 4;
+    Plain p = 5;
+  }
+}

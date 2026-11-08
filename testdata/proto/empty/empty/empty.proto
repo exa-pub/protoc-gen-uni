@@ -1,0 +1,11 @@
+// Test: empty.
+//
+// empty.proto has only a package and imports and declares nothing (generators
+// still emit a file descriptor for it); normal.proto is an ordinary file in
+// the same package.
+syntax = "proto3";
+
+package test.empty;
+
+import "empty/normal.proto";
+import "google/protobuf/timestamp.proto";

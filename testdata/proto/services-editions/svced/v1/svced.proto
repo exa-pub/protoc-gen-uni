@@ -1,0 +1,56 @@
+// Test: services in edition 2023.
+//
+// Covers the four streaming kinds, deprecated and idempotent methods,
+// comments on services and methods, and request/response messages with
+// file-level feature overrides, for plugins that support editions.
+edition = "2023";
+
+package test.svced.v1;
+
+import "google/protobuf/empty.proto";
+
+option features.field_presence = IMPLICIT;
+option features.enum_type = CLOSED;
+
+enum Kind {
+  KIND_UNSPECIFIED = 0;
+  KIND_A = 1;
+}
+
+message Item {
+  string id = 1;
+  Kind kind = 2 [features.field_presence = EXPLICIT];
+  Item child = 3 [features.message_encoding = DELIMITED];
+  int32 explicit = 4 [features.field_presence = EXPLICIT];
+}
+
+// Catalog serves items.
+service Catalog {
+  // Get returns one item.
+  rpc Get(Item) returns (Item) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Put streams items from the client.
+  rpc Put(stream Item) returns (google.protobuf.Empty); // trailing comment on Put
+
+  // List streams items to the client.
+  rpc List(Item) returns (stream Item) {
+    option idempotency_level = IDEMPOTENT;
+  }
+
+  // Sync is a bidirectional stream.
+  rpc Sync(stream Item) returns (stream Item);
+
+  // Remove is deprecated.
+  rpc Remove(Item) returns (google.protobuf.Empty) {
+    option deprecated = true;
+  }
+}
+
+// OldCatalog is deprecated as a whole.
+service OldCatalog {
+  option deprecated = true;
+
+  rpc Get(Item) returns (Item);
+}

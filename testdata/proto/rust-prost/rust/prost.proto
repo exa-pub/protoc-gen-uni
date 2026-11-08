@@ -1,0 +1,123 @@
+// Test: rust-prost.
+//
+// Rust code generation of prost-build (protoc-gen-prost): Rust keywords as names, enum prefix
+// stripping, boxing of recursive fields, Copy/Eq derives, well-known types, and the rustdoc
+// sanitizing of comments (URLs and brackets).
+syntax = "proto3";
+
+package test.rust;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+// URLs: see https://example.com/docs, (http://example.org/a_b) and
+// https://example.net/x?y=[1] then text; not note://abc or http:// alone.
+// Brackets: [Self] [link](https://x.y/z) [a][b] [c] [] [ ] [d]] \[escaped\] x[e] [f]
+// [start of line] and [end of line]
+//  one leading space
+//   two leading spaces
+//no space
+//	tab
+message Type {
+  // Keywords: [type] and self.
+  int32 type = 1;
+  string self = 2;
+  bool async = 3;
+  uint32 crate = 4;
+  double gen = 5;
+  // Recursive, therefore boxed.
+  Type super = 6;
+  repeated Type children = 7;
+  map<string, Kind> kinds = 8;
+  map<int32, Type> by_id = 9;
+  // A oneof named like a keyword.
+  oneof match {
+    // Recursive in a oneof.
+    Type nested = 10;
+    google.protobuf.Empty empty = 11;
+    google.protobuf.Timestamp at = 12;
+    google.protobuf.Int32Value wrapped = 13;
+  }
+  optional Kind kind = 14;
+  bytes _0data = 15;
+  string fieldName = 16;
+  string XMLHttpRequest = 17;
+  repeated google.protobuf.StringValue names = 18;
+}
+
+// Copy and Eq.
+message Point {
+  int32 x = 1;
+  int32 y = 2;
+  Kind kind = 3;
+}
+
+message Line {
+  Point a = 1;
+  Point b = 2;
+}
+
+message FloatPoint {
+  float x = 1;
+  double y = 2;
+}
+
+message WithString {
+  string s = 1;
+  Line line = 2;
+  bytes b = 3;
+}
+
+// Mutual recursion.
+message A {
+  B b = 1;
+}
+
+message B {
+  A a = 1;
+  C c = 2;
+}
+
+message C {
+  int32 v = 1;
+  oneof value {
+    A a = 2;
+    int64 n = 3;
+  }
+}
+
+enum Kind {
+  KIND_UNSPECIFIED = 0;
+  KIND_SELF = 1;
+  KIND_1 = 2;
+  KIND_KINDLY = 3;
+  KINDNESS = 4;
+  KIND_TYPE = 5;
+}
+
+enum Alias {
+  option allow_alias = true;
+  ALIAS_A = 0;
+  ALIAS_B = 0;
+  ALIAS_C = 1;
+}
+
+// Nested types in a message named like a keyword.
+message Impl {
+  message Fn {
+    int32 v = 1;
+    Impl outer = 2;
+  }
+  enum Loop {
+    LOOP_UNSPECIFIED = 0;
+    LOOP_ONCE = 1;
+  }
+  Fn fn = 1;
+  Loop loop = 2;
+  oneof for {
+    int32 x = 3;
+    string y = 4;
+    Fn f = 5;
+  }
+}

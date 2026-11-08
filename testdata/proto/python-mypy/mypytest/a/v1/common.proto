@@ -1,0 +1,20 @@
+// Test: python-mypy. A dependency of mypytest/casts.proto; its basename collides with
+// mypytest/b/v1/common.proto (import aliases _common_pb2 and _common_pb2_1).
+syntax = "proto3";
+
+package mypytest.a.v1;
+
+import "google/protobuf/descriptor.proto";
+
+message Common {
+  string value = 1;
+}
+
+enum Color {
+  COLOR_UNSPECIFIED = 0;
+  COLOR_RED = 1;
+}
+
+extend google.protobuf.MessageOptions {
+  string common_tag = 51234;
+}

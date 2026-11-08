@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+// Same type names as test.imports.common.v1, in a different package.
+package test.imports.other.v1;
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_BROKEN = 1;
+}
+
+message Item {
+  int64 id = 1;
+  Status status = 2;
+
+  // Nested type with the same simple name as a top-level type elsewhere.
+  message Id {
+    int64 value = 1;
+  }
+  Id nested_id = 3;
+}

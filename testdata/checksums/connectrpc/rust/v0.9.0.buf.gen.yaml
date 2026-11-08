@@ -1,0 +1,61 @@
+# Golden config for connectrpc/rust v0.9.0: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Groups: buffa_module; buffa_module with the registry option file_per_package; extern_path=. with
+# gate_client_feature=client and encodable_impls=all_messages; buffa_module with an extern_path for the
+# WKT, no_json, no_register_fn and strict_utf8_mapping; gate_client_feature without a name,
+# encodable_impls=outputs and element_memory_limit=unlimited; no options (fails with "not covered by
+# any extern_path mapping" on inputs with services); errors: an element_memory_limit the request
+# exceeds, an invalid encodable_impls value, an unknown option.
+# services-case tests the error for method names that map to the same Rust identifier.
+# Not tested: the BUFFA_ELEMENT_MEMORY_LIMIT environment variable.
+# Regenerate: scripts/gen-testdata.sh connectrpc/rust v0.9.0
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-case
+  - directory: testdata/proto/services-editions
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/services-connect
+  - directory: testdata/proto/services-editions2024
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/connectrpc/rust:v0.9.0
+    out: module
+    opt: [buffa_module=crate::proto]
+  - remote: buf.build/connectrpc/rust:v0.9.0
+    out: file-per-package
+    opt: [buffa_module=crate::proto, file_per_package]
+  - remote: buf.build/connectrpc/rust:v0.9.0
+    out: gate
+    opt: [extern_path=.=crate::pb, gate_client_feature=client, encodable_impls=all_messages]
+  - remote: buf.build/connectrpc/rust:v0.9.0
+    out: extern
+    opt: [buffa_module=crate::proto, extern_path=.google.protobuf=::buffa_types::google::protobuf, no_json, no_register_fn, strict_utf8_mapping]
+  - remote: buf.build/connectrpc/rust:v0.9.0
+    out: gate-default
+    opt: [buffa_module=::my_crate::proto, gate_client_feature, encodable_impls=outputs, element_memory_limit=unlimited]
+  - remote: buf.build/connectrpc/rust:v0.9.0
+    out: no-module
+  - remote: buf.build/connectrpc/rust:v0.9.0
+    out: error-memory
+    opt: [buffa_module=crate::proto, element_memory_limit=1024]
+  - remote: buf.build/connectrpc/rust:v0.9.0
+    out: error-encodable
+    opt: [encodable_impls=none]
+  - remote: buf.build/connectrpc/rust:v0.9.0
+    out: error-unknown
+    opt: [foo=bar]

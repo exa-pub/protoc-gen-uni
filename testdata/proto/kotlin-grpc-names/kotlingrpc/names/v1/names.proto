@@ -1,0 +1,46 @@
+// Method names that clash with the members grpc/kotlin imports (unaryRpc, builder,
+// getServiceDescriptor, DEFAULT), keywords, underscores and acronyms; a message named like a type
+// nested in the generated object; a Java package with keywords; several services, so that
+// getServiceDescriptor gets import aliases.
+syntax = "proto3";
+
+package kotlingrpc.names.v1;
+
+import "kotlingrpc/types/v1/types.proto";
+
+option java_package = "kotlingrpc.fun.in.names.v1";
+
+message Request {
+  message Nested {
+    message Deeper {}
+  }
+}
+
+message NamesCoroutineStub {}
+
+service Names {
+  rpc UnaryRpc(Request) returns (Request);
+  rpc Builder(Request) returns (stream Request);
+  rpc GetServiceDescriptor(Request) returns (Request.Nested);
+  rpc _DEFAULT(stream Request) returns (Request.Nested.Deeper);
+  rpc Build(Request) returns (NamesCoroutineStub);
+  rpc Context(stream Request) returns (stream Request);
+  rpc http_get_url(Request) returns (Request);
+  rpc HTTPGetURL(Request) returns (Request);
+  rpc Get(Request) returns (Request);
+  rpc Class(Request) returns (Request) {
+    option deprecated = true;
+  }
+  rpc bidiStreamingRpc(stream Request) returns (stream Request);
+  rpc ServerStreamingServerMethodDefinition(Request) returns (stream Request);
+}
+
+service Other {
+  rpc Call(kotlingrpc.types.v1.Flow) returns (stream kotlingrpc.types.v1.Metadata);
+  rpc Stream(stream kotlingrpc.types.v1.Status) returns (kotlingrpc.types.v1.String);
+  rpc Chan(kotlingrpc.types.v1.Channel) returns (kotlingrpc.types.v1.DEFAULT);
+  rpc B(kotlingrpc.types.v1.builder) returns (kotlingrpc.types.v1.unaryRpc);
+  rpc U(stream kotlingrpc.types.v1.UNIMPLEMENTED) returns (stream kotlingrpc.types.v1.Deprecated);
+}
+
+service Third {}

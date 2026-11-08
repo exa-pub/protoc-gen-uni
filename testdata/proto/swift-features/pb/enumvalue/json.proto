@@ -1,0 +1,16 @@
+// The pb.enumvalue.json option of protoc-gen-swift (declared for EnumValueOptions
+// extension 998 in descriptor.proto; protoc ships it as
+// google/protobuf/json_enumvalue_options.proto).
+syntax = "proto2";
+
+package pb.enumvalue;
+
+import "google/protobuf/descriptor.proto";
+
+message JsonEnumValueOptions {
+  optional string string = 1;
+}
+
+extend google.protobuf.EnumValueOptions {
+  optional JsonEnumValueOptions json = 998;
+}

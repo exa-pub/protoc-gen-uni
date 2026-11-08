@@ -1,0 +1,66 @@
+# Golden config for grpc/go v1.6.2: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Inputs set no go_package: managed mode adds go_package_prefix.
+# python-mypy has a deprecated file with a service; http-gateway has google.api.http annotations.
+# Groups: paths=source_relative; require_unimplemented_servers=false; separate_package (buf patch)
+# with source_relative and import paths, and with module=; module=; annotate_code (.meta files);
+# errors: an invalid boolean value, an unknown flag.
+# Regenerate: scripts/gen-testdata.sh grpc/go v1.6.2
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: example.com/gen
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-case
+  - directory: testdata/proto/services-editions
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/services-connect
+  - directory: testdata/proto/services-editions2024
+  - directory: testdata/proto/http-gateway
+  - directory: testdata/proto/python-mypy
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/grpc/go:v1.6.2
+    out: source-relative
+    opt: [paths=source_relative]
+  - remote: buf.build/grpc/go:v1.6.2
+    out: no-unimplemented
+    opt: [paths=source_relative, require_unimplemented_servers=false]
+  - remote: buf.build/grpc/go:v1.6.2
+    out: separate
+    opt: [paths=source_relative, require_unimplemented_servers=false, separate_package=true]
+  - remote: buf.build/grpc/go:v1.6.2
+    out: separate-import
+    opt: [separate_package=true]
+  - remote: buf.build/grpc/go:v1.6.2
+    out: separate-module
+    opt: [separate_package=true, module=example.com/gen]
+  - remote: buf.build/grpc/go:v1.6.2
+    out: module
+    opt: [module=example.com/gen]
+  - remote: buf.build/grpc/go:v1.6.2
+    out: annotate
+    opt: [paths=source_relative, annotate_code]
+  - remote: buf.build/grpc/go:v1.6.2
+    out: error-value
+    opt: [require_unimplemented_servers=yes]
+  - remote: buf.build/grpc/go:v1.6.2
+    out: error-unknown
+    opt: [foo=bar]

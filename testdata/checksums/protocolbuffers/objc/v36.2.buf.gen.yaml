@@ -1,0 +1,52 @@
+# Golden config for protocolbuffers/objc v36.2: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Inputs left out: naming: see cpp.
+# Regenerate: scripts/gen-testdata.sh protocolbuffers/objc v36.2
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/objc-naming
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/go-features
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/protocolbuffers/objc:v36.2
+    out: default
+  - remote: buf.build/protocolbuffers/objc:v36.2
+    out: c-function
+    opt: [extension_generation_mode=c_function]
+  - remote: buf.build/protocolbuffers/objc:v36.2
+    out: package-prefix
+    opt: [use_package_as_prefix=yes, package_as_prefix_forced_prefix=XX]
+  - remote: buf.build/protocolbuffers/objc:v36.2
+    out: minimal
+    opt: [generate_minimal_imports=no, headers_use_forward_declarations=yes, strip_custom_options=no]
+  - remote: buf.build/protocolbuffers/objc:v36.2
+    out: fwd-decls
+    opt: [headers_use_forward_declarations=yes]
+  - remote: buf.build/protocolbuffers/objc:v36.2
+    out: framework
+    opt: [generate_for_named_framework=MyFramework, runtime_import_prefix=GPB/]
+  - remote: buf.build/protocolbuffers/objc:v36.2
+    out: migration
+    opt: [extension_generation_mode=migration, generate_minimal_imports=no]
+  - remote: buf.build/protocolbuffers/objc:v36.2
+    out: multi
+    opt: [experimental_multi_source_generation=yes]
+  - remote: buf.build/protocolbuffers/objc:v36.2
+    out: annotate
+    opt: [annotation_pragma_name=clang, annotation_guard_name=MY_GUARD]
+  - remote: buf.build/protocolbuffers/objc:v36.2
+    out: strip
+    opt: [experimental_strip_nonfunctional_codegen=yes]

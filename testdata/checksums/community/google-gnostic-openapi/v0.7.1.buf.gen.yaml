@@ -1,0 +1,55 @@
+# Golden config for community/google-gnostic-openapi v0.7.1: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Inputs set no go_package: managed mode adds go_package_prefix.
+# Groups: default (one merged openapi.yaml); naming=proto with enum_type=string and fq_schema_naming;
+# output_mode=source_relative with default_response=false, depth, title, version and description;
+# errors (flag parsing): an invalid int value, an unknown option.
+# gnostic-openapi tests the openapi.v3 annotations (vendored, like upstream's examples);
+# http-gateway the google.api.http bindings. editions2024 tests the error of protobuf-go 1.36.7 for
+# edition 2024.
+# Inputs left out: editions2023, services-editions, real-protovalidate-editions (the plugin declares
+# no editions support, buf rejects them); services-editions2024 (the same error as editions2024).
+# Regenerate: scripts/gen-testdata.sh community/google-gnostic-openapi v0.7.1
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: example.com/gen
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-case
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/services-connect
+  - directory: testdata/proto/http-gateway
+  - directory: testdata/proto/http-gateway-delete-body
+  - directory: testdata/proto/http-gateway-scalar-body
+  - directory: testdata/proto/gnostic-openapi
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+plugins:
+  - remote: buf.build/community/google-gnostic-openapi:v0.7.1
+    out: default
+  - remote: buf.build/community/google-gnostic-openapi:v0.7.1
+    out: naming
+    opt: [naming=proto, enum_type=string, fq_schema_naming=true]
+  - remote: buf.build/community/google-gnostic-openapi:v0.7.1
+    out: source-relative
+    opt: [output_mode=source_relative, default_response=false, depth=1, title=T, version=1.2.3, description=D]
+  - remote: buf.build/community/google-gnostic-openapi:v0.7.1
+    out: error-depth
+    opt: [depth=x]
+  - remote: buf.build/community/google-gnostic-openapi:v0.7.1
+    out: error-unknown
+    opt: [foo=bar]

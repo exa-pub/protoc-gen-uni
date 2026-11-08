@@ -1,0 +1,18 @@
+// Uses the well-known types of this module (google/protobuf/*.proto are inputs here, so plugins
+// that append code to the well-known type files, like protoc-gen-js, generate it).
+syntax = "proto3";
+
+package wktuse;
+
+import "google/protobuf/any.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+message Envelope {
+  google.protobuf.Any payload = 1;
+  google.protobuf.Struct attributes = 2;
+  google.protobuf.Timestamp created = 3;
+  repeated google.protobuf.Value values = 4;
+  map<string, google.protobuf.ListValue> lists = 5;
+  google.protobuf.NullValue nothing = 6;
+}

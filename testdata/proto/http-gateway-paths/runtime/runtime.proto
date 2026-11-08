@@ -1,0 +1,18 @@
+// Test: types of a Go package named "runtime", which grpc-gateway already imports: the gateway
+// imports it with the alias "runtime_0" (registry ReserveGoPackageAlias).
+syntax = "proto3";
+
+package test.paths.runtime;
+
+enum OtherEnum {
+  OTHER_ENUM_UNSPECIFIED = 0;
+  OTHER_A = 1;
+}
+
+message other_msg {
+  string id = 1;
+  message sub_msg {
+    string x = 1;
+  }
+  sub_msg sub = 2;
+}

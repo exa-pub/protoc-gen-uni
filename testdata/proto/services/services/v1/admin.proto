@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package test.services.v1;
+
+import "services/types/types.proto";
+import "services/v1/services.proto";
+
+// Admin is declared in a second file of the same package and reuses
+// messages from services.proto.
+service Admin {
+  rpc Reset(PingRequest) returns (PingResponse);
+  rpc Inspect(test.services.types.GetRequest) returns (stream PingResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}

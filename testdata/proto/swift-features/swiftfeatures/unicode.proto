@@ -1,0 +1,12 @@
+// Test: comments split at Unicode line separators.
+syntax = "proto3";
+
+package swiftfeatures.comments;
+
+// First line second linethird line
+//  
+//
+message Separated {
+  // Trailing whitespace only: 
+  int32 a = 1;
+}

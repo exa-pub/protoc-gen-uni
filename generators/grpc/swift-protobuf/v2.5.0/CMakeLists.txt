@@ -1,0 +1,1 @@
+uni_generator(LIBRARIES swift_grpc_codegen swift_swift_protobuf)

@@ -1,0 +1,43 @@
+# Golden config for bufbuild/py v0.7.0: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Regenerate: scripts/gen-testdata.sh bufbuild/py v0.7.0
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/go-features
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+  - directory: testdata/proto/es-bootstrap
+  - directory: testdata/proto/python-py
+plugins:
+  - remote: buf.build/bufbuild/py:v0.7.0
+    out: default
+  - remote: buf.build/bufbuild/py:v0.7.0
+    out: sdk
+    opt: [init_files=false]
+  - remote: buf.build/bufbuild/py:v0.7.0
+    out: nofmt
+    opt: [no_fmt_off=true, escape_module_with_hash=true]
+  # the options of the buf.build SDKs (buf.plugin.yaml registry opts)
+  - remote: buf.build/bufbuild/py:v0.7.0
+    out: registry
+    opt: [init_files=false, "map_imports=**:"]
+  - remote: buf.build/bufbuild/py:v0.7.0
+    out: mapped
+    opt: ["map_imports=imports/**:pkg.sub", "map_imports=*.proto:root", "map_imports=buf/validate/**/*.proto:bv"]
+  # an unknown option: upstream fails with a Python traceback
+  - remote: buf.build/bufbuild/py:v0.7.0
+    out: badopt
+    opt: [foo=bar]

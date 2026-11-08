@@ -1,0 +1,60 @@
+# Golden config for connectrpc/gosimple v1.21.1: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Inputs set no go_package: managed mode adds go_package_prefix.
+# Groups: paths=source_relative; simple (empty value) with source_relative; simple=true with an empty
+# package_suffix (same package) and import paths; simple=false with package_suffix=rpc and module=;
+# annotate_code (.meta files) with simple; errors: an invalid simple value, a package_suffix that is not a Go identifier, an unknown flag.
+# Regenerate: scripts/gen-testdata.sh connectrpc/gosimple v1.21.1
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: example.com/gen
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-case
+  - directory: testdata/proto/services-editions
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/services-connect
+  - directory: testdata/proto/services-editions2024
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/connectrpc/gosimple:v1.21.1
+    out: source-relative
+    opt: [paths=source_relative]
+  - remote: buf.build/connectrpc/gosimple:v1.21.1
+    out: simple
+    opt: [simple, paths=source_relative]
+  - remote: buf.build/connectrpc/gosimple:v1.21.1
+    out: simple-same-package
+    opt: [simple=true, package_suffix]
+  - remote: buf.build/connectrpc/gosimple:v1.21.1
+    out: simple-false
+    opt: [simple=false, package_suffix=rpc, module=example.com/gen]
+  - remote: buf.build/connectrpc/gosimple:v1.21.1
+    out: annotate
+    opt: [paths=source_relative, annotate_code, simple]
+  - remote: buf.build/connectrpc/gosimple:v1.21.1
+    out: error-simple
+    opt: [simple=yes]
+  - remote: buf.build/connectrpc/gosimple:v1.21.1
+    out: error-suffix
+    opt: [package_suffix=a.b]
+  - remote: buf.build/connectrpc/gosimple:v1.21.1
+    out: error-unknown
+    opt: [foo=bar]

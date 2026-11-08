@@ -1,0 +1,36 @@
+# Golden config for protocolbuffers/dart v25.1.0: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Inputs left out: upstream fails on naming (RangeError).
+# Regenerate: scripts/gen-testdata.sh protocolbuffers/dart v25.1.0
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/go-features
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+  - directory: testdata/proto/dart-long
+plugins:
+  - remote: buf.build/protocolbuffers/dart:v25.1.0
+    out: default
+  - remote: buf.build/protocolbuffers/dart:v25.1.0
+    out: grpc
+    opt: [grpc]
+  - remote: buf.build/protocolbuffers/dart:v25.1.0
+    out: noargs
+    opt: [disable_constructor_args]
+  # generate_kythe_info: .pb.dart and .pbenum.dart are not formatted (plain generator output,
+  # the linearized text of the dart_style nodes), plus .meta files.
+  - remote: buf.build/protocolbuffers/dart:v25.1.0
+    out: kythe
+    opt: [generate_kythe_info]

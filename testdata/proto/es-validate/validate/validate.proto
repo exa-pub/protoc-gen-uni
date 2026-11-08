@@ -1,0 +1,91 @@
+// Test: protovalidate rules relevant to protoc-gen-es valid types.
+//
+// Uses (buf.validate.field).required on singular, repeated, map, oneof and
+// WKT message fields (and on scalars, where it does not affect typing),
+// (buf.validate.field).ignore = IGNORE_ALWAYS on fields with and without
+// `required`, repeated.items / map.values ignore, transitive and recursive
+// references to messages that need a valid type, messages that need none,
+// plus proto2 `required` and edition LEGACY_REQUIRED message fields (see
+// legacy.proto) for valid_types=legacy_required.
+syntax = "proto3";
+
+package test.validate;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "validate/legacy/proto2.proto";
+import "validate/legacy/editions.proto";
+
+message Plain {
+  string name = 1;
+}
+
+message User {
+  string id = 1 [(buf.validate.field).required = true];
+  Plain profile = 2 [(buf.validate.field).required = true];
+  Plain optional_profile = 3;
+  google.protobuf.Timestamp created_at = 4 [(buf.validate.field).required = true];
+  repeated Plain items = 5 [(buf.validate.field).required = true];
+  map<string, Plain> by_key = 6 [(buf.validate.field).required = true];
+  // Required but ignored: stays optional.
+  Plain ignored_required = 7 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).ignore = IGNORE_ALWAYS
+  ];
+  // Not required, rules ignored: the field's message type is not replaced by
+  // its valid type.
+  Container ignored_container = 8 [(buf.validate.field).ignore = IGNORE_ALWAYS];
+  Container container = 9;
+  repeated Container ignored_items = 10 [(buf.validate.field).repeated.items.ignore = IGNORE_ALWAYS];
+  map<string, Container> ignored_values = 11 [(buf.validate.field).map.values.ignore = IGNORE_ALWAYS];
+  Plain if_zero = 12 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
+  ];
+  oneof choice {
+    Plain choice_plain = 13 [(buf.validate.field).required = true];
+    string choice_text = 14;
+  }
+  optional int32 age = 15 [(buf.validate.field).required = true, (buf.validate.field).int32.gt = 0];
+  string email = 16 [(buf.validate.field).string.email = true];
+}
+
+// Needs a valid type only transitively, via User.
+message Container {
+  User user = 1;
+  repeated User users = 2;
+  map<int32, User> users_by_id = 3;
+}
+
+// Recursive message that needs a valid type.
+message Node {
+  Node parent = 1 [(buf.validate.field).required = true];
+  repeated Node children = 2;
+}
+
+// Recursive message that needs no valid type.
+message Tree {
+  Tree left = 1;
+  Tree right = 2;
+}
+
+// Uses types from another file that need a valid type only with
+// valid_types=legacy_required.
+message UsesLegacy {
+  test.validate.legacy.Proto2Required proto2 = 1;
+  test.validate.legacy.EditionRequired edition = 2 [(buf.validate.field).required = true];
+}
+
+message OneofRules {
+  option (buf.validate.message).oneof = {
+    fields: ["a", "b"]
+    required: true
+  };
+  Plain a = 1;
+  Plain b = 2;
+  oneof kind {
+    option (buf.validate.oneof).required = true;
+    Plain x = 3;
+    int32 y = 4;
+  }
+}

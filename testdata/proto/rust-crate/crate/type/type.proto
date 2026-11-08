@@ -1,0 +1,10 @@
+// A Rust keyword as a package part.
+syntax = "proto3";
+
+package test.crate.type;
+
+import "google/protobuf/timestamp.proto";
+
+message Type {
+  google.protobuf.Timestamp at = 1;
+}

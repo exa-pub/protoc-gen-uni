@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+// Package (and directory) named like a JS reserved word and Go keyword.
+package test.naming.switch;
+
+import "naming/type/type.proto";
+
+message class {
+  test.naming.type.type type = 1;
+}

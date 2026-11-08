@@ -1,0 +1,30 @@
+// ruby_package in the A::B form (used as is), lowercase and underscore-prefixed names
+// (RubifyConstant), map entries (skipped) and nested types.
+syntax = "proto3";
+
+package ruby_pkg.v1;
+
+option ruby_package = "Acme::Ruby_pkg::V1";
+
+message Outer {
+  message inner_lower {
+    enum nested_enum {
+      NESTED_ENUM_UNSPECIFIED = 0;
+    }
+    map<string, int32> counts = 1;
+  }
+  inner_lower inner = 1;
+  map<int32, Outer> children = 2;
+}
+
+message _Underscore {
+  int32 x = 1;
+}
+
+message lower_case_message {
+  _Underscore u = 1;
+}
+
+enum lower_enum {
+  LOWER_ENUM_UNSPECIFIED = 0;
+}

@@ -1,0 +1,126 @@
+// Test: objc-naming.
+//
+// Names and options that only the Objective-C generator treats specially:
+// objc_class_prefix, ObjC/C/NSObject reserved words (suffixed _Class, _p,
+// _Enum, _Value, _Extension), retained (new*, copy*) and init* names,
+// "Array" suffixes, url/http segments, enum aliases whose names collide,
+// groups, message- and file-scoped extensions, deprecations, a message set,
+// text format names that need decode data, extension ranges to merge, and a
+// public import chain.
+syntax = "proto2";
+
+package objc.naming_test.url_http;
+
+import public "objc/public_dep.proto";
+
+option objc_class_prefix = "ONT";
+option deprecated = true;
+
+// A message named like a reserved word.
+message Size {
+  optional int32 id = 1;
+  optional string description = 2;
+  optional string new_value = 3;
+  optional string copy_data = 4;
+  optional string init_name = 5;
+  repeated string mutable_copy = 6;
+  optional int32 value_array = 7;
+  repeated int32 values = 8;
+  optional string url_path = 9;
+  optional string http_server_url = 10;
+  optional string self = 11;
+  optional bool YES = 12;
+  optional string _cmd = 13;
+  optional string class = 14;
+  optional string retainCount = 15;
+  optional string hash = 16;
+  optional string zone = 17;
+  optional string ABCdef = 18;
+  optional string a1b2c3 = 19;
+  optional string foo__bar = 20;
+  optional string fooBAR_baz = 21;
+  map<string, Status> status_by_name = 22;
+  map<int32, Size> size_by_id = 23;
+  map<bool, bytes> data_by_flag = 24;
+  optional group MyGroup = 25 {
+    optional int32 group_value = 26;
+  }
+  repeated group RepeatedGroup = 27 {
+    optional string text = 28;
+  }
+  optional Status status = 29 [default = STATUS_GONE, deprecated = true];
+  optional string question = 30 [default = "what??!"];
+  optional bytes nul = 31 [default = "a\000b??/"];
+  optional int32 min32 = 32 [default = -2147483648];
+  optional float tiny = 33 [default = 1e-30];
+  optional double big = 34 [default = 1e300];
+  oneof choice {
+    string choice_text = 40;
+    int64 choice_number = 41;
+    Size choice_size = 42;
+  }
+  oneof other_choice {
+    bool flag = 43;
+  }
+
+  extensions 100 to 199;
+  extensions 200 to 299;
+  extensions 500 to max;
+
+  message Fixed {
+    optional int32 x = 1;
+    enum Duration {
+      DURATION_UNSPECIFIED = 0;
+      DURATION_LONG = 1;
+    }
+  }
+
+  extend Size {
+    optional int32 scoped_ext = 100;
+    repeated string new_names = 101;
+    optional Fixed fixed_ext = 102;
+  }
+}
+
+enum Status {
+  option allow_alias = true;
+  STATUS_UNKNOWN = 0;
+  STATUS_ACTIVE = 1;
+  STATUS_RUNNING = 1;
+  Status_Active = 1;
+  STATUS_GONE = 2 [deprecated = true];
+  STATUS_MIN = -2147483648;
+  retain = 3;
+}
+
+enum Fract {
+  FRACT_ZERO = 0;
+}
+
+// A message set.
+message Container {
+  option message_set_wire_format = true;
+  extensions 4 to max;
+}
+
+message SetItem {
+  extend Container {
+    optional SetItem item = 10;
+  }
+  optional string data = 1;
+}
+
+extend Size {
+  optional string file_ext = 200;
+  repeated int32 packed_ext = 201 [packed = true];
+  optional Status status_ext = 202;
+  optional group GroupExt = 203 {
+    optional int32 a = 1;
+  }
+  optional string copy_ext = 500;
+}
+
+message DeprecatedMessage {
+  option deprecated = true;
+  optional int32 init = 1;
+}

@@ -1,0 +1,250 @@
+// Test: grpc-gateway path parameters, bodies and response bodies beyond http-gateway.
+//
+// Covers path parameters of every scalar type, repeated scalars and enums (the separator of
+// repeated_path_param_separator), enums from another package and nested enums, proto3 optional,
+// nested field paths (runtime.PopulateFieldFromPath), oneof fields in paths and bodies (the
+// type switch preparation), well-known types; bodies naming a nested message field; PATCH with a
+// FieldMask and a body field, "*" or a nested field; custom methods with odd verbs and an empty
+// kind, the root path, deep wildcards and percent-encoding; response bodies naming fields of
+// other packages; server streaming with and without response body; snake_case services, methods
+// and messages (the generator camel-cases them in place); request types from other packages and
+// nested request types; methods without a rule (generate_unbound_methods), an empty rule, a
+// service without bindings and two services. The path "protocolbuffers/go" makes the deprecated
+// alias of separate_package point to "grpc-ecosystem/gateway/v2".
+syntax = "proto3";
+
+package test.paths.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "runtime/runtime.proto";
+
+enum Color {
+  COLOR_UNSPECIFIED = 0;
+  RED = 1;
+}
+
+message Inner {
+  string name = 1;
+  int32 num = 2;
+  Deep deep = 3;
+  message Deep {
+    string leaf = 1;
+    oneof d {
+      string dleaf = 2;
+    }
+  }
+  enum in_enum {
+    IN_ENUM_UNSPECIFIED = 0;
+  }
+  in_enum ie = 4;
+}
+
+message snake_request {
+  string id = 1;
+  repeated string tags = 2;
+  Color color = 3;
+  repeated Color colors = 4;
+  optional int64 opt = 5;
+  Inner inner = 6;
+  oneof kind_of {
+    string a = 7;
+    Inner b = 8;
+  }
+  google.protobuf.Timestamp ts = 9;
+  google.protobuf.FieldMask update_mask = 10;
+  bytes data = 11;
+  test.paths.runtime.OtherEnum oe = 12;
+  map<string, string> labels = 13;
+  google.protobuf.StringValue sv = 14;
+  uint32 u32 = 15;
+  sint64 s64 = 16;
+  double d = 17;
+  float f = 18;
+  bool flag = 19;
+  fixed64 f64 = 20;
+  sfixed32 sf32 = 21;
+  repeated int32 nums = 22;
+  repeated test.paths.runtime.OtherEnum oes = 23;
+  Inner.Deep deep = 24;
+  google.protobuf.Duration dur = 25;
+  Inner.in_enum ie = 26;
+  repeated bytes datas = 27;
+  string _under = 28;
+  string x_2y = 29;
+}
+
+message Resp {
+  repeated Inner items = 1;
+  Inner one = 2;
+  string next = 3;
+  test.paths.runtime.other_msg om = 4;
+}
+
+service my_service {
+  rpc get_thing(snake_request) returns (Resp) {
+    option (google.api.http) = {get: "/v1/things/{id}"};
+  }
+  rpc Tags(snake_request) returns (Resp) {
+    option (google.api.http) = {get: "/v1/tags/{tags}/{nums}/{datas}"};
+  }
+  rpc Colors(snake_request) returns (Resp) {
+    option (google.api.http) = {get: "/v1/colors/{color}/{colors}/{oe}/{oes}/{ie}"};
+  }
+  rpc Opt(snake_request) returns (Resp) {
+    option (google.api.http) = {get: "/v1/opt/{opt}/{u32}/{s64}/{d}/{f}/{flag}/{f64}/{sf32}/{data}/{_under}/{x_2y}"};
+  }
+  rpc Nested(snake_request) returns (Resp) {
+    option (google.api.http) = {
+      post: "/v1/{inner.name}/{inner.deep.leaf}/{inner.ie}"
+      body: "*"
+    };
+  }
+  rpc OneofPath(snake_request) returns (Resp) {
+    option (google.api.http) = {
+      post: "/v1/oneof/{a}"
+      body: "inner"
+    };
+  }
+  rpc OneofBody(snake_request) returns (Resp) {
+    option (google.api.http) = {
+      put: "/v1/oneofb"
+      body: "b"
+    };
+  }
+  rpc Wkt(snake_request) returns (Resp) {
+    option (google.api.http) = {get: "/v1/wkt/{ts}/{sv}/{dur}"};
+  }
+  rpc Patch(snake_request) returns (Resp) {
+    option (google.api.http) = {
+      patch: "/v1/patch/{id}"
+      body: "inner"
+    };
+  }
+  rpc PatchStar(snake_request) returns (Resp) {
+    option (google.api.http) = {
+      patch: "/v1/patchs/{id}"
+      body: "*"
+    };
+  }
+  rpc PatchDeep(snake_request) returns (Resp) {
+    option (google.api.http) = {
+      patch: "/v1/patchd/{id}"
+      body: "inner.deep"
+    };
+  }
+  rpc Custom(snake_request) returns (Resp) {
+    option (google.api.http) = {
+      custom: {
+        kind: "LOCK"
+        path: "/v1/lock/{id=locks/*}:lock"
+      }
+    };
+  }
+  rpc Head(snake_request) returns (Resp) {
+    option (google.api.http) = {
+      custom: {
+        kind: "HEAD"
+        path: "/v1/**"
+      }
+      additional_bindings {get: "/"}
+      additional_bindings {delete: "/v1/x/{id=a/**}:del"}
+      additional_bindings {
+        custom: {
+          kind: ""
+          path: "/v1/empty-kind"
+        }
+      }
+      additional_bindings {get: "/v1/verb:a:b"}
+      additional_bindings {get: "/v1/{id}:x:y"}
+      additional_bindings {get: "/v1/a/*/b/**/c/{id=x/*/y/**}:v"}
+      additional_bindings {get: "/v1/pct%20x/{id}"}
+    };
+  }
+  rpc RespBody(snake_request) returns (Resp) {
+    option (google.api.http) = {
+      get: "/v1/rb"
+      response_body: "items"
+    };
+  }
+  rpc RespBodyNested(snake_request) returns (Resp) {
+    option (google.api.http) = {
+      get: "/v1/rbn"
+      response_body: "one"
+    };
+  }
+  rpc RespBodyOther(snake_request) returns (Resp) {
+    option (google.api.http) = {
+      get: "/v1/rbo"
+      response_body: "om"
+    };
+  }
+  rpc ServerStream(snake_request) returns (stream Resp) {
+    option (google.api.http) = {
+      get: "/v1/ss/{id}"
+      response_body: "one"
+    };
+  }
+  rpc ServerStream2(snake_request) returns (stream Resp) {
+    option (google.api.http) = {get: "/v1/ss2/{id}"};
+  }
+  rpc ClientStream(stream snake_request) returns (Resp) {
+    option (google.api.http) = {
+      post: "/v1/cs"
+      body: "*"
+    };
+  }
+  rpc Bidi(stream snake_request) returns (stream Resp) {
+    option (google.api.http) = {
+      post: "/v1/bidi"
+      body: "*"
+    };
+  }
+  rpc Unbound(snake_request) returns (Resp);
+  rpc UnboundStream(stream snake_request) returns (stream Resp);
+  rpc DeepBody(snake_request) returns (Resp) {
+    option (google.api.http) = {
+      post: "/v1/deepbody"
+      body: "inner.deep"
+    };
+  }
+  rpc OtherReq(test.paths.runtime.other_msg) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/other/{id}/{sub.x}"
+      body: "sub"
+    };
+  }
+  rpc OtherReq2(test.paths.runtime.other_msg.sub_msg) returns (Inner.Deep) {
+    option (google.api.http) = {get: "/v1/other2/{x}"};
+  }
+  rpc DeepOneof(Inner.Deep) returns (Inner.Deep) {
+    option (google.api.http) = {get: "/v1/deeponeof/{dleaf}"};
+  }
+  rpc Empty(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/empty"
+      body: "*"
+    };
+  }
+  rpc EmptyRule(snake_request) returns (Resp) {
+    option (google.api.http) = {body: "*"};
+  }
+}
+
+service NoBindings {
+  rpc Foo(snake_request) returns (Resp);
+}
+
+service second_svc {
+  rpc do_it(Inner) returns (Inner) {
+    option (google.api.http) = {
+      post: "/v2/do/{name}"
+      body: "deep"
+      response_body: "deep"
+    };
+  }
+}

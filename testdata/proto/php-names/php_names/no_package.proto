@@ -1,0 +1,9 @@
+// php-names: no package (no namespace), a php_metadata_namespace without a trailing backslash,
+// and file names with digits and underscores.
+syntax = "proto3";
+
+option php_metadata_namespace = "Meta\\Data";
+
+message NoPackage {
+  int32 value_1st = 1;
+}

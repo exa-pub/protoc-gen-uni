@@ -1,0 +1,1 @@
+uni_generator(LIBRARIES uni_es_protoplugin uni_es_protobuf_ts_runtime ecmascript_formatters_typescript)

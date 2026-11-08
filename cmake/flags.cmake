@@ -1,0 +1,80 @@
+# Compiler and linker flags. Release builds: -Os (UNI_OPT) plus everything else that makes the
+# binary smaller. -Os is not slower than -O3 here (one process per request: loading a smaller
+# binary outweighs faster hot loops). x86_64, es + go, 222 requests, one process each:
+#   -Os + LTO 349 312 B 1214 ms | -O2 + LTO 447 448 B 1265 ms | -O3 + LTO 508 888 B 1300 ms
+set(UNI_OPT "Os" CACHE STRING "optimization level of release builds: Os, O2 or O3")
+set_property(CACHE UNI_OPT PROPERTY STRINGS Os O2 O3)
+option(UNI_HARDENING "stack protector and RELRO (about +10 KB)" OFF)
+option(UNI_WERROR "treat warnings as errors" OFF)
+option(UNI_SANITIZE "AddressSanitizer + UndefinedBehaviorSanitizer, calloc per object" OFF)
+option(UNI_LTO "link-time optimization (release builds)" ON)
+# Check that no output depends on how qsort orders equal elements (upstream sorts that are stable
+# must be ported as stable sorts): tests/e2e/qsort_ties.c replaces qsort (GNU ld --wrap, no LTO).
+option(UNI_QSORT_CHECK "link a qsort that reverses runs of equal elements (tests only)" OFF)
+set(UNI_VERSION "dev" CACHE STRING "version printed by --version")
+
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
+set(CMAKE_C_FLAGS_RELEASE "-${UNI_OPT} -DNDEBUG")
+
+add_compile_definitions(_DEFAULT_SOURCE VERSION="${UNI_VERSION}")
+add_compile_options(-Wall -Wextra -Wno-unused-parameter)
+if(UNI_WERROR)
+  add_compile_options(-Werror)
+endif()
+# Reproducible: no absolute paths in the binary.
+add_compile_options(-ffile-prefix-map=${CMAKE_SOURCE_DIR}/=)
+
+if(UNI_SANITIZE)
+  add_compile_definitions(UNI_NO_ARENA)
+  add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g)
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    # -O1 as the ASan documentation recommends: the golden tests run ~30% faster than at -O0.
+    add_compile_options(-O1)
+  endif()
+  add_link_options(-fsanitize=address,undefined)
+  return()
+endif()
+
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Release")
+  return()
+endif()
+
+include(CheckIPOSupported)
+check_ipo_supported(RESULT _uni_lto OUTPUT _uni_lto_output LANGUAGES C)
+if(_uni_lto AND UNI_LTO AND NOT UNI_QSORT_CHECK)
+  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+endif()
+
+add_compile_options(-fmerge-all-constants -fno-ident)
+if(APPLE)
+  add_link_options(-Wl,-dead_strip -Wl,-x)
+  return()
+endif()
+
+add_compile_options(-ffunction-sections -fdata-sections -fno-asynchronous-unwind-tables -fno-unwind-tables)
+add_link_options(-s -Wl,--gc-sections)
+if(WIN32)
+  # Reproducible: no link time in the PE header (and so no checksum change).
+  add_link_options(-static -Wl,--no-insert-timestamp)
+  return()
+endif()
+
+# Linux
+add_compile_options(-fno-plt)
+add_link_options(-Wl,--build-id=none)
+if(UNI_STATIC)
+  add_compile_options(-fno-pie)
+  add_link_options(-static -no-pie -Wl,-z,noseparate-code -Wl,-z,max-page-size=4096)
+endif()
+if(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
+  add_compile_options(-mno-outline-atomics)
+endif()
+if(UNI_HARDENING)
+  add_compile_options(-fstack-protector-strong)
+  add_link_options(-Wl,-z,relro,-z,now)
+else()
+  add_compile_options(-fno-stack-protector)
+  add_link_options(-Wl,-z,norelro)
+endif()

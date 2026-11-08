@@ -1,0 +1,23 @@
+// Test: optimize_for = LITE_RUNTIME: lite enum name tables (with aliases),
+// lite maps and lite services.
+syntax = "proto2";
+
+package test.cpplite;
+
+option optimize_for = LITE_RUNTIME;
+
+enum Color {
+  option allow_alias = true;
+  RED = 0;
+  CRIMSON = 0;
+  GREEN = 5;
+  BLUE = -1;
+  AQUA = 1000;
+}
+
+message Paint {
+  optional Color color = 1;
+  map<string, Color> named = 2;
+  repeated Color history = 3;
+  optional string label = 4 [default = "none"];
+}

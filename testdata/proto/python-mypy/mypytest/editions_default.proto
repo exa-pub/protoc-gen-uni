@@ -1,0 +1,10 @@
+// Test: python-mypy, editions without file features (FIELD_PRESENCE_UNKNOWN).
+edition = "2024";
+
+package mypytest.editions_default;
+
+message Defaults {
+  int32 plain = 1;
+  int32 implicit = 2 [features.field_presence = IMPLICIT];
+  repeated string list = 3;
+}

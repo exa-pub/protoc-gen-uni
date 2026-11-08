@@ -1,0 +1,16 @@
+syntax = "proto2";
+
+package test.options.usage;
+
+import "options/v1/options.proto";
+
+// Extension range options and a proto2 field default combined with options.
+message Ranged {
+  optional int32 x = 1 [default = 5, (test.options.v1.field_string) = "x"];
+
+  extensions 100 to 199 [(test.options.v1.range_string) = "range"];
+}
+
+extend Ranged {
+  optional string ranged_ext = 100 [(test.options.v1.field_string) = "on extension"];
+}

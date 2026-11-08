@@ -1,0 +1,50 @@
+# Golden config for protocolbuffers/go v1.36.12: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Regenerate: scripts/gen-testdata.sh protocolbuffers/go v1.36.12
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: example.com/gen
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/go-features
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/protocolbuffers/go:v1.36.12
+    out: source-relative
+    opt: [paths=source_relative]
+  - remote: buf.build/protocolbuffers/go:v1.36.12
+    out: import
+  - remote: buf.build/protocolbuffers/go:v1.36.12
+    out: opaque
+    opt: [paths=source_relative, default_api_level=API_OPAQUE]
+  - remote: buf.build/protocolbuffers/go:v1.36.12
+    out: hybrid
+    opt: [paths=source_relative, default_api_level=API_HYBRID]
+  - remote: buf.build/protocolbuffers/go:v1.36.12
+    out: annotate
+    opt: [paths=source_relative, annotate_code=true]
+  - remote: buf.build/protocolbuffers/go:v1.36.12
+    out: annotate-hybrid
+    opt: [paths=source_relative, annotate_code=true, default_api_level=API_HYBRID]
+  - remote: buf.build/protocolbuffers/go:v1.36.12
+    out: module
+    opt: [module=example.com/gen]
+  - remote: buf.build/protocolbuffers/go:v1.36.12
+    out: strip
+    opt: [paths=source_relative, experimental_strip_nonfunctional_codegen=true]

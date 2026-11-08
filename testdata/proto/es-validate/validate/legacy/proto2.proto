@@ -1,0 +1,17 @@
+syntax = "proto2";
+
+package test.validate.legacy;
+
+import "buf/validate/validate.proto";
+
+message Inner {
+  optional string value = 1;
+}
+
+message Proto2Required {
+  required Inner inner = 1;
+  required string scalar = 2;
+  optional Inner opt = 3;
+  required Inner ignored = 4 [(buf.validate.field).ignore = IGNORE_ALWAYS];
+  optional Inner validated = 5 [(buf.validate.field).required = true];
+}

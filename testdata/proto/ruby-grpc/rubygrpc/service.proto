@@ -1,0 +1,49 @@
+// Test: Ruby names in grpc services (grpc/ruby): ruby_package in the a.b
+// form, request and response types from files with other ruby_package
+// values (A::B form, trailing ::, no package), nested and lower-case or
+// underscore-prefixed message names, snake_case services and methods, a
+// service without methods, and '$' in comments.
+
+// Detached comment with $dollar and $$two$$.
+
+// Leading comment on syntax with $var$.
+syntax = "proto3";
+
+package test.ruby_grpc.v1;
+
+import "rubygrpc/types.proto";
+import "rubygrpc/nopkg.proto";
+
+option ruby_package = "acme.ruby_grpc";
+
+message req {
+  string a = 1;
+  message _inner {
+    string b = 1;
+  }
+}
+
+message _Underscore {}
+
+// Detached comment before my_service.
+
+// my_service has a snake_case name; $cost$ is 10$.
+service my_service {
+  // do_it uses nested types. $x$
+  rpc do_it(req) returns (req._inner); // Trailing on do_it with $.
+
+  /* Block comment
+   * over $lines$.
+   */
+  rpc Other(test.ruby_grpc.types.Shared) returns (_Underscore);
+
+  rpc Nested(stream test.ruby_grpc.types.Shared.Nested_type) returns (stream RootType);
+}
+// Trailing comment on my_service.
+
+// A service without methods is left out.
+service Empty {}
+
+service __double_underscore__ {
+  rpc lower(req) returns (req);
+}

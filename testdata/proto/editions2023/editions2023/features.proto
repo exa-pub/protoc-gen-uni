@@ -1,0 +1,117 @@
+edition = "2023";
+
+package test.editions2023;
+
+import "editions2023/defaults.proto";
+
+// File-level overrides; everything below inherits these unless overridden.
+option features.field_presence = IMPLICIT;
+option features.enum_type = CLOSED;
+option features.repeated_field_encoding = EXPANDED;
+option features.utf8_validation = NONE;
+option features.json_format = LEGACY_BEST_EFFORT;
+
+// Closed by file default.
+enum ClosedEnum {
+  CLOSED_ENUM_ONE = 1;
+  CLOSED_ENUM_TWO = 2;
+}
+
+// Explicitly open, overriding the file default.
+enum ReopenedEnum {
+  option features.enum_type = OPEN;
+  REOPENED_ENUM_UNSPECIFIED = 0;
+  REOPENED_ENUM_X = 1;
+}
+
+message Presence {
+  // IMPLICIT from file.
+  int32 implicit_int32 = 1;
+  string implicit_string = 2;
+  bytes implicit_bytes = 3;
+  ReopenedEnum implicit_enum = 4;
+  // Messages always have explicit presence.
+  Presence message = 5;
+
+  int32 explicit_int32 = 6 [features.field_presence = EXPLICIT];
+  string explicit_string = 7 [features.field_presence = EXPLICIT, default = "dflt"];
+  ClosedEnum explicit_closed_enum = 8 [features.field_presence = EXPLICIT];
+  ClosedEnum closed_enum_default = 9 [
+    features.field_presence = EXPLICIT,
+    default = CLOSED_ENUM_TWO
+  ];
+
+  int32 required_int32 = 10 [features.field_presence = LEGACY_REQUIRED];
+  Presence required_message = 11 [features.field_presence = LEGACY_REQUIRED];
+  string required_string = 12 [features.field_presence = LEGACY_REQUIRED];
+
+  // Field-level utf8 override back to VERIFY.
+  string verified_string = 13 [features.utf8_validation = VERIFY];
+  map<string, string> unverified_map = 14;
+  repeated string unverified_list = 15;
+}
+
+message Encoding {
+  // EXPANDED from file.
+  repeated int32 expanded_int32 = 1;
+  repeated ClosedEnum expanded_enum = 2;
+  repeated int32 packed_int32 = 3 [features.repeated_field_encoding = PACKED];
+  repeated double packed_double = 4 [features.repeated_field_encoding = PACKED];
+
+  // Delimited (group-like) encoding.
+  Inner delimited = 5 [features.message_encoding = DELIMITED];
+  repeated Inner delimited_list = 6 [features.message_encoding = DELIMITED];
+  Inner length_prefixed = 7;
+  oneof choice {
+    Inner delimited_choice = 8 [features.message_encoding = DELIMITED];
+    int32 plain_choice = 9;
+  }
+  map<int32, Inner> inner_map = 10;
+
+  message Inner {
+    int32 a = 1 [features.field_presence = EXPLICIT];
+    // A delimited field whose type name matches the lowercased field name,
+    // mirroring how proto2 groups look.
+    Inner inner = 2 [features.message_encoding = DELIMITED];
+  }
+}
+
+// Only json_format (and enum_type on enums) can be set below file level
+// other than on fields; nested elements inherit from the enclosing scope.
+message MessageLevel {
+  option features.json_format = ALLOW;
+
+  int32 implicit_from_file = 1;
+  repeated int32 expanded_from_file = 2;
+
+  enum NestedClosed {
+    NESTED_CLOSED_FIRST = 1;
+  }
+  enum NestedOpen {
+    option features.enum_type = OPEN;
+    option features.json_format = LEGACY_BEST_EFFORT;
+    NESTED_OPEN_UNSPECIFIED = 0;
+  }
+  NestedClosed nested_closed = 5 [features.field_presence = EXPLICIT];
+  NestedOpen nested_open = 7;
+
+  message Child {
+    // Inherits json_format = ALLOW from the parent message.
+    int32 implicit_inherited = 1;
+    int32 explicit_override = 2 [features.field_presence = EXPLICIT];
+  }
+  Child child = 6;
+}
+
+message UsesOtherFile {
+  test.editions2023.Defaults defaults = 1;
+  OpenEnum open_enum = 2;
+  ClosedEnum closed_enum = 3 [features.field_presence = EXPLICIT];
+}
+
+extend Defaults {
+  // Extensions always have explicit presence and may not set field_presence.
+  int32 ext_int32_file = 150;
+  repeated int32 ext_expanded = 151;
+  Encoding.Inner ext_delimited = 152 [features.message_encoding = DELIMITED];
+}

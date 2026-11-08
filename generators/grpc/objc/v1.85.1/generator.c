@@ -1,0 +1,239 @@
+/*
+ *
+ * Copyright 2015 gRPC authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
+/* grpc/objc v1.85.1: a port of grpc_objective_c_plugin of grpc v1.85.1 (buf.build/grpc/objc,
+ * https://github.com/grpc/grpc): src/compiler/objective_c_plugin.cc (ObjectiveCGrpcGenerator and
+ * its main) and the Objective-C generator of grpc_plugin_support (objective_c_generator.c). The
+ * helpers shared by the grpc plugins are pkg/languages/cpp/grpc; the plugin links protobuf 35.1
+ * (MODULE.bazel): pkg/languages/cpp/libprotoc with its 35.1 version (lp_version_35_1), whose
+ * compiler/objectivec/names.cc is that of 36.2 (objectivec_names.h). SUPPORT_OBJC_PREFIX_VALIDATION
+ * is not defined by the Bazel build.
+ *
+ * Unity build: this file includes the other .c files of the version directory, and everything
+ * but the generator below is static. */
+#include "grpc.h"
+#include "objectivec_names.h"
+#include "uni.h"
+
+#include <stdlib.h>
+#include <string.h>
+
+#include "objective_c_generator.c"
+
+static char *ImportProtoHeaders(const LpFile *dep, const char *indent, const char *framework,
+				const char *pb_runtime_import_prefix)
+{
+	char *header = MessageHeaderName(dep);
+
+	if (!lp_objc_is_protobuf_library_bundled_proto_file(dep)) {
+		if (!*framework)
+			return xcat(indent, LocalImport(header));
+		return xcat(indent, FrameworkImport(header, framework));
+	}
+
+	char *base_name = header;
+	grpc_strip_prefix(&base_name, "google/protobuf/");
+	char *file_name = xcat("GPB", base_name);
+	/* create the import code snippet */
+	char *framework_header = xcat(LP_OBJC_PROTOBUF_LIBRARY_FRAMEWORK_NAME, "/", file_name);
+	char *local_header = file_name;
+	if (*pb_runtime_import_prefix)
+		local_header = xcat(pb_runtime_import_prefix, "/", file_name);
+
+	return PreprocIfElse("GPB_USE_PROTOBUF_FRAMEWORK_IMPORTS", xcat(indent, SystemImport(framework_header)),
+			     xcat(indent, LocalImport(local_header)));
+}
+
+/* Write the given code into the given file. */
+static void Write(LpContext *context, const char *filename, const char *code)
+{
+	buf_adds(lp_context_open(context, filename), code);
+}
+
+/* ObjectiveCGrpcGenerator::Generate */
+static COLD bool generate_file(const LpGenerator *g, const LpFile *file, const char *parameter, LpContext *context,
+			       Buf *error)
+{
+	if (file->n_services == 0) {
+		/* No services.  Do nothing. */
+		return true;
+	}
+
+	const Str *raw_parameter = g->user;
+	if (raw_parameter->n && memchr(raw_parameter->p, 0, raw_parameter->n))
+		fail("unsupported by protoc-gen-uni: a parameter with a NUL byte");
+
+	bool grpc_local_import = false;
+	const char *framework = "";
+	char *pb_runtime_import_prefix = "";
+	const char *grpc_local_import_prefix = "";
+	Vec params_list = grpc_tokenize(parameter, ",");
+	for (int i = 0; i < params_list.n; i++) {
+		Vec param = grpc_tokenize(params_list.v[i], "=");
+		const char *key = param.v[0];
+		if (str_eq(key, "generate_for_named_framework")) {
+			if (param.n != 2) {
+				buf_adds(error, "Format: generate_for_named_framework=<Framework>");
+				return false;
+			} else if (!*(const char *)param.v[1]) {
+				buf_adds(error, xcat("Name of framework cannot be empty for parameter: ", key));
+				return false;
+			}
+			framework = param.v[1];
+		} else if (str_eq(key, "runtime_import_prefix")) {
+			if (param.n != 2) {
+				buf_adds(error, "Format: runtime_import_prefix=dir/");
+				return false;
+			}
+			pb_runtime_import_prefix = param.v[1];
+			grpc_strip_suffix(&pb_runtime_import_prefix, "/");
+		} else if (str_eq(key, "grpc_local_import_prefix")) {
+			grpc_local_import = true;
+			if (param.n != 2) {
+				buf_adds(error, "Format: grpc_local_import_prefix=dir/");
+				return false;
+			}
+			grpc_local_import_prefix = param.v[1];
+		}
+	}
+
+	static const char kNonNullBegin[] = "NS_ASSUME_NONNULL_BEGIN\n";
+	static const char kNonNullEnd[] = "NS_ASSUME_NONNULL_END\n";
+	static const char kProtocolOnly[] = "GPB_GRPC_PROTOCOL_ONLY";
+	static const char kForwardDeclare[] = "GPB_GRPC_FORWARD_DECLARE_MESSAGE_PROTO";
+
+	char *file_name = lp_objc_file_path(file);
+
+	Parameters generator_params = {.no_v1_compatibility = false};
+	if (*parameter) {
+		Vec parameters_list = grpc_tokenize(parameter, ",");
+		for (int i = 0; i < parameters_list.n; i++) {
+			Vec param = grpc_tokenize(parameters_list.v[i], "=");
+			if (str_eq(param.v[0], "no_v1_compatibility"))
+				generator_params.no_v1_compatibility = true;
+		}
+	}
+	bool v1 = !generator_params.no_v1_compatibility;
+
+	/* Write out a file header. */
+	char *file_header = xcat("// Code generated by gRPC proto compiler.  DO NOT EDIT!\n"
+				 "// source: ",
+				 file->name, "\n\n");
+	const LpSourceLocations *locs = lp_source_locations(file);
+
+	{
+		/* Generate .pbrpc.h */
+
+		char *imports = !*framework ? LocalImport(xcat(file_name, ".pbobjc.h"))
+					    : FrameworkImport(xcat(file_name, ".pbobjc.h"), framework);
+
+		char *(*import)(const char *) = grpc_local_import ? LocalImport : SystemImport;
+		const char *prefix = grpc_local_import ? grpc_local_import_prefix : "";
+		char *system_imports = import(xcat(prefix, "ProtoRPC/ProtoService.h"));
+		if (!v1)
+			system_imports = xcat(system_imports, import(xcat(prefix, "ProtoRPC/ProtoRPC.h")));
+		else
+			system_imports = xcat(system_imports, import(xcat(prefix, "ProtoRPC/ProtoRPCLegacy.h")),
+					      import(xcat(prefix, "RxLibrary/GRXWriteable.h")),
+					      import(xcat(prefix, "RxLibrary/GRXWriter.h")));
+
+		const char *forward_declarations = xcat("@class GRPCUnaryProtoCall;\n"
+							"@class GRPCStreamingProtoCall;\n"
+							"@class GRPCCallOptions;\n"
+							"@class GRXWriter;\n"
+							"@protocol GRPCProtoResponseHandler;\n",
+							v1 ? "@class GRPCProtoCall;\n" : "", "\n");
+
+		char *class_declarations = GetAllMessageClasses(file);
+
+		Buf class_imports = {0};
+		for (int i = 0; i < file->n_dependencies; i++)
+			buf_adds(&class_imports,
+				 ImportProtoHeaders(file->dependencies[i], "  ", framework, pb_runtime_import_prefix));
+
+		Buf ng_protocols = {0}, protocols = {0}, interfaces = {0};
+		for (int i = 0; i < file->n_services; i++)
+			buf_adds(&ng_protocols, GetV2Protocol(locs, &file->services[i]));
+		for (int i = 0; i < file->n_services; i++)
+			buf_adds(&protocols, GetProtocol(locs, &file->services[i], &generator_params));
+		for (int i = 0; i < file->n_services; i++)
+			buf_adds(&interfaces, GetInterface(&file->services[i], &generator_params));
+
+		Write(context, xcat(file_name, ".pbrpc.h"),
+		      xcat(file_header, SystemImport("Foundation/Foundation.h"), "\n", PreprocIfNot(kForwardDeclare, imports),
+			   "\n", PreprocIfNot(kProtocolOnly, system_imports), "\n", class_declarations, "\n",
+			   PreprocIfNot(kForwardDeclare, buf_str(&class_imports)), "\n", forward_declarations, "\n",
+			   kNonNullBegin, "\n", buf_str(&ng_protocols), buf_str(&protocols), "\n",
+			   PreprocIfNot(kProtocolOnly, buf_str(&interfaces)), "\n", kNonNullEnd, "\n"));
+	}
+
+	{
+		/* Generate .pbrpc.m */
+
+		char *imports = !*framework ? xcat(LocalImport(xcat(file_name, ".pbrpc.h")),
+						   LocalImport(xcat(file_name, ".pbobjc.h")))
+					    : xcat(FrameworkImport(xcat(file_name, ".pbrpc.h"), framework),
+						   FrameworkImport(xcat(file_name, ".pbobjc.h"), framework));
+
+		char *(*import)(const char *) = grpc_local_import ? LocalImport : SystemImport;
+		const char *prefix = grpc_local_import ? grpc_local_import_prefix : "";
+		if (!v1)
+			imports = xcat(imports, import(xcat(prefix, "ProtoRPC/ProtoRPC.h")));
+		else
+			imports = xcat(imports, import(xcat(prefix, "ProtoRPC/ProtoRPCLegacy.h")),
+				       import(xcat(prefix, "RxLibrary/GRXWriter+Immediate.h")));
+
+		Buf class_imports = {0};
+		for (int i = 0; i < file->n_dependencies; i++)
+			buf_adds(&class_imports,
+				 ImportProtoHeaders(file->dependencies[i], "", framework, pb_runtime_import_prefix));
+
+		Buf definitions = {0};
+		for (int i = 0; i < file->n_services; i++)
+			buf_adds(&definitions, GetSource(locs, &file->services[i], &generator_params));
+
+		Write(context, xcat(file_name, ".pbrpc.m"),
+		      xcat(file_header, PreprocIfNot(kProtocolOnly, xcat(imports, "\n", buf_str(&class_imports), "\n",
+									  buf_str(&definitions)))));
+	}
+
+	return true;
+}
+
+static COLD const char *generate(PbMsg *req, Str raw, Buf *out)
+{
+	Str parameter = pb_bytes(req, CGR_PARAMETER);
+	const LpGenerator objc_grpc_generator = {
+		.plugin_name = "/grpc_objective_c_plugin_binary", /* argv[0]: the ENTRYPOINT of the bufbuild/plugins image */
+		.generate = generate_file,
+		.supported_features = 3, /* FEATURE_PROTO3_OPTIONAL | FEATURE_SUPPORTS_EDITIONS */
+		.minimum_edition = LP_EDITION_PROTO2,
+		.maximum_edition = LP_EDITION_2024, /* GOOGLE_PROTOBUF_VERSION >= 6032000 */
+		.version = &lp_version_35_1,
+		.user = &parameter, /* the parameter with its NUL bytes */
+	};
+	/* The prefix mode of names.cc is process global: the default (no options set it here). */
+	lp_objc_reset_prefix_mode();
+	return lp_plugin_main(raw, parameter, &objc_grpc_generator, out);
+}
+
+const UniGenerator gen_grpc_objc_v1_85_1 = {
+	.name = "grpc/objc",
+	.version = "v1.85.1",
+	.generate = generate,
+};

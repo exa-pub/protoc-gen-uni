@@ -1,0 +1,1 @@
+uni_generator(LIBRARIES python_protobuf python_std uni_pb)

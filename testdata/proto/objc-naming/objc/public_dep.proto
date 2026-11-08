@@ -1,0 +1,12 @@
+// Test: objc-naming. A file without package or prefix, re-exported with
+// `import public` and depending on a WKT.
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import public "objc/leaf.proto";
+
+message PublicDep {
+  google.protobuf.Timestamp when = 1;
+  objc.leaf.Leaf leaf = 2;
+  optional int32 maybe = 3;
+}

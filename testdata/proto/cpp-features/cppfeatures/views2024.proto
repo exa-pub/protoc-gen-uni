@@ -1,0 +1,27 @@
+// Test: edition 2024 (string_type VIEW by default, enum_name_uses_string_view)
+// with features.(pb.cpp).enum_name_uses_string_view = false on one enum.
+edition = "2024";
+
+package test.cppfeatures2024;
+
+import "google/protobuf/cpp_features.proto";
+
+enum Fruit {
+  FRUIT_UNSPECIFIED = 0;
+  FRUIT_APPLE = 1;
+}
+
+enum Legacy {
+  option features.(pb.cpp).enum_name_uses_string_view = false;
+  LEGACY_UNSPECIFIED = 0;
+  LEGACY_ONE = 1;
+}
+
+message Basket {
+  string name = 1;
+  repeated string tags = 2;
+  bytes payload = 3;
+  Fruit fruit = 4;
+  Legacy legacy = 5;
+  string std = 6 [features.(pb.cpp).string_type = STRING];
+}

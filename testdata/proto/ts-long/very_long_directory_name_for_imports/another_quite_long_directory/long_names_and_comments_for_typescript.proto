@@ -1,0 +1,100 @@
+// Detached comment before the syntax statement, which protobuf-ts copies into the file header.
+// It is long on purpose: TypeScript's printer has no line width, so nothing here may wrap even though this line is far longer than one hundred and twenty characters.
+
+syntax = "proto2";
+
+// Detached comment before the package statement, with characters that need care: */ and /* and a backslash \ and "quotes".
+
+package very.long.package_name.for_the_typescript_printer.v1;
+
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.FieldOptions {
+  optional string a_rather_long_custom_field_option_name_for_testing = 50001;
+  optional VeryLongOptionMessageNameThatIsUsedAsTheTypeOfACustomOption a_long_message_option = 50002;
+}
+
+extend google.protobuf.MessageOptions {
+  optional string a_rather_long_custom_message_option_name_for_testing = 50003;
+}
+
+extend google.protobuf.MethodOptions {
+  repeated string a_rather_long_repeated_custom_method_option = 50004;
+}
+
+message VeryLongOptionMessageNameThatIsUsedAsTheTypeOfACustomOption {
+  optional string first_string_value_with_a_long_name = 1;
+  repeated int64 repeated_sixty_four_bit_values_with_a_long_name = 2;
+  optional double a_double_value_with_a_long_name = 3;
+  map<string, string> a_map_of_strings_with_a_long_name = 4;
+}
+
+// A message with a very long name whose leading comment is also very long: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+//
+// A second paragraph with non-ASCII text: Grüße, 日本語, emoji 🎉, and a JSDoc terminator */ that must be escaped.
+message AMessageWithAVeryLongNameThatGoesOnAndOnForMoreThanOneHundredCharactersToTestTheTypeScriptPrinter {
+  option (a_rather_long_custom_message_option_name_for_testing) = "a message option value that is long enough to make the options object literal really very long indeed, with ünïcödé and \"quotes\" and a \\ backslash";
+
+  // A field with a long name, a long default value and a long custom option.
+  optional string a_string_field_with_a_really_quite_long_name_to_see_how_property_signatures_print = 1 [
+    default = "a default value that is long: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt \"quoted\"",
+    (a_rather_long_custom_field_option_name_for_testing) = "an option value with a line\nbreak, a tab\t, non-ASCII ünïcödé 日本 and 🎉, and \"quotes\" and \\ backslashes"
+  ];
+
+  optional int64 a_sixty_four_bit_integer_field_with_a_long_name_and_a_long_default = 2 [default = -9223372036854775808];
+
+  optional double a_double_field_with_a_long_name_and_an_exponent_default_value = 3 [default = 1.7976931348623157e+308, json_name = "aCustomJsonNameThatIsAlsoQuiteLongAndContainsÜnïcödé"];
+
+  optional bytes a_bytes_field_with_a_long_name_and_a_default_with_escapes = 4 [default = "\x00\x01\xff abc"];
+
+  repeated AMessageWithAVeryLongNameThatGoesOnAndOnForMoreThanOneHundredCharactersToTestTheTypeScriptPrinter recursive_repeated_field_with_a_long_type = 5;
+
+  map<string, AMessageWithAVeryLongNameThatGoesOnAndOnForMoreThanOneHundredCharactersToTestTheTypeScriptPrinter> a_map_with_a_long_value_type = 6;
+
+  optional AnEnumWithAVeryLongNameThatAlsoHasVeryLongValueNamesToTestPrefixStripping an_enum_field_with_a_long_type = 7 [default = AN_ENUM_WITH_A_VERY_LONG_NAME_THAT_ALSO_HAS_VERY_LONG_VALUE_NAMES_TO_TEST_PREFIX_STRIPPING_SECOND_VALUE_NAME];
+
+  optional string a_field_with_a_message_option = 8 [(a_long_message_option) = {
+    first_string_value_with_a_long_name: "a long string inside a message option, which becomes a nested object literal"
+    repeated_sixty_four_bit_values_with_a_long_name: [1, -2, 9007199254740993, -9223372036854775808]
+    a_double_value_with_a_long_name: 0.000001234
+    a_map_of_strings_with_a_long_name: [{key: "10", value: "ten"}, {key: "2", value: "two"}, {key: "a key", value: "with a space"}, {key: "1", value: "one"}]
+  }];
+
+  oneof a_oneof_with_a_long_name_that_contains_several_members {
+    // A trailing-comment test inside a oneof.
+    string first_member_of_the_oneof_with_a_long_name = 9; // trailing comment of the first member, which is also rather long to see how it prints
+    AMessageWithAVeryLongNameThatGoesOnAndOnForMoreThanOneHundredCharactersToTestTheTypeScriptPrinter second_member_message = 10;
+  }
+
+  // A nested message with a long name.
+  message ANestedMessageWithAnotherVeryLongNameInsideTheVeryLongOuterMessageName {
+    optional uint64 an_unsigned_value_with_a_long_name = 1 [default = 18446744073709551615];
+  }
+}
+
+// An enum whose values share the long prefix, which protobuf-ts drops.
+enum AnEnumWithAVeryLongNameThatAlsoHasVeryLongValueNamesToTestPrefixStripping {
+  // The first value.
+  AN_ENUM_WITH_A_VERY_LONG_NAME_THAT_ALSO_HAS_VERY_LONG_VALUE_NAMES_TO_TEST_PREFIX_STRIPPING_FIRST_VALUE_NAME = 0;
+  AN_ENUM_WITH_A_VERY_LONG_NAME_THAT_ALSO_HAS_VERY_LONG_VALUE_NAMES_TO_TEST_PREFIX_STRIPPING_SECOND_VALUE_NAME = 1; // trailing comment
+  AN_ENUM_WITH_A_VERY_LONG_NAME_THAT_ALSO_HAS_VERY_LONG_VALUE_NAMES_TO_TEST_PREFIX_STRIPPING_NEGATIVE_VALUE = -2147483648;
+}
+
+// A service with long method names, streaming kinds and a long method option.
+service AServiceWithAVeryLongNameForTestingTheGeneratedClientsAndServersOfProtobufTs {
+  rpc AUnaryMethodWithAVeryLongNameThatTakesALongMessageAndReturnsIt(AMessageWithAVeryLongNameThatGoesOnAndOnForMoreThanOneHundredCharactersToTestTheTypeScriptPrinter) returns (AMessageWithAVeryLongNameThatGoesOnAndOnForMoreThanOneHundredCharactersToTestTheTypeScriptPrinter) {
+    option (a_rather_long_repeated_custom_method_option) = "first long option value of the method";
+    option (a_rather_long_repeated_custom_method_option) = "second long option value of the method, with ünïcödé";
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc AServerStreamingMethodWithALongName(AMessageWithAVeryLongNameThatGoesOnAndOnForMoreThanOneHundredCharactersToTestTheTypeScriptPrinter.ANestedMessageWithAnotherVeryLongNameInsideTheVeryLongOuterMessageName) returns (stream AMessageWithAVeryLongNameThatGoesOnAndOnForMoreThanOneHundredCharactersToTestTheTypeScriptPrinter);
+  rpc AClientStreamingMethodWithALongName(stream AMessageWithAVeryLongNameThatGoesOnAndOnForMoreThanOneHundredCharactersToTestTheTypeScriptPrinter) returns (VeryLongOptionMessageNameThatIsUsedAsTheTypeOfACustomOption);
+  rpc ABidiStreamingMethodWithALongName(stream VeryLongOptionMessageNameThatIsUsedAsTheTypeOfACustomOption) returns (stream VeryLongOptionMessageNameThatIsUsedAsTheTypeOfACustomOption);
+}
+
+// A comment with CRLF line breaks: @bufbuild/protoplugin 2.5.2 keeps the carriage returns.
+// Second line of the CRLF comment.
+message MessageWithACarriageReturnComment {
+  // field comment with CRLF
+  optional int32 value = 1;
+}

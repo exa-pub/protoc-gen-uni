@@ -1,0 +1,22 @@
+// ruby_package in the a.b form (converted like a package, upstream warns), an import, and
+// float/double defaults that need 17 and 9 significant digits.
+syntax = "proto2";
+
+package ruby_pkg.v1.dots;
+
+import "rubypkg/colons.proto";
+
+option ruby_package = "acme.ruby_pkg.dotted_name";
+
+message Defaults {
+  optional double third = 1 [default = 0.333333333333333314829616256247];
+  optional double big = 2 [default = 1e22];
+  optional double tiny = 3 [default = 5e-324];
+  optional float f_tenth = 4 [default = 0.1];
+  optional float f_odd = 5 [default = 16777217];
+  optional float f_max = 6 [default = 3.4028235e38];
+  optional float f_third = 7 [default = 0.333333333];
+  optional bytes b = 8 [default = "#{x}#$y#@z\001\377"];
+  optional string s = 9 [default = "#{interpolation}"];
+  optional .ruby_pkg.v1.Outer outer = 10;
+}

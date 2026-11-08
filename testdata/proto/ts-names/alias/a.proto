@@ -1,0 +1,16 @@
+// A local message named like an import that a helper uses: the import gets an alias here, and
+// ts-poet keeps the helper text of the first file that printed it (b.proto prints the alias).
+syntax = "proto3";
+
+package alias.a;
+
+import "google/protobuf/timestamp.proto";
+
+message Timestamp {
+  int32 x = 1;
+}
+
+message A {
+  google.protobuf.Timestamp t = 1;
+  Timestamp u = 2;
+}

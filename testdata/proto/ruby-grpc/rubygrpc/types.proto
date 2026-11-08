@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package test.ruby_grpc.types;
+
+option ruby_package = "Acme::Types::";
+
+message Shared {
+  message Nested_type {}
+}

@@ -1,0 +1,39 @@
+# Golden config for protocolbuffers/kotlin v36.2: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Inputs left out: naming: see cpp.
+# Regenerate: scripts/gen-testdata.sh protocolbuffers/kotlin v36.2
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/go-features
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/protocolbuffers/kotlin:v36.2
+    out: default
+  - remote: buf.build/protocolbuffers/kotlin:v36.2
+    out: lite
+    opt: [lite]
+  - remote: buf.build/protocolbuffers/kotlin:v36.2
+    out: annotate
+    opt: [annotate_code]
+  - remote: buf.build/protocolbuffers/kotlin:v36.2
+    out: lite-no-jvm-dsl
+    opt: [lite, no_jvm_dsl]
+  - remote: buf.build/protocolbuffers/kotlin:v36.2
+    out: strip
+    opt: [experimental_strip_nonfunctional_codegen]
+  - remote: buf.build/protocolbuffers/kotlin:v36.2
+    out: mutable
+    opt: [mutable]

@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+// File options that rename the generated code of most languages.
+package test.rpcnames.opts.v1;
+
+import "google/protobuf/empty.proto";
+import "rpcnames/greeter.proto";
+
+option csharp_namespace = "Example.Rpc.Opts";
+option java_multiple_files = true;
+option java_outer_classname = "OptsProto";
+option java_package = "com.example.rpc.opts";
+option objc_class_prefix = "RPO";
+option php_metadata_namespace = "Example\\Rpc\\Opts\\Meta";
+option php_namespace = "Example\\Rpc\\Opts";
+option ruby_package = "Example::Rpc::Opts";
+option swift_prefix = "RPO_";
+
+message Options {
+  string value = 1;
+}
+
+// OptsService refers to types of a package without these options.
+service OptsService {
+  rpc Get(Options) returns (Options);
+  rpc Greet(test.rpcnames.Request) returns (stream Options);
+  rpc Ping(google.protobuf.Empty) returns (google.protobuf.Empty);
+}

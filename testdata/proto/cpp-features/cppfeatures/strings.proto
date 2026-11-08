@@ -1,0 +1,73 @@
+// Test: C++-specific features and options (protocolbuffers/cpp).
+//
+// strings.proto (edition 2023) sets features.(pb.cpp).string_type to VIEW,
+// CORD and STRING on singular, repeated and oneof string and bytes fields
+// (CORD is supported for singular bytes only; other CORD fields fall back to
+// std::string with private accessors), and features.(pb.cpp).legacy_closed_enum
+// on fields of open and closed enums.
+edition = "2023";
+
+package test.cppfeatures;
+
+import "google/protobuf/cpp_features.proto";
+
+option features.(pb.cpp).string_type = VIEW;
+
+enum Open {
+  OPEN_UNSPECIFIED = 0;
+  OPEN_ONE = 1;
+  OPEN_FIVE = 5;
+}
+
+enum Closed {
+  option features.enum_type = CLOSED;
+  CLOSED_ONE = 1;
+  CLOSED_TWO = 2;
+  CLOSED_HUNDRED = 100;
+}
+
+enum ClosedZero {
+  option features.enum_type = CLOSED;
+  CLOSED_ZERO_NONE = 0;
+  CLOSED_ZERO_TEN = 10;
+}
+
+message Strings {
+  string view_string = 1;
+  bytes view_bytes = 2;
+  string std_string = 3 [features.(pb.cpp).string_type = STRING];
+  bytes std_bytes = 4 [features.(pb.cpp).string_type = STRING];
+  bytes cord_bytes = 5 [features.(pb.cpp).string_type = CORD];
+  bytes cord_bytes_default = 6 [
+    features.(pb.cpp).string_type = CORD,
+    default = "cord\001default"
+  ];
+  string cord_string = 7 [features.(pb.cpp).string_type = CORD];
+  repeated string view_list = 8;
+  repeated bytes std_list = 9 [features.(pb.cpp).string_type = STRING];
+  repeated bytes cord_list = 10 [features.(pb.cpp).string_type = CORD];
+  string view_default = 11 [default = "what??!"];
+  string implicit_string = 12 [features.field_presence = IMPLICIT];
+  bytes implicit_cord = 13 [
+    features.field_presence = IMPLICIT,
+    features.(pb.cpp).string_type = CORD
+  ];
+  oneof choice {
+    string oneof_view = 20;
+    bytes oneof_cord = 21 [features.(pb.cpp).string_type = CORD];
+    bytes oneof_cord_default = 22 [
+      features.(pb.cpp).string_type = CORD,
+      default = "x"
+    ];
+    string oneof_std = 23 [features.(pb.cpp).string_type = STRING];
+    string oneof_std_default = 24 [
+      features.(pb.cpp).string_type = STRING,
+      default = "std"
+    ];
+  }
+  Open legacy_closed = 30 [features.(pb.cpp).legacy_closed_enum = true];
+  Closed closed = 31;
+  repeated Open legacy_closed_list = 32 [features.(pb.cpp).legacy_closed_enum = true];
+  map<string, ClosedZero> closed_map = 33;
+  map<int32, Open> open_map = 34;
+}

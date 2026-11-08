@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package test.crate.a_b;
+
+import "crate/a/a.proto";
+
+message AB {
+  test.crate.a.A a = 1;
+}

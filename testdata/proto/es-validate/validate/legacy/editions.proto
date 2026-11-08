@@ -1,0 +1,15 @@
+edition = "2023";
+
+package test.validate.legacy;
+
+import "validate/legacy/proto2.proto";
+
+message EditionRequired {
+  Inner inner = 1 [features.field_presence = LEGACY_REQUIRED];
+  int32 scalar = 2 [features.field_presence = LEGACY_REQUIRED];
+  Inner delimited = 3 [
+    features.field_presence = LEGACY_REQUIRED,
+    features.message_encoding = DELIMITED
+  ];
+  Inner opt = 4;
+}

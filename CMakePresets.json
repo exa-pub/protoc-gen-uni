@@ -1,0 +1,234 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "linux-x86_64",
+      "displayName": "Linux x86_64, static musl (toolchain image)",
+      "inherits": "base",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/x86_64-linux-musl.cmake"
+    },
+    {
+      "name": "linux-aarch64",
+      "displayName": "Linux aarch64, static musl (toolchain image)",
+      "inherits": "base",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/aarch64-linux-musl.cmake"
+    },
+    {
+      "name": "linux-x86_64-clang",
+      "displayName": "Linux x86_64, static musl, clang + lld (size comparison)",
+      "inherits": "linux-x86_64",
+      "cacheVariables": {
+        "UNI_COMPILER": "clang"
+      }
+    },
+    {
+      "name": "linux-aarch64-clang",
+      "displayName": "Linux aarch64, static musl, clang + lld (size comparison)",
+      "inherits": "linux-aarch64",
+      "cacheVariables": {
+        "UNI_COMPILER": "clang"
+      }
+    },
+    {
+      "name": "windows-x86_64",
+      "displayName": "Windows x86_64, mingw-w64 (toolchain image)",
+      "inherits": "base",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/x86_64-w64-mingw32.cmake"
+    },
+    {
+      "name": "darwin",
+      "displayName": "macOS, host clang (macOS runner)",
+      "inherits": "base"
+    },
+    {
+      "name": "dev",
+      "displayName": "Host compiler, debug",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "UNI_WERROR": "ON"
+      }
+    },
+    {
+      "name": "asan",
+      "displayName": "Host clang, ASan + UBSan",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang",
+        "UNI_SANITIZE": "ON"
+      }
+    },
+    {
+      "name": "fuzz",
+      "displayName": "Host clang, libFuzzer + ASan + UBSan (fuzz/fuzz_request.c)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_C_COMPILER": "clang",
+        "UNI_SANITIZE": "ON",
+        "UNI_FUZZ": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux-x86_64",
+      "configurePreset": "linux-x86_64"
+    },
+    {
+      "name": "linux-aarch64",
+      "configurePreset": "linux-aarch64"
+    },
+    {
+      "name": "linux-x86_64-clang",
+      "configurePreset": "linux-x86_64-clang"
+    },
+    {
+      "name": "linux-aarch64-clang",
+      "configurePreset": "linux-aarch64-clang"
+    },
+    {
+      "name": "windows-x86_64",
+      "configurePreset": "windows-x86_64"
+    },
+    {
+      "name": "darwin",
+      "configurePreset": "darwin"
+    },
+    {
+      "name": "dev",
+      "configurePreset": "dev"
+    },
+    {
+      "name": "asan",
+      "configurePreset": "asan"
+    },
+    {
+      "name": "fuzz",
+      "configurePreset": "fuzz"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 8
+      }
+    },
+    {
+      "name": "linux-x86_64",
+      "inherits": "base",
+      "configurePreset": "linux-x86_64"
+    },
+    {
+      "name": "linux-aarch64",
+      "inherits": "base",
+      "configurePreset": "linux-aarch64"
+    },
+    {
+      "name": "darwin",
+      "inherits": "base",
+      "configurePreset": "darwin"
+    },
+    {
+      "name": "dev",
+      "inherits": "base",
+      "configurePreset": "dev"
+    },
+    {
+      "name": "asan",
+      "inherits": "base",
+      "configurePreset": "asan"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "linux-x86_64",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "linux-x86_64"
+        },
+        {
+          "type": "build",
+          "name": "linux-x86_64"
+        },
+        {
+          "type": "test",
+          "name": "linux-x86_64"
+        }
+      ]
+    },
+    {
+      "name": "linux-aarch64",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "linux-aarch64"
+        },
+        {
+          "type": "build",
+          "name": "linux-aarch64"
+        },
+        {
+          "type": "test",
+          "name": "linux-aarch64"
+        }
+      ]
+    },
+    {
+      "name": "dev",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "dev"
+        },
+        {
+          "type": "build",
+          "name": "dev"
+        },
+        {
+          "type": "test",
+          "name": "dev"
+        }
+      ]
+    },
+    {
+      "name": "asan",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "asan"
+        },
+        {
+          "type": "build",
+          "name": "asan"
+        },
+        {
+          "type": "test",
+          "name": "asan"
+        }
+      ]
+    }
+  ]
+}

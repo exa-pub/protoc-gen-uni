@@ -1,0 +1,1 @@
+uni_generator(LIBRARIES python_formatters_black python_stringcase python_std uni_pb)

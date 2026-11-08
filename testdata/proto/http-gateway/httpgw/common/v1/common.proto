@@ -1,0 +1,38 @@
+// Test: HTTP annotations, shared types.
+//
+// A file without services in a second package: Book collides with
+// test.httpgw.v1.Book (OpenAPI naming strategies), Edition is used as a
+// nested path variable from another package.
+syntax = "proto3";
+
+package test.httpgw.common.v1;
+
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+// Book in the common package has the same name as test.httpgw.v1.Book.
+message Book {
+  // Resource name: originals/{original}.
+  string name = 1;
+  string isbn = 2;
+  Status status = 3;
+}
+
+// Edition of a book.
+message Edition {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      title: "Edition"
+      description: "Edition of a book."
+    }
+  };
+
+  Book book = 1;
+  int32 number = 2;
+}
+
+// Status of a book.
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_AVAILABLE = 1;
+  STATUS_LENT = 2;
+}

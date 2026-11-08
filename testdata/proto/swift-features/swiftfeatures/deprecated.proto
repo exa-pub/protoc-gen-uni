@@ -1,0 +1,24 @@
+// Test: a deprecated file.
+syntax = "proto3";
+
+package swiftfeatures.deprecated;
+
+option deprecated = true;
+
+// A message of a deprecated file.
+message Old {
+  string name = 1 [deprecated = true];
+  // A field.
+  int32 count = 2 [deprecated = true];
+}
+
+enum OldEnum {
+  OLD_ENUM_UNSPECIFIED = 0;
+  // A value.
+  OLD_ENUM_GONE = 1 [deprecated = true];
+}
+
+message Nested {
+  option deprecated = true;
+  message Inner {}
+}

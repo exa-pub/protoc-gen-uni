@@ -1,0 +1,24 @@
+// Test: an empty swift_prefix and extensions without a type prefix.
+syntax = "proto2";
+
+package swiftfeatures.noprefix;
+
+option swift_prefix = "";
+
+message Base {
+  extensions 100 to 199;
+}
+
+extend Base {
+  optional int32 plain_value = 100;
+  optional string class = 101;
+  repeated int64 values = 102;
+}
+
+message Message {
+  optional int32 type = 1;
+}
+
+message Type {
+  optional Message message = 1;
+}

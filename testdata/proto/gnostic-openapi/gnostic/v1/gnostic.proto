@@ -1,0 +1,236 @@
+// Test: gnostic protoc-gen-openapi annotations.
+//
+// Covers the openapi.v3 extensions read by protoc-gen-openapi (vendored in
+// openapiv3/): document on the file (info, servers, components with security
+// schemes and schemas, security, tags, external docs, specification
+// extensions), operation on methods (tags, summary, description, operation
+// id, parameters, deprecated, security, servers, external docs), schema on
+// messages and property on fields (title, description, format, limits,
+// pattern, read_only, required, default, enum, example), together with
+// google.api.http bindings, google.api.field_behavior and nested messages.
+syntax = "proto3";
+
+package test.gnostic.v1;
+
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+import "openapiv3/annotations.proto";
+
+option (openapi.v3.document) = {
+  openapi: "3.0.3"
+  info: {
+    title: "Gnostic API"
+    version: "2.0.0"
+    description: "Description from the document annotation."
+    terms_of_service: "https://example.com/terms"
+    contact: {
+      name: "API team"
+      url: "https://example.com"
+      email: "api@example.com"
+    }
+    license: {
+      name: "Apache License"
+      url: "https://example.com/license"
+    }
+  }
+  servers: [
+    {
+      url: "https://api.example.com/v1"
+      description: "Production"
+    },
+    {
+      url: "https://{env}.example.com"
+      description: "By environment"
+      variables: {
+        additional_properties: [
+          {
+            name: "env"
+            value: {
+              enum: ["dev", "staging"]
+              default: "dev"
+              description: "Environment"
+            }
+          }
+        ]
+      }
+    }
+  ]
+  components: {
+    security_schemes: {
+      additional_properties: [
+        {
+          name: "BasicAuth"
+          value: {
+            security_scheme: {
+              type: "http"
+              scheme: "basic"
+            }
+          }
+        },
+        {
+          name: "ApiKey"
+          value: {
+            security_scheme: {
+              type: "apiKey"
+              name: "X-API-Key"
+              in: "header"
+            }
+          }
+        }
+      ]
+    }
+    schemas: {
+      additional_properties: [
+        {
+          name: "Extra"
+          value: {
+            schema: {
+              type: "object"
+              description: "A schema declared in the document annotation."
+            }
+          }
+        }
+      ]
+    }
+  }
+  security: [
+    {
+      additional_properties: [
+        {
+          name: "BasicAuth"
+          value: {
+            value: []
+          }
+        }
+      ]
+    }
+  ]
+  tags: [
+    {
+      name: "Notes"
+      description: "Notes operations"
+    }
+  ]
+  external_docs: {
+    description: "More docs"
+    url: "https://example.com/docs"
+  }
+  specification_extension: [
+    {
+      name: "x-document"
+      value: {yaml: "true"}
+    }
+  ]
+};
+
+// Note is a note.
+message Note {
+  option (openapi.v3.schema) = {
+    title: "Overridden note title"
+    description: "Overridden note description."
+    required: ["text"]
+    example: {yaml: "{\"id\": \"1\", \"text\": \"hello\"}"}
+  };
+
+  // The note id.
+  string id = 1 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (openapi.v3.property) = {
+      read_only: true
+      format: "uuid"
+    }
+  ];
+  string text = 2 [(openapi.v3.property) = {
+    title: "Overridden field title"
+    max_length: 255
+    min_length: 1
+    pattern: "^.+$"
+  }];
+  int32 priority = 3 [(openapi.v3.property) = {
+    minimum: 0
+    maximum: 10
+    default: {number: 5}
+  }];
+  string color = 4 [(openapi.v3.property) = {
+    enum: [{yaml: "red"}, {yaml: "green"}]
+    description: "Color of the note."
+  }];
+  repeated string labels = 5 [(google.api.field_behavior) = REQUIRED];
+  Attachment attachment = 6;
+
+  // An attachment of a note.
+  message Attachment {
+    string url = 1;
+    int64 size = 2;
+  }
+}
+
+message GetNoteRequest {
+  string id = 1;
+  bool include_deleted = 2;
+}
+
+message ListNotesResponse {
+  repeated Note notes = 1;
+}
+
+// NoteService manages notes.
+service NoteService {
+  // GetNote returns a note.
+  rpc GetNote(GetNoteRequest) returns (Note) {
+    option (google.api.http) = {get: "/v1/notes/{id}"};
+    option (openapi.v3.operation) = {
+      tags: ["Notes"]
+      summary: "Get a note"
+      description: "Overridden operation description."
+      operation_id: "fetchNote"
+      parameters: [
+        {
+          parameter: {
+            name: "X-Request-Id"
+            in: "header"
+            description: "Request id"
+            required: true
+            schema: {
+              schema: {type: "string"}
+            }
+          }
+        }
+      ]
+      external_docs: {
+        description: "Operation docs"
+        url: "https://example.com/get"
+      }
+      servers: [
+        {url: "https://notes.example.com"}
+      ]
+      security: [
+        {
+          additional_properties: [
+            {
+              name: "ApiKey"
+              value: {
+                value: []
+              }
+            }
+          ]
+        }
+      ]
+    };
+  }
+
+  // ListNotes lists notes.
+  rpc ListNotes(google.protobuf.Empty) returns (ListNotesResponse) {
+    option (google.api.http) = {get: "/v1/notes"};
+    option (openapi.v3.operation) = {deprecated: true};
+  }
+
+  // CreateNote creates a note.
+  rpc CreateNote(Note) returns (Note) {
+    option (google.api.http) = {
+      post: "/v1/notes"
+      body: "*"
+    };
+  }
+}

@@ -1,0 +1,40 @@
+# Golden config for apple/swift v1.39.0: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Regenerate: scripts/gen-testdata.sh apple/swift v1.39.0
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/go-features
+  - directory: testdata/proto/swift-features
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/apple/swift:v1.39.0
+    out: default
+  - remote: buf.build/apple/swift:v1.39.0
+    out: bsr
+    opt: [Visibility=Public, FileNaming=PathToUnderscores]
+  - remote: buf.build/apple/swift:v1.39.0
+    out: options
+    opt: [Visibility=Package, FileNaming=DropPath, EnumGeneration=nonexhaustiveWarn, UseAccessLevelOnImports=true]
+  - remote: buf.build/apple/swift:v1.39.0
+    out: extra
+    opt: [ExtraModuleImports=Foundation, ImplementationOnlyImports=true]
+  - remote: buf.build/apple/swift:v1.39.0
+    out: hidden
+    opt: [ExperimentalHiddenNames=All, experimental_strip_nonfunctional_codegen, EnumGeneration=nonexhaustive, FileNaming=path_to_underscores]
+  - remote: buf.build/apple/swift:v1.39.0
+    out: module
+    opt: [SwiftProtobufModuleName=MyProtobuf, Visibility=public, UseAccessLevelOnImports=true]

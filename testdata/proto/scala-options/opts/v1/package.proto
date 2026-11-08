@@ -1,0 +1,16 @@
+// Test: package-scoped ScalaPB options (this file has no definitions, so ScalaPB generates no
+// code for it; the other files of the package inherit the options).
+syntax = "proto3";
+
+package test.scalaopts.v1;
+
+import "scalapb/scalapb.proto";
+
+option (scalapb.options) = {
+  scope: PACKAGE
+  enum_value_naming: CAMEL_CASE
+  enum_strip_prefix: true
+  import: "scala.util.Try"
+  collection_type: "_root_.scala.collection.immutable.List"
+  lenses: false
+};

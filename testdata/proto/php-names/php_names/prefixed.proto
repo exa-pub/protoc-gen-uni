@@ -1,0 +1,22 @@
+// php-names: php_class_prefix (used instead of the reserved-name prefix), php_namespace and a
+// php_metadata_namespace that ends with a backslash.
+syntax = "proto3";
+
+package test.php.prefixed;
+
+option php_class_prefix = "Pfx";
+option php_namespace = "My\\Name_space";
+option php_metadata_namespace = "My\\Meta\\";
+
+message Class {
+  message Nested {
+    int32 x = 1;
+  }
+  Nested nested = 1;
+  Status status = 2;
+}
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_OK = 1;
+}

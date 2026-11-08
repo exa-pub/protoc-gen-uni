@@ -1,0 +1,63 @@
+// Test: grpc/php names and comments.
+//
+// The file comment has a $dollar and a */ comment end.
+
+// Detached file comment.
+
+// File comment of the syntax statement: $var$ and */ end.
+syntax = "proto3";
+
+package grpc_php.names.v1;
+
+import "grpc_php/prefix/prefixed.proto";
+
+// Mixed, Never and Object are PHP reserved words since protobuf 36: protobuf
+// 35.1 (grpc v1.85.1) does not prefix them.
+message Mixed {
+  string id = 1;
+}
+
+message Never {
+  message Object {
+    string id = 1;
+  }
+}
+
+message Object {
+  string id = 1;
+}
+
+// Class is reserved in both versions; its nested type gets the prefix too.
+message Class {
+  message Mixed {
+    string id = 1;
+  }
+  message Inner {
+    string id = 1;
+  }
+}
+
+message void {
+  string id = 1;
+}
+
+// Detached service comment.
+
+// ReservedService uses reserved names. A comment with $1 and */ inside.
+// Second line with a trailing */
+service ReservedService {
+  // Unary returns Mixed. Costs $$ and */ ends.
+  rpc Unary(Mixed) returns (Never.Object);
+  // ClientStream
+  rpc ClientStream(stream Object) returns (Class.Mixed);
+  rpc ServerStream(Class.Inner) returns (stream void);
+  rpc Bidi(stream grpc_php.prefix.Thing) returns (stream grpc_php.prefix.Thing.Nested);
+  rpc Deprecated(Mixed) returns (Mixed) {
+    option deprecated = true;
+  }
+}
+
+service object {
+  option deprecated = true;
+  rpc mixed(Object) returns (grpc_php.prefix.Interface);
+}

@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package test.imports.reexport;
+
+// Re-exports common.proto: importers of this file can use its types directly.
+import public "imports/common/v1/common.proto";
+import "imports/other/v1/item.proto";
+
+message Wrapper {
+  test.imports.common.v1.Item common = 1;
+  test.imports.other.v1.Item other = 2;
+}

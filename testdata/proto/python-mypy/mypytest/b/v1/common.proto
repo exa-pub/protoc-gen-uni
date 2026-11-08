@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package mypytest.b.v1;
+
+// Re-exported names: messages, enums, enum values and extensions of the public import.
+import public "mypytest/a/v1/common.proto";
+
+message Common {
+  mypytest.a.v1.Common inner = 1;
+  mypytest.a.v1.Color color = 2;
+}

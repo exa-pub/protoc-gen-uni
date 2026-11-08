@@ -1,0 +1,173 @@
+// Test: comments.
+//
+// Leading, trailing and detached comments on every element kind (syntax,
+// package, imports, options, messages, fields, oneofs, maps, groups-free
+// nested types, enums, enum values, extensions, services, methods,
+// reserved ranges), both // and /* */ styles, comments containing "*/", "@",
+// backticks, ${template}, HTML, backslashes and non-ASCII characters, and
+// deprecated elements (which generators annotate in docs).
+
+// Detached comment before syntax (second detached block).
+
+// Leading comment on syntax.
+syntax = "proto3"; // Trailing comment on syntax.
+
+// Detached comment before package.
+
+// Leading comment on package.
+package test.comments; // Trailing comment on package.
+
+// Leading comment on import.
+import "google/protobuf/descriptor.proto"; // Trailing comment on import.
+
+// Leading comment on file option.
+option java_multiple_files = true; // Trailing comment on file option.
+
+// Detached comment 1 before Message.
+
+/* Detached block comment 2 before Message. */
+
+// Leading comment on Message.
+// Second line with "@" sign: @deprecated @param foo @see bar @internal
+// Third line with a fake block end: */ and /* and **/ and /** ... */
+//   Indented line with trailing spaces and a tab:	end
+// Unicode: héllo wörld — 日本語 🚀 ¯\_(ツ)_/¯
+// Backticks `code`, template ${injection}, html <script>alert(1)</script>
+// Backslashes \ \\ \n A and quotes ' " and percent %s %d
+message Message { // Trailing comment on Message open brace.
+  // Detached comment inside Message before field.
+
+  // Leading comment on field `name`.
+  string name = 1; // Trailing comment on name.
+
+  /* Leading block comment on id. */
+  int64 id = 2; /* Trailing block comment on id. */
+
+  /**
+   * Javadoc-style leading comment on flags.
+   * @deprecated use something else
+   */
+  repeated bool flags = 3 [deprecated = true]; // Deprecated field.
+
+  // Leading comment on map field.
+  map<string, Message> children = 4; // Trailing comment on map.
+
+  // Leading comment on oneof.
+  oneof choice { // Trailing comment on oneof.
+    // Leading comment on oneof member a.
+    string a = 5; // Trailing comment on a.
+    // Leading comment on oneof member b.
+    int32 b = 6;
+  }
+
+  // Leading comment on optional field.
+  optional string opt = 7; // Trailing comment on optional.
+
+  // Leading comment on nested message.
+  message Nested { // Trailing comment on Nested.
+    // Leading comment on nested field.
+    int32 value = 1; // Trailing comment on nested field.
+  }
+
+  // Leading comment on nested enum.
+  enum NestedEnum {
+    // Leading comment on nested enum value.
+    NESTED_ENUM_UNSPECIFIED = 0; // Trailing comment on nested enum value.
+  }
+
+  // Leading comment on reserved.
+  reserved 100 to 110; // Trailing comment on reserved.
+  reserved "old_name";
+
+  Nested nested = 8;
+  NestedEnum nested_enum = 9;
+
+  // A comment with only an asterisk-slash: */
+  string tricky = 10;
+  // */
+  string tricky2 = 11;
+  /* /* nested-looking block start */
+  string tricky3 = 12;
+  //
+  // ^ empty comment line above and below
+  //
+  string tricky4 = 13;
+  //no space after slashes
+  string tricky5 = 14;
+  ////// many slashes
+  string tricky6 = 15;
+
+  // Trailing detached comment at the end of Message body.
+}
+// Trailing comment after Message (attaches as trailing).
+
+// Leading comment on deprecated message.
+message OldMessage {
+  option deprecated = true; // Trailing comment on option.
+
+  // Leading comment on field of deprecated message.
+  string field = 1;
+}
+
+// Leading comment on Enum.
+// It has two lines.
+enum Enum { // Trailing comment on Enum.
+  // Detached comment inside Enum.
+
+  // Leading comment on ENUM_UNSPECIFIED.
+  ENUM_UNSPECIFIED = 0; // Trailing comment on ENUM_UNSPECIFIED.
+  /* Block comment on ENUM_ONE containing */ /* twice */
+  ENUM_ONE = 1;
+  // Deprecated value.
+  ENUM_OLD = 2 [deprecated = true]; // Trailing on deprecated value.
+  ENUM_NO_COMMENT = 3;
+}
+
+// Leading comment on deprecated enum.
+enum OldEnum {
+  option deprecated = true;
+  OLD_ENUM_UNSPECIFIED = 0;
+}
+
+// Leading comment on extend block.
+extend google.protobuf.MessageOptions { // Trailing comment on extend.
+  // Leading comment on extension field.
+  string my_message_option = 50000; // Trailing comment on extension.
+  // Deprecated extension.
+  int32 old_message_option = 50001 [deprecated = true];
+}
+
+// Leading comment on Service.
+// @Annotation(value = "x") */ end
+service Service { // Trailing comment on Service.
+  // Detached comment inside Service.
+
+  // Leading comment on Method.
+  rpc Method(Message) returns (Message); // Trailing comment on Method.
+
+  // Leading comment on method with options body.
+  rpc WithOptions(Message) returns (Message) { // Trailing on WithOptions.
+    // Leading comment on method option.
+    option deprecated = true; // Trailing comment on method option.
+  }
+
+  /* Block leading comment on stream method. */
+  rpc Stream(stream Message) returns (stream Message);
+}
+
+// Leading comment on deprecated service.
+service OldService {
+  option deprecated = true;
+  rpc Call(Message) returns (Message);
+}
+
+message NoComments {
+  string a = 1;
+  NoCommentsEnum b = 2;
+}
+
+enum NoCommentsEnum {
+  NO_COMMENTS_ENUM_UNSPECIFIED = 0;
+}
+
+// Detached comment at the very end of the file.

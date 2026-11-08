@@ -1,0 +1,5 @@
+// Test: python-py, an imported proto3 file (custom json_name, packed = false).
+syntax = "proto3";
+package other;
+message Item { int32 x = 1 [json_name = "custom"]; optional bytes y = 2; repeated int32 z = 3 [packed = false]; }
+message TYPE_CHECKING {}

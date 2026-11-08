@@ -1,0 +1,39 @@
+# Golden config for community/timostamm-protobuf-ts v2.11.1: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Inputs left out: upstream: no editions, naming fails (enum object).
+# Real-project inputs left out: real-protovalidate-editions (no editions).
+# ts-long: long names, comments, defaults and option values, non-ASCII, CRLF comments (printer).
+# Group error: upstream rejects the options (ParameterError).
+# Regenerate: scripts/gen-testdata.sh community/timostamm-protobuf-ts v2.11.1
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/ts-long
+plugins:
+  - remote: buf.build/community/timostamm-protobuf-ts:v2.11.1
+    out: default
+  - remote: buf.build/community/timostamm-protobuf-ts:v2.11.1
+    out: registry
+    opt: [long_type_string, optimize_code_size, add_pb_suffix, ts_nocheck, eslint_disable]
+  - remote: buf.build/community/timostamm-protobuf-ts:v2.11.1
+    out: grpc
+    opt: [client_grpc1, server_grpc1, long_type_bigint]
+  - remote: buf.build/community/timostamm-protobuf-ts:v2.11.1
+    out: generic
+    opt: [server_generic, keep_enum_prefix, use_proto_field_name, force_optimize_speed]
+  - remote: buf.build/community/timostamm-protobuf-ts:v2.11.1
+    out: deps
+    opt: [generate_dependencies, force_exclude_all_options, long_type_number]
+  - remote: buf.build/community/timostamm-protobuf-ts:v2.11.1
+    out: error
+    opt: [client_none, client_grpc1]

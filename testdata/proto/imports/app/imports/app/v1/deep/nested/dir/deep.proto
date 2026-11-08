@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+// A file in a nested directory of another module, in a sub-package.
+package test.imports.app.v1.deep;
+
+import "imports/other/v1/item.proto";
+
+message Deep {
+  test.imports.other.v1.Item item = 1;
+  Inner inner = 2;
+
+  message Inner {
+    string value = 1;
+  }
+}

@@ -1,0 +1,40 @@
+# Golden config for protocolbuffers/php v36.2: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Upstream rejects required fields, closed enums (proto2 enums) and groups: those inputs test its
+# error. The `internal` group generates only google/protobuf/descriptor.proto (php-internal) and
+# fails on any other file.
+# Inputs left out: naming: see cpp.
+# Options left out: aggregate_metadata (output order depends on absl hash sets) and
+# internal_generate_c_wkt (writes ../ext/...); unknown options abort the plugin (ABSL_LOG(FATAL)).
+# Regenerate: scripts/gen-testdata.sh protocolbuffers/php v36.2
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/go-features
+  - directory: testdata/proto/ruby-package
+  - directory: testdata/proto/map-options
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/es-bootstrap
+  - directory: testdata/proto/php-names
+  - directory: testdata/proto/php-bad-namespace
+  - directory: testdata/proto/php-internal
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/protocolbuffers/php:v36.2
+    out: default
+  - remote: buf.build/protocolbuffers/php:v36.2
+    out: internal
+    opt: [internal]

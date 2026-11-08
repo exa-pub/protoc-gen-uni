@@ -1,0 +1,2 @@
+https://github.com/bufbuild/protovalidate 4d7e5a20b2997e63a3106046a897f1130b86e2bb
+The editions cases (with predefined_rules_proto2/proto3.proto, which import them) of proto/protovalidate-testing/buf/validate/conformance/cases/, unmodified; validate.proto comes from the pinned buf.build/bufbuild/protovalidate dependency (buf.lock).

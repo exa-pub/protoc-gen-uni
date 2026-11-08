@@ -1,0 +1,1 @@
+uni_generator(LIBRARIES swift_connect_plugin_utilities)

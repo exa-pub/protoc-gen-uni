@@ -1,0 +1,3 @@
+# php-internal: google/protobuf/descriptor.proto alone (a copy of the one in es-bootstrap, bundled
+# with buf v1.75.0), for the `internal` option of protocolbuffers/php, which generates only that file.
+version: v2

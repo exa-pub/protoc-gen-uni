@@ -1,0 +1,32 @@
+// Test: objc-naming. An editions file with an empty objc_class_prefix and
+// extensions of a message of another file.
+edition = "2023";
+
+package objc.leaf;
+
+import "google/protobuf/descriptor.proto";
+
+option objc_class_prefix = "";
+
+message Leaf {
+  int32 depth = 1;
+  repeated int32 packed_values = 2;
+  repeated int32 expanded_values = 3 [features.repeated_field_encoding = EXPANDED];
+  Leaf child = 4 [features.message_encoding = DELIMITED];
+  string text = 5 [features.field_presence = IMPLICIT];
+  Kind kind = 6;
+  enum Kind {
+    option features.enum_type = CLOSED;
+    KIND_ZERO = 0;
+    KIND_ONE = 1;
+    KIND_TWO = 2;
+  }
+}
+
+extend google.protobuf.MessageOptions {
+  string leaf_note = 50001;
+}
+
+extend google.protobuf.FieldOptions {
+  Leaf leaf_field = 50002;
+}

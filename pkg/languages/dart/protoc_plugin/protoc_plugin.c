@@ -1,0 +1,22 @@
+/* Unity build of the protoc_plugin 25.1.0 port (see internal.h): everything but
+ * protoc_plugin_generate is static. Order follows the dependencies. */
+#include "internal.h"
+
+#include "string_escape.c"
+#include "nodes.c"
+#include "names.c"
+#include "shared.c"
+#include "indenting_writer.c"
+#include "options.c"
+#include "output_config.c"
+#include "base_type.c"
+#include "protobuf_field.c"
+#include "const_generator.c"
+#include "enum_generator.c"
+#include "message_generator.c"
+#include "extension_generator.c"
+#include "mixins.c"
+#include "service_generator.c"
+#include "file_generator.c"
+#include "linker.c"
+#include "code_generator.c"

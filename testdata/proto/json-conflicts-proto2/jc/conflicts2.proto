@@ -1,0 +1,23 @@
+// Test: names that conflict in JSON or without the enum name prefix in proto2, which buf
+// accepts. protoc 22 and later reject them; protobuf 3.x accepts them (enum names: a warning).
+syntax = "proto2";
+
+package jc.p2;
+
+enum Kind {
+  KIND_UNSPECIFIED = 0;
+  KIND_FOO_BAR = 1;
+  KIND_FOOBAR = 2;
+  FOO_BAR = 3;
+}
+
+message Conflicts {
+  optional int32 foo_bar = 1;
+  optional int32 fooBar = 2;
+  optional string foobar = 3;
+  optional Kind kind = 4;
+  message Nested {
+    repeated int32 a_b = 1;
+    repeated int32 aB = 2;
+  }
+}

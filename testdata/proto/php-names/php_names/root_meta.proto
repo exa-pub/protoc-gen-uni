@@ -1,0 +1,16 @@
+// php-names: php_metadata_namespace "\" (the metadata class has no namespace) and an empty
+// php_namespace (classes without a namespace).
+syntax = "proto3";
+
+package test.php.rootmeta;
+
+option php_metadata_namespace = "\\";
+option php_namespace = "";
+
+message RootMessage {
+  int32 x = 1;
+}
+
+enum RootEnum {
+  ROOT_ENUM_UNSPECIFIED = 0;
+}

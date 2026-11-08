@@ -1,0 +1,13 @@
+syntax = "proto3";
+package other;
+import "nanopb.proto";
+option (nanopb_fileopt).mangle_names = M_STRIP_PACKAGE;
+message O {
+  string name = 1 [(nanopb).max_size = 10];
+  repeated int32 v = 2 [(nanopb).max_count = 5];
+  OE kind = 3;
+  optional int32 opt = 4;
+  message Inner { int32 z = 1; }
+  Inner inner = 5;
+}
+enum OE { OE_ZERO = 0; OE_ONE = 1; }

@@ -1,0 +1,83 @@
+// Test: Dart line lengths.
+//
+// Long message, field, enum, oneof, map, extension, service and method names,
+// long string, bytes and number defaults and long comments, so that the Dart
+// formatter (dart_style, 80 columns) has to split generated declarations,
+// argument lists, cascades, conditionals, collection literals, type arguments
+// and comments in every place where protocolbuffers/dart emits them.
+syntax = "proto2";
+
+package test.dart_long.a_rather_long_package_name_that_makes_qualified_names_long;
+
+import "google/protobuf/timestamp.proto";
+
+// A message whose name alone is longer than the page width of the formatter, which means that every declaration mentioning it has to be split somewhere, and this comment line is also far longer than eighty columns.
+message AVeryLongMessageNameThatIsLongerThanTheEightyColumnPageWidthOfTheDartFormatter {
+  // A field with a long name and a long string default value that does not fit on one line together with the getter.
+  optional string a_field_with_a_rather_long_name_to_force_line_splits = 1 [default = "a long default string value that is certainly longer than the page width of eighty columns"];
+  optional bytes a_bytes_field_with_a_long_default_value = 2 [default = "\001\002\003 bytes default that is long enough to wrap the list literal of code units"];
+  optional int64 an_int64_field_with_a_long_name_and_default = 3 [default = -9223372036854775808];
+  optional uint64 an_unsigned_sixty_four_bit_field_with_a_default = 4 [default = 18446744073709551615];
+  optional double a_double_field_with_a_long_name_and_a_default = 5 [default = 1.7976931348623157e308];
+  optional float a_float_field_with_an_infinite_default_value = 6 [default = -inf];
+  optional double a_double_field_with_a_not_a_number_default = 7 [default = nan];
+  optional int32 an_int32_field_with_a_negative_default_value = 8 [default = -2147483648];
+  optional bool a_boolean_field_with_a_true_default_value_here = 9 [default = true];
+  optional TheLongNamedEnumerationWithManyValuesAndAVeryLongNameIndeed an_enum_field_with_a_default = 10 [default = THE_SECOND_VALUE_OF_THE_LONG_NAMED_ENUMERATION_WITH_A_LONG_NAME];
+  repeated AVeryLongMessageNameThatIsLongerThanTheEightyColumnPageWidthOfTheDartFormatter recursive_repeated_message_field_with_a_long_name = 11;
+  map<string, AVeryLongMessageNameThatIsLongerThanTheEightyColumnPageWidthOfTheDartFormatter> a_map_from_strings_to_long_named_messages = 12;
+  map<int64, TheLongNamedEnumerationWithManyValuesAndAVeryLongNameIndeed> a_map_from_int64_keys_to_long_named_enumeration_values = 13;
+  optional google.protobuf.Timestamp a_timestamp_field_with_a_long_name_from_another_file = 14;
+  required string a_required_string_field_with_a_rather_long_name_too = 15;
+  repeated TheLongNamedEnumerationWithManyValuesAndAVeryLongNameIndeed repeated_enum_values_field_name = 16 [packed = true];
+  optional string a_string_with_quotes_and_dollars = 17 [default = "it's $100 \"quoted\" \\ back\\slash and a tab\t and a newline\n in a default"];
+
+  // A oneof with a long name and long member names.
+  oneof a_oneof_with_a_long_name_that_produces_long_enum_and_method_names {
+    string the_first_member_of_the_oneof_with_a_long_name = 20;
+    AVeryLongMessageNameThatIsLongerThanTheEightyColumnPageWidthOfTheDartFormatter the_second_member_of_the_oneof_with_a_long_name = 21;
+    int32 the_third_member_of_the_oneof = 22;
+  }
+
+  // A nested message with a long name inside a message with a long name.
+  message ANestedMessageWithAnotherLongNameToMakeTheClassNameEvenLonger {
+    optional string a_nested_field_with_a_long_name_that_needs_wrapping = 1 [default = "nested default"];
+    repeated string repeated_strings_in_the_nested_message_with_a_long_name = 2;
+
+    enum ANestedEnumerationInsideTheNestedMessageWithALongName {
+      A_NESTED_ENUMERATION_VALUE_WITH_A_LONG_NAME_ZERO = 0;
+      A_NESTED_ENUMERATION_VALUE_WITH_A_LONG_NAME_ONE = 1;
+    }
+  }
+
+  extensions 1000 to 1999;
+}
+
+// An enumeration with a long name and long value names, so the value
+// constants, the values list and the valueOf method have to be split.
+enum TheLongNamedEnumerationWithManyValuesAndAVeryLongNameIndeed {
+  // The first value of the enumeration, with a comment that is longer than the page width of the formatter.
+  THE_FIRST_VALUE_OF_THE_LONG_NAMED_ENUMERATION_WITH_A_LONG_NAME = 0;
+  THE_SECOND_VALUE_OF_THE_LONG_NAMED_ENUMERATION_WITH_A_LONG_NAME = 1;
+  THE_THIRD_VALUE_OF_THE_LONG_NAMED_ENUMERATION_WITH_A_LONG_NAME = 2;
+  THE_HUNDREDTH_VALUE_OF_THE_ENUMERATION = 100;
+}
+
+extend AVeryLongMessageNameThatIsLongerThanTheEightyColumnPageWidthOfTheDartFormatter {
+  // An extension with a long name.
+  optional string an_extension_field_with_a_long_name_on_the_long_message = 1000 [default = "extension default value that is long"];
+  repeated AVeryLongMessageNameThatIsLongerThanTheEightyColumnPageWidthOfTheDartFormatter repeated_extension_of_long_messages = 1001;
+  optional TheLongNamedEnumerationWithManyValuesAndAVeryLongNameIndeed an_enum_extension_with_a_long_name = 1002;
+}
+
+// A service with a long name and long method names, with long request and
+// response type names.
+service AServiceWithAVeryLongNameThatMakesTheGeneratedClientAndServerClassesLong {
+  // A unary method with a long name.
+  rpc AUnaryMethodWithAVeryLongNameThatTakesALongNamedMessage(AVeryLongMessageNameThatIsLongerThanTheEightyColumnPageWidthOfTheDartFormatter) returns (AVeryLongMessageNameThatIsLongerThanTheEightyColumnPageWidthOfTheDartFormatter);
+  rpc AServerStreamingMethodWithALongName(AVeryLongMessageNameThatIsLongerThanTheEightyColumnPageWidthOfTheDartFormatter) returns (stream google.protobuf.Timestamp);
+  rpc AClientStreamingMethodWithALongName(stream google.protobuf.Timestamp) returns (AVeryLongMessageNameThatIsLongerThanTheEightyColumnPageWidthOfTheDartFormatter);
+  rpc ABidirectionalStreamingMethodWithALongName(stream AVeryLongMessageNameThatIsLongerThanTheEightyColumnPageWidthOfTheDartFormatter) returns (stream AVeryLongMessageNameThatIsLongerThanTheEightyColumnPageWidthOfTheDartFormatter) {
+    option deprecated = true;
+  }
+}

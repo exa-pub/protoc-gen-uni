@@ -1,0 +1,50 @@
+# Golden config for bufbuild/grpc-py v0.5.0: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Groups: default (async and sync stubs); io=sync; io=async with the registry option map_imports=**:;
+# map_imports with prefixes; errors (Python tracebacks of the plugin framework): an invalid io value,
+# an unknown option. Files without services produce no output.
+# Regenerate: scripts/gen-testdata.sh bufbuild/grpc-py v0.5.0
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-case
+  - directory: testdata/proto/services-editions
+  - directory: testdata/proto/services-editions2024
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/services-connect
+  - directory: testdata/proto/http-gateway
+  - directory: testdata/proto/http-gateway-delete-body
+  - directory: testdata/proto/http-gateway-scalar-body
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/bufbuild/grpc-py:v0.5.0
+    out: default
+  - remote: buf.build/bufbuild/grpc-py:v0.5.0
+    out: sync
+    opt: [io=sync]
+  - remote: buf.build/bufbuild/grpc-py:v0.5.0
+    out: async-map
+    opt: [io=async, "map_imports=**:"]
+  - remote: buf.build/bufbuild/grpc-py:v0.5.0
+    out: mapped
+    opt: ["map_imports=services/**:pkg.sub", "map_imports=*.proto:root", "map_imports=google/protobuf/*.proto:wkt"]
+  - remote: buf.build/bufbuild/grpc-py:v0.5.0
+    out: error-io
+    opt: [io=threads]
+  - remote: buf.build/bufbuild/grpc-py:v0.5.0
+    out: error-unknown
+    opt: [foo=bar]

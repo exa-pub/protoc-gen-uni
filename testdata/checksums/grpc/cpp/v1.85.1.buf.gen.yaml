@@ -1,0 +1,53 @@
+# Golden config for grpc/cpp v1.85.1: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Groups: default; generate_mock_code; services_namespace with the header and include options;
+# allow_sync_server_api/allow_cq_api=false with allow_deprecated, mock code and gmock_search_path;
+# repeat: options given twice ("=false" does not clear an earlier generate_mock_code or
+# include_import_headers "=true", but does clear use_system_headers);
+# errors: an invalid boolean value, an unknown parameter.
+# services-generic tests the error for cc_generic_services.
+# Not tested: a parameter without "=" (upstream reads past the end of a vector).
+# Inputs left out: naming: libprotoc 35.1 rejects naming/legacy.proto (JSON name conflict) and
+# exits with a timestamped log line.
+# Regenerate: scripts/gen-testdata.sh grpc/cpp v1.85.1
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-case
+  - directory: testdata/proto/services-editions
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/grpc/cpp:v1.85.1
+    out: default
+  - remote: buf.build/grpc/cpp:v1.85.1
+    out: mock
+    opt: [generate_mock_code=true]
+  - remote: buf.build/grpc/cpp:v1.85.1
+    out: options
+    opt: [services_namespace=svc, use_system_headers=false, grpc_search_path=grpc, message_header_extension=.pb.hpp, include_import_headers=true, additional_header_includes=a.h:b.h]
+  - remote: buf.build/grpc/cpp:v1.85.1
+    out: no-sync
+    opt: [allow_sync_server_api=false, allow_cq_api=false, allow_deprecated=true, generate_mock_code=true, gmock_search_path=gmock]
+  - remote: buf.build/grpc/cpp:v1.85.1
+    out: repeat
+    opt: [generate_mock_code=true, generate_mock_code=false, include_import_headers=true, include_import_headers=false, use_system_headers=false, use_system_headers=true, allow_cq_api=false, allow_cq_api=true]
+  - remote: buf.build/grpc/cpp:v1.85.1
+    out: error-invalid
+    opt: [use_system_headers=yes]
+  - remote: buf.build/grpc/cpp:v1.85.1
+    out: error-unknown
+    opt: [foo=bar]

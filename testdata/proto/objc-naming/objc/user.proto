@@ -1,0 +1,23 @@
+// Test: objc-naming. Uses the types of the other files through the public
+// import chain, custom options and enum fields of other files.
+syntax = "proto2";
+
+package objc.user;
+
+import "objc/names.proto";
+
+message User {
+  option (objc.leaf.leaf_note) = "note";
+  optional PublicDep dep = 1;
+  optional objc.leaf.Leaf leaf = 2 [(objc.leaf.leaf_field) = { depth: 1 }];
+  optional objc.naming_test.url_http.Status status = 3;
+  repeated objc.naming_test.url_http.Status statuses = 4;
+  optional objc.leaf.Leaf.Kind kind = 5;
+  map<string, objc.leaf.Leaf.Kind> kinds = 6;
+  map<string, objc.leaf.Leaf> leaves = 7;
+  repeated objc.leaf.Leaf leaf_list = 8;
+}
+
+extend objc.naming_test.url_http.Size {
+  optional User user = 150;
+}

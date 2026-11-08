@@ -1,0 +1,816 @@
+// Test: HTTP annotations (grpc-gateway, openapiv2, gnostic).
+//
+// Covers google.api.http with every path template form: literal segments,
+// variables ({name}), nested field variables ({shelf.name}, a field of a
+// message from another package), variables with patterns (single wildcard *,
+// deep wildcard ** at the end, literals between wildcards), several variables
+// in one path, a bare * segment, verbs (":merge" after a variable, after a
+// literal and after a pattern); path variables of type string, int32, int64,
+// enum, bool, repeated string and a field with path_param_name; body "*",
+// body naming a message field, a repeated field and an HttpBody field (a
+// scalar body field is in http-gateway-scalar-body); response_body naming a
+// repeated field and a message field; additional_bindings (several per
+// method, with their own body); every HTTP
+// method (get, put, post, delete, patch) and custom (HEAD, OPTIONS); query
+// parameters of every kind (scalars, enums, repeated, nested messages,
+// oneofs, maps, optional, well-known types, bytes); google.api.HttpBody
+// responses; google.protobuf.FieldMask on PATCH (allow_patch_feature);
+// google.api.field_behavior and google.api visibility rules; deprecated
+// methods and fields, idempotency levels, internal comments "(-- --)",
+// recursive messages; and the openapiv2 options on file (openapiv2_swagger),
+// message (openapiv2_schema), field (openapiv2_field), enum (openapiv2_enum),
+// service (openapiv2_tag) and method (openapiv2_operation) level, including
+// google.protobuf.Value extensions of every kind.
+syntax = "proto3";
+
+package test.httpgw.v1;
+
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/api/httpbody.proto";
+import "google/api/visibility.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "httpgw/common/v1/common.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+  info: {
+    title: "Library API"
+    version: "1.0"
+    description: "Library API description.\n\nSecond paragraph."
+    terms_of_service: "https://example.com/terms"
+    contact: {
+      name: "Library team"
+      url: "https://example.com"
+      email: "team@example.com"
+    }
+    license: {
+      name: "BSD 3-Clause License"
+      url: "https://example.com/license"
+    }
+    extensions: {
+      key: "x-info"
+      value: {string_value: "info"}
+    }
+  }
+  host: "api.example.com"
+  base_path: "/api"
+  schemes: [HTTPS, WSS]
+  consumes: ["application/json", "application/x-foo-mime"]
+  produces: ["application/json", "application/x-foo-mime"]
+  responses: {
+    key: "403"
+    value: {description: "Returned when the user does not have permission."}
+  }
+  responses: {
+    key: "404"
+    value: {
+      description: "Returned when the resource does not exist."
+      schema: {
+        json_schema: {type: STRING}
+      }
+    }
+  }
+  responses: {
+    key: "418"
+    value: {
+      description: "I'm a teapot."
+      schema: {
+        json_schema: {ref: ".test.httpgw.v1.Shelf"}
+      }
+      headers: {
+        key: "X-Teapot"
+        value: {
+          description: "Teapot header"
+          type: "string"
+          format: "uuid"
+          default: "\"a\""
+          pattern: "^[a-z]+$"
+        }
+      }
+      examples: {
+        key: "application/json"
+        value: "{\"name\": \"shelves/1\"}"
+      }
+      extensions: {
+        key: "x-response"
+        value: {bool_value: true}
+      }
+    }
+  }
+  security_definitions: {
+    security: {
+      key: "BasicAuth"
+      value: {type: TYPE_BASIC}
+    }
+    security: {
+      key: "ApiKeyAuth"
+      value: {
+        type: TYPE_API_KEY
+        in: IN_HEADER
+        name: "X-API-Key"
+        description: "API key in a header."
+        extensions: {
+          key: "x-amazon-apigateway-authtype"
+          value: {string_value: "oauth2"}
+        }
+      }
+    }
+    security: {
+      key: "OAuth2"
+      value: {
+        type: TYPE_OAUTH2
+        flow: FLOW_ACCESS_CODE
+        authorization_url: "https://example.com/oauth/authorize"
+        token_url: "https://example.com/oauth/token"
+        scopes: {
+          scope: {
+            key: "read"
+            value: "Grants read access"
+          }
+          scope: {
+            key: "write"
+            value: "Grants write access"
+          }
+        }
+      }
+    }
+  }
+  security: {
+    security_requirement: {
+      key: "BasicAuth"
+      value: {}
+    }
+    security_requirement: {
+      key: "ApiKeyAuth"
+      value: {}
+    }
+  }
+  security: {
+    security_requirement: {
+      key: "OAuth2"
+      value: {
+        scope: ["read", "write"]
+      }
+    }
+  }
+  tags: {
+    name: "LibraryService"
+    description: "Overrides the description of the service tag."
+    external_docs: {
+      url: "https://example.com/library"
+      description: "More about the library"
+    }
+  }
+  tags: {
+    name: "Extra"
+    description: "A tag without a service."
+  }
+  external_docs: {
+    url: "https://example.com/docs"
+    description: "Library docs"
+  }
+  extensions: {
+    key: "x-string"
+    value: {string_value: "bar"}
+  }
+  extensions: {
+    key: "x-list"
+    value: {
+      list_value: {
+        values: [{string_value: "one"}, {bool_value: true}, {number_value: 3}]
+      }
+    }
+  }
+  extensions: {
+    key: "x-number"
+    value: {number_value: 1.5}
+  }
+  extensions: {
+    key: "x-null"
+    value: {null_value: NULL_VALUE}
+  }
+  extensions: {
+    key: "x-struct"
+    value: {
+      struct_value: {
+        fields: {
+          key: "b"
+          value: {string_value: "second"}
+        }
+        fields: {
+          key: "a"
+          value: {
+            struct_value: {
+              fields: {
+                key: "nested"
+                value: {number_value: 100000000000000000000}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+};
+
+// Shelf is a shelf of books.
+message Shelf {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      title: "A shelf"
+      description: "A shelf holds books."
+      required: ["theme"]
+      extensions: {
+        key: "x-shelf"
+        value: {bool_value: true}
+      }
+    }
+    external_docs: {
+      url: "https://example.com/shelf"
+      description: "Shelf docs"
+    }
+    example: "{\"name\": \"shelves/1\", \"theme\": \"fiction\"}"
+  };
+
+  // Resource name of the shelf.
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+  // The theme of the shelf.
+  string theme = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    description: "Overrides the comment."
+    min_length: 1
+    max_length: 64
+    pattern: "^[a-z]+$"
+    example: "\"fiction\""
+    default: "general"
+  }];
+  google.protobuf.Timestamp create_time = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  int32 capacity = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    title: "Capacity"
+    minimum: 1
+    maximum: 1000
+    exclusive_maximum: true
+    exclusive_minimum: false
+    multiple_of: 2
+    format: "int32"
+    extensions: {
+      key: "x-capacity"
+      value: {number_value: 7}
+    }
+  }];
+  repeated string labels = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    min_items: 0
+    max_items: 10
+    unique_items: true
+    read_only: true
+  }];
+  map<string, int32> counts = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    min_properties: 1
+    max_properties: 5
+  }];
+  string kind = 7 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    enum: ["small", "large"]
+    type: STRING
+  }];
+  string legacy = 8 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    field_configuration: {deprecated: true}
+  }];
+}
+
+// Book is a book on a shelf.
+//
+// (-- Internal comment: removed by remove_internal_comments. --)
+message Book {
+  // Resource name: shelves/{shelf}/books/{book}.
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string title = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.field_behavior) = IMMUTABLE
+  ];
+  // The author. Deprecated: use authors.
+  string author = 3 [deprecated = true];
+  repeated string authors = 4;
+  Genre genre = 5;
+  // Page count (-- not counting the cover --).
+  optional int32 pages = 6;
+  // The original book from the common package.
+  test.httpgw.common.v1.Book original = 7;
+  google.protobuf.Struct metadata = 8;
+  map<string, string> attributes = 9;
+  bytes cover = 10;
+  oneof format {
+    string isbn = 11;
+    int64 catalog_id = 12;
+  }
+  google.protobuf.Duration loan_period = 13;
+  google.protobuf.StringValue subtitle = 14;
+  string internal_note = 15 [(google.api.field_visibility).restriction = "INTERNAL"];
+  string preview_note = 16 [(google.api.field_visibility).restriction = "PREVIEW"];
+  // A recursive field.
+  Book sequel = 17;
+  repeated Chapter chapters = 18;
+  string json_named = 19 [json_name = "customJsonName"];
+  uint64 big = 20;
+  double rating = 21;
+  float score = 22;
+  bool available = 23;
+  fixed64 fixed = 24;
+  sint32 signed = 25;
+  google.protobuf.Value extra = 26;
+  google.protobuf.ListValue values = 27;
+  google.protobuf.Int64Value copies = 28;
+  google.protobuf.BytesValue thumbnail = 29;
+  map<int64, Chapter> chapter_index = 30;
+  test.httpgw.common.v1.Status status = 31 [(google.api.field_behavior) = OPTIONAL];
+  string input_only = 32 [(google.api.field_behavior) = INPUT_ONLY];
+
+  // Chapter of a book.
+  message Chapter {
+    string title = 1;
+    int32 number = 2;
+  }
+}
+
+// Genre of a book.
+enum Genre {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_enum) = {
+    description: "Overrides the comment."
+    title: "Genre"
+    default: "GENRE_FICTION"
+    example: "\"GENRE_SCIENCE\""
+    external_docs: {
+      url: "https://example.com/genre"
+      description: "Genre docs"
+    }
+    extensions: {
+      key: "x-genre"
+      value: {string_value: "genre"}
+    }
+  };
+
+  // No genre.
+  GENRE_UNSPECIFIED = 0;
+  // Fiction.
+  GENRE_FICTION = 1;
+  GENRE_SCIENCE = 2 [(google.api.value_visibility).restriction = "PREVIEW"];
+  GENRE_OLD = 3 [deprecated = true];
+}
+
+// A message visible only with the INTERNAL restriction.
+message InternalInfo {
+  option (google.api.message_visibility).restriction = "INTERNAL";
+  string secret = 1;
+}
+
+message CreateShelfRequest {
+  Shelf shelf = 1;
+  // Optional id of the new shelf.
+  string shelf_id = 2;
+}
+
+message GetShelfRequest {
+  string name = 1;
+}
+
+message ListShelvesRequest {
+  // Parent library (additional binding).
+  string library = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  Filter filter = 4;
+  Genre genre = 5;
+  repeated string tags = 6;
+  repeated Genre genres = 7;
+  optional bool only_full = 8;
+  google.protobuf.Timestamp since = 9;
+  google.protobuf.FieldMask read_mask = 10;
+  map<string, string> params = 11;
+  oneof order {
+    string order_by = 12;
+    bool reverse = 13;
+  }
+  bytes cursor = 14;
+  google.protobuf.Int32Value min_books = 15;
+  repeated int64 ids = 16;
+  double min_rating = 17;
+  google.protobuf.Duration max_age = 18;
+  test.httpgw.common.v1.Status status = 19;
+  string internal_param = 20 [(google.api.field_visibility).restriction = "INTERNAL"];
+  // Deprecated query parameter.
+  string old_param = 21 [deprecated = true];
+
+  message Filter {
+    string theme = 1;
+    int32 min_capacity = 2;
+    Range range = 3;
+
+    message Range {
+      int32 low = 1;
+      int32 high = 2;
+    }
+  }
+}
+
+message ListShelvesResponse {
+  repeated Shelf shelves = 1;
+  string next_page_token = 2;
+}
+
+message DeleteShelfRequest {
+  string name = 1;
+  bool force = 2;
+}
+
+message UpdateShelfRequest {
+  Shelf shelf = 1;
+  google.protobuf.FieldMask update_mask = 2;
+}
+
+message MergeShelvesRequest {
+  string name = 1;
+  string other_shelf = 2;
+}
+
+message CreateBookRequest {
+  string parent = 1;
+  Book book = 2;
+  string request_id = 3;
+}
+
+message BatchCreateBooksRequest {
+  string parent = 1;
+  repeated Book books = 2;
+}
+
+message BatchCreateBooksResponse {
+  repeated Book books = 1;
+}
+
+message GetBookRequest {
+  string name = 1;
+  google.protobuf.FieldMask read_mask = 2;
+}
+
+message GetFileRequest {
+  string path = 1;
+}
+
+message ListBooksRequest {
+  string parent = 1;
+  int32 page_size = 2;
+}
+
+message ListBooksResponse {
+  repeated Book books = 1;
+  string next_page_token = 2;
+}
+
+message UpdateBookRequest {
+  Book book = 1;
+  google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message MoveBookRequest {
+  string name = 1;
+  string other_shelf_name = 2;
+}
+
+message MoveBookResponse {
+  Book book = 1;
+  Shelf shelf = 2;
+}
+
+message ChapterRequest {
+  string shelf = 1;
+  string book = 2;
+  int32 chapter_number = 3;
+  int64 version = 4;
+  bool draft = 5;
+}
+
+message GenreRequest {
+  Genre genre = 1;
+  test.httpgw.common.v1.Status status = 2;
+}
+
+message BatchGetBooksRequest {
+  repeated string names = 1;
+}
+
+message FindBookRequest {
+  string book_title = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    field_configuration: {path_param_name: "bookTitle"}
+  }];
+}
+
+message EditionRequest {
+  test.httpgw.common.v1.Edition edition = 1;
+}
+
+message UploadCoverRequest {
+  string name = 1;
+  google.api.HttpBody data = 2;
+}
+
+message DownloadCoverRequest {
+  string name = 1;
+  string size = 2;
+}
+
+message CountRequest {
+  string kind = 1;
+}
+
+message CountResponse {
+  int64 count = 1;
+}
+
+// LibraryService manages shelves and books.
+//
+// It covers every form of the google.api.http annotation.
+service LibraryService {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_tag) = {
+    description: "Overrides the service comment."
+    external_docs: {
+      url: "https://example.com/service"
+      description: "Service docs"
+    }
+    extensions: {
+      key: "x-tag"
+      value: {string_value: "library"}
+    }
+  };
+
+  // CreateShelf creates a shelf. Body: a message field.
+  rpc CreateShelf(CreateShelfRequest) returns (Shelf) {
+    option (google.api.http) = {
+      post: "/v1/shelves"
+      body: "shelf"
+    };
+  }
+
+  // GetShelf returns a shelf. Pattern variable, openapiv2_operation.
+  rpc GetShelf(GetShelfRequest) returns (Shelf) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (google.api.http) = {get: "/v1/{name=shelves/*}"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Get a shelf"
+      description: "Overrides the method comment."
+      tags: ["Shelves", "Extra"]
+      operation_id: "fetchShelf"
+      external_docs: {
+        url: "https://example.com/get"
+        description: "Get docs"
+      }
+      consumes: "application/x-get"
+      produces: "application/x-get"
+      schemes: [HTTP]
+      responses: {
+        key: "200"
+        value: {
+          description: "The shelf."
+          examples: {
+            key: "application/json"
+            value: "{\"name\": \"shelves/1\"}"
+          }
+        }
+      }
+      responses: {
+        key: "404"
+        value: {
+          description: "No such shelf."
+          schema: {
+            json_schema: {ref: ".google.rpc.Status"}
+          }
+        }
+      }
+      responses: {
+        key: "default"
+        value: {description: "Any other error."}
+      }
+      security: {
+        security_requirement: {
+          key: "OAuth2"
+          value: {
+            scope: ["read"]
+          }
+        }
+      }
+      extensions: {
+        key: "x-operation"
+        value: {string_value: "get"}
+      }
+      parameters: {
+        headers: {
+          name: "X-Request-Id"
+          description: "Request id."
+          type: STRING
+          format: "uuid"
+          required: true
+        }
+        headers: {
+          name: "X-Retries"
+          type: INTEGER
+        }
+      }
+    };
+  }
+
+  // ListShelves lists shelves. Query parameters, additional bindings.
+  rpc ListShelves(ListShelvesRequest) returns (ListShelvesResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (google.api.http) = {
+      get: "/v1/shelves"
+      additional_bindings: {get: "/v1/{library=libraries/*}/shelves"}
+      additional_bindings: {
+        post: "/v1/shelves:search"
+        body: "*"
+      }
+    };
+  }
+
+  // DeleteShelf deletes a shelf.
+  rpc DeleteShelf(DeleteShelfRequest) returns (google.protobuf.Empty) {
+    option idempotency_level = IDEMPOTENT;
+    option (google.api.http) = {delete: "/v1/{name=shelves/*}"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      security: {}
+      deprecated: true
+    };
+  }
+
+  // UpdateShelf updates a shelf with a field mask.
+  rpc UpdateShelf(UpdateShelfRequest) returns (Shelf) {
+    option (google.api.http) = {
+      patch: "/v1/{shelf.name=shelves/*}"
+      body: "shelf"
+      additional_bindings: {
+        put: "/v1/{shelf.name=shelves/*}"
+        body: "*"
+      }
+    };
+  }
+
+  // MergeShelves merges two shelves. Verb after a pattern.
+  rpc MergeShelves(MergeShelvesRequest) returns (Shelf) {
+    option (google.api.http) = {
+      post: "/v1/{name=shelves/*}:merge"
+      body: "*"
+    };
+  }
+
+  // CreateBook creates a book.
+  rpc CreateBook(CreateBookRequest) returns (Book) {
+    option (google.api.http) = {
+      post: "/v1/{parent=shelves/*}/books"
+      body: "book"
+    };
+  }
+
+  // BatchCreateBooks creates books. Body: a repeated field; response_body: a
+  // repeated field.
+  rpc BatchCreateBooks(BatchCreateBooksRequest) returns (BatchCreateBooksResponse) {
+    option (google.api.http) = {
+      post: "/v1/{parent=shelves/*}/books:batchCreate"
+      body: "books"
+      response_body: "books"
+    };
+  }
+
+  // GetBook returns a book. Two variables in a pattern, custom HEAD binding.
+  rpc GetBook(GetBookRequest) returns (Book) {
+    option (google.api.http) = {
+      get: "/v1/{name=shelves/*/books/*}"
+      additional_bindings: {
+        custom: {
+          kind: "HEAD"
+          path: "/v1/{name=shelves/*/books/*}"
+        }
+      }
+      additional_bindings: {get: "/v1/books/{name=**}"}
+    };
+  }
+
+  // GetFile returns a book by a path. Deep wildcard after a literal.
+  rpc GetFile(GetFileRequest) returns (google.api.HttpBody) {
+    option (google.api.http) = {
+      get: "/v1/files/{path=**}"
+      additional_bindings: {get: "/v1/archive/{path=old/*/**}"}
+    };
+  }
+
+  // ListBooks lists books. response_body: a repeated field.
+  rpc ListBooks(ListBooksRequest) returns (ListBooksResponse) {
+    option (google.api.http) = {
+      get: "/v1/{parent=shelves/*}/books"
+      response_body: "books"
+    };
+  }
+
+  // UpdateBook replaces a book.
+  rpc UpdateBook(UpdateBookRequest) returns (Book) {
+    option idempotency_level = IDEMPOTENT;
+    option (google.api.http) = {
+      put: "/v1/{book.name=shelves/*/books/*}"
+      body: "book"
+      additional_bindings: {
+        patch: "/v1/{book.name=shelves/*/books/*}"
+        body: "book"
+      }
+      additional_bindings: {
+        patch: "/v2/{book.name=shelves/*/books/*}"
+        body: "*"
+      }
+    };
+  }
+
+  // MoveBook moves a book. response_body: a message field.
+  rpc MoveBook(MoveBookRequest) returns (MoveBookResponse) {
+    option (google.api.http) = {
+      post: "/v1/{name=shelves/*/books/*}:move"
+      body: "*"
+      response_body: "book"
+    };
+  }
+
+  // GetChapter has variables without patterns of several types.
+  rpc GetChapter(ChapterRequest) returns (Book.Chapter) {
+    option (google.api.http) = {get: "/v1/shelves/{shelf}/books/{book}/chapters/{chapter_number}/versions/{version}/{draft}"};
+  }
+
+  // ListByGenre has enum path variables.
+  rpc ListByGenre(GenreRequest) returns (ListBooksResponse) {
+    option (google.api.http) = {get: "/v1/genres/{genre}/statuses/{status}"};
+  }
+
+  // BatchGetBooks has a repeated path variable.
+  rpc BatchGetBooks(BatchGetBooksRequest) returns (ListBooksResponse) {
+    option (google.api.http) = {get: "/v1/books:batchGet/{names}"};
+  }
+
+  // FindBook has a path variable renamed by path_param_name.
+  rpc FindBook(FindBookRequest) returns (Book) {
+    option (google.api.http) = {get: "/v1/titles/{book_title}:find"};
+  }
+
+  // GetEdition has a nested variable of a message from another package.
+  rpc GetEdition(EditionRequest) returns (test.httpgw.common.v1.Edition) {
+    option (google.api.http) = {get: "/v1/{edition.book.name=originals/*}/editions/{edition.number}"};
+  }
+
+  // UploadCover uploads a cover. Body: an HttpBody field.
+  rpc UploadCover(UploadCoverRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      put: "/v1/{name=shelves/*/books/*}/cover"
+      body: "data"
+    };
+  }
+
+  // DownloadCover returns an HttpBody.
+  rpc DownloadCover(DownloadCoverRequest) returns (google.api.HttpBody) {
+    option (google.api.http) = {get: "/v1/{name=shelves/*/books/*}/cover"};
+  }
+
+  // CountBooks has a bare * segment and a verb after a literal.
+  rpc CountBooks(CountRequest) returns (CountResponse) {
+    option (google.api.http) = {
+      custom: {
+        kind: "OPTIONS"
+        path: "/v1/*/books:count"
+      }
+    };
+  }
+
+  // OldGetShelf is deprecated.
+  rpc OldGetShelf(GetShelfRequest) returns (Shelf) {
+    option deprecated = true;
+    option (google.api.http) = {get: "/v0/{name=shelves/*}"};
+  }
+
+  // InternalReset is visible only with the INTERNAL restriction.
+  rpc InternalReset(google.protobuf.Empty) returns (InternalInfo) {
+    option (google.api.method_visibility).restriction = "INTERNAL";
+    option (google.api.http) = {
+      post: "/v1/internal:reset"
+      body: "*"
+    };
+  }
+
+  // Unbound has no HTTP binding.
+  rpc Unbound(GetShelfRequest) returns (Shelf);
+}
+
+// PreviewService is visible only with the PREVIEW restriction.
+service PreviewService {
+  option (google.api.api_visibility).restriction = "PREVIEW";
+
+  rpc Preview(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (google.api.http) = {get: "/v1/preview"};
+  }
+}

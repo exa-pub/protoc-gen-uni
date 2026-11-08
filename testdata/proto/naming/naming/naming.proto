@@ -1,0 +1,372 @@
+// Test: naming.
+//
+// Identifiers that collide with target-language keywords, builtins and
+// generated names:
+//  - JS/TS reserved words and builtins (class, constructor, function, Object,
+//    toString, __proto__, ...), names of symbols imported by protoc-gen-es
+//    (Message, GenFile, fileDesc, ...) and of symbols it generates (FooSchema,
+//    file_naming_naming), oneof `case`/`value` properties;
+//  - Go keywords and generated method names (Reset, String, ProtoMessage,
+//    Descriptor, ProtoReflect), GetX vs X getter collisions, XXX_ prefixes,
+//    nested types colliding with oneof wrapper types;
+//  - fields that differ only by underscores or case (see legacy.proto);
+//  - enum value prefix stripping cases;
+//  - a message named like its file (Naming in naming.proto, FooBar in
+//    foo_bar.proto) and packages named like keywords (type/, switch/).
+syntax = "proto3";
+
+package test.naming;
+
+// Message named like its file.
+message Naming {
+  string naming = 1;
+  Naming self = 2;
+}
+
+// --- JS / TS ---------------------------------------------------------------
+
+message JsReserved {
+  string class = 1;
+  string constructor = 2;
+  string function = 3;
+  string toString = 4;
+  string __proto__ = 5;
+  string valueOf = 6;
+  string hasOwnProperty = 7;
+  string isPrototypeOf = 8;
+  string propertyIsEnumerable = 9;
+  string toLocaleString = 10;
+  string toJSON = 11;
+  string new = 12;
+  string delete = 13;
+  string typeof = 14;
+  string instanceof = 15;
+  string in = 16;
+  string this = 17;
+  string super = 18;
+  string var = 19;
+  string let = 20;
+  string const = 21;
+  string yield = 22;
+  string await = 23;
+  string async = 24;
+  string static = 25;
+  string implements = 26;
+  string interface = 27;
+  string package = 28;
+  string private = 29;
+  string protected = 30;
+  string public = 31;
+  string export = 32;
+  string import = 33;
+  string undefined = 34;
+  string NaN = 35;
+  string Infinity = 36;
+  string arguments = 37;
+  string eval = 38;
+  string null = 39;
+  string true = 40;
+  string false = 41;
+  string void = 42;
+  string with = 43;
+  string debugger = 44;
+  string extends = 45;
+  string switch = 46;
+  string case = 47;
+  string default = 48;
+  string throw = 49;
+  string try = 50;
+  string catch = 51;
+  string finally = 52;
+  string do = 53;
+  string while = 54;
+  string for = 55;
+  string if = 56;
+  string else = 57;
+  string return = 58;
+  string break = 59;
+  string continue = 60;
+  string enum = 61;
+  string type = 62;
+  string any = 63;
+  string unknown = 64;
+  string never = 65;
+  string object = 66;
+  string symbol = 67;
+  string bigint = 68;
+  string as = 69;
+  string is = 70;
+  string keyof = 71;
+  string readonly = 72;
+  string declare = 73;
+  string namespace = 74;
+  string module = 75;
+  string require = 76;
+  string globalThis = 77;
+  string type_name = 78;
+  string unknown_fields = 79;
+  string _ = 80;
+}
+
+// Messages named like JS builtins and reserved words.
+message Object {
+  string toString = 1;
+}
+message Array {}
+message String {}
+message Number {}
+message Boolean {}
+message Symbol {}
+message Promise {}
+message Error {}
+message Date {}
+message Map {}
+message Set {}
+message JSON {}
+message Math {}
+message BigInt {}
+message Uint8Array {}
+message Record {}
+message Partial {}
+message class {}
+message function {}
+message interface {}
+message constructor {}
+message __proto__ {}
+message toString {}
+message undefined {}
+message object {}
+
+enum Function {
+  FUNCTION_UNSPECIFIED = 0;
+}
+
+// Names of symbols protoc-gen-es imports from @bufbuild/protobuf.
+message Message {
+  string message = 1;
+}
+message GenFile {}
+message GenMessage {}
+message GenEnum {}
+message GenExtension {}
+message GenService {}
+message JsonObject {}
+message fileDesc {}
+message messageDesc {}
+message enumDesc {}
+message protoInt64 {}
+
+// Names of symbols protoc-gen-es generates.
+message Thing {}
+message ThingSchema {}
+message ThingJson {}
+enum Color {
+  COLOR_UNSPECIFIED = 0;
+}
+message ColorSchema {}
+message file_naming_naming {}
+
+message Oneofs {
+  // Oneof members named like the properties of protoc-gen-es oneof objects.
+  oneof kind {
+    string case = 1;
+    string value = 2;
+  }
+}
+
+message OneofNames {
+  // Oneofs named like the properties of protoc-gen-es oneof objects and
+  // JS builtins.
+  oneof case {
+    int32 a = 1;
+    int32 b = 2;
+  }
+  oneof value {
+    int32 c = 3;
+  }
+  oneof constructor {
+    int32 d = 4;
+  }
+  oneof toString {
+    int32 e = 5;
+  }
+}
+
+// --- Go --------------------------------------------------------------------
+
+message GoMethods {
+  string reset = 1;
+  string string = 2;
+  string proto_message = 3;
+  string descriptor = 4;
+  string proto_reflect = 5;
+  string marshal = 6;
+  string unmarshal = 7;
+  string extension_range_array = 8;
+  string extension_map = 9;
+  string enum = 10;
+  string state = 11;
+  string size_cache = 12;
+  string unknown_fields = 13;
+}
+
+message GoGetters {
+  // Field Name has getter GetName, which collides with field GetName.
+  string name = 1;
+  string get_name = 2;
+  // Field get_value would collide with getter of value.
+  string get_value = 3;
+  string value = 4;
+  string GetFoo = 5;
+}
+
+message GoXXX {
+  string XXX_unrecognized = 1;
+  string XXX_sizecache = 2;
+  string XXX_NoUnkeyedLiteral = 3;
+  string xxx_hidden_name = 4;
+  string XXX_presence = 5;
+  string XXX_raceDetectHookData = 6;
+}
+
+message GoKeywords {
+  string break = 1;
+  string chan = 2;
+  string defer = 3;
+  string fallthrough = 4;
+  string func = 5;
+  string go = 6;
+  string goto = 7;
+  string map = 8;
+  string range = 9;
+  string select = 10;
+  string struct = 11;
+  string iota = 12;
+  string nil = 13;
+  string error = 14;
+  string len = 15;
+  string make = 16;
+}
+
+// Messages named like Go keywords and predeclared identifiers.
+message func {}
+message chan {}
+message error {}
+message int32 {}
+message bool {}
+message nil {}
+
+message GoOneofCollision {
+  // A nested message whose Go name equals the oneof wrapper type name.
+  message Foo {}
+  message Bar_ {}
+  oneof choice {
+    Foo foo = 1;
+    int32 bar = 2;
+  }
+  // Oneof whose Go interface name might clash.
+  oneof reset {
+    int32 x = 3;
+  }
+}
+
+message Outer {
+  message Inner {
+    message Innermost {}
+  }
+  // A field whose Go name equals a nested type name.
+  Inner inner = 1;
+  Inner.Innermost Inner_Innermost = 2;
+}
+
+// --- Enum value prefix stripping -------------------------------------------
+
+// Standard: prefix stripped (UNSPECIFIED, ONE).
+enum Simple {
+  SIMPLE_UNSPECIFIED = 0;
+  SIMPLE_ONE = 1;
+}
+
+// CamelCase enum name, prefix MY_ENUM_.
+enum MyEnum {
+  MY_ENUM_UNSPECIFIED = 0;
+  MY_ENUM_VALUE = 1;
+}
+
+// Stripping would leave an identifier starting with a digit.
+enum Digits {
+  DIGITS_UNSPECIFIED = 0;
+  DIGITS_1 = 1;
+  DIGITS_2ND = 2;
+}
+
+// Not all values share the prefix: nothing stripped.
+enum Mixed {
+  MIXED_UNSPECIFIED = 0;
+  OTHER = 1;
+}
+
+// A value equal to the prefix without trailing part.
+enum Exact {
+  EXACT_UNSPECIFIED = 0;
+  EXACT = 1;
+}
+
+// Lowercase / odd values.
+enum lower_enum {
+  lower_enum_unspecified = 0;
+  lower_enum_value = 1;
+}
+
+// Stripping yields reserved words / builtins.
+enum Reserved {
+  RESERVED_UNSPECIFIED = 0;
+  RESERVED_CONSTRUCTOR = 1;
+  RESERVED_TO_STRING = 2;
+  RESERVED_CLASS = 3;
+  RESERVED_DELETE = 4;
+  RESERVED___PROTO__ = 5;
+}
+
+message BuiltinsScope {
+  // Values named like JS builtins without a prefix (nested so the values do
+  // not clash with the top-level messages of the same name).
+  enum Builtins {
+    constructor = 0;
+    toString = 1;
+    __proto__ = 2;
+    valueOf = 3;
+    class = 4;
+  }
+}
+
+// Prefix differs by case from the enum name.
+enum HTTPCode {
+  HTTP_CODE_UNSPECIFIED = 0;
+  HTTP_CODE_OK = 1;
+}
+
+enum HttpStatus {
+  HTTPSTATUS_UNSPECIFIED = 0;
+  HTTPSTATUS_OK = 1;
+}
+
+message HasNestedEnum {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    STATE_ON = 1;
+  }
+  State state = 1;
+}
+
+// --- Services --------------------------------------------------------------
+
+service Service {
+  rpc Delete(Naming) returns (Naming);
+  rpc New(Naming) returns (Naming);
+  rpc ToString(Naming) returns (Naming);
+  rpc Constructor(Naming) returns (Naming);
+  rpc Reset(Naming) returns (Naming);
+  rpc String(Naming) returns (Naming);
+  rpc Class(Object) returns (Message);
+}

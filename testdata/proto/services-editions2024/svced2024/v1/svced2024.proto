@@ -1,0 +1,53 @@
+// Test: services in edition 2024.
+//
+// Covers the four streaming kinds, deprecated and idempotent methods,
+// comments on services and methods, and request/response messages with
+// edition 2024 symbol visibility (export, local) and feature overrides, for
+// plugins that support edition 2024.
+edition = "2024";
+
+package test.svced2024.v1;
+
+import "google/protobuf/empty.proto";
+
+option features.field_presence = IMPLICIT;
+
+export enum Kind {
+  KIND_UNSPECIFIED = 0;
+  KIND_A = 1;
+}
+
+export message Item {
+  string id = 1;
+  Kind kind = 2 [features.field_presence = EXPLICIT];
+  Item child = 3 [features.message_encoding = DELIMITED];
+}
+
+// Filter is local: visible only in this file.
+local message Filter {
+  string prefix = 1;
+}
+
+// Catalog serves items.
+service Catalog {
+  // Get returns one item.
+  rpc Get(Item) returns (Item) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Put streams items from the client.
+  rpc Put(stream Item) returns (google.protobuf.Empty); // trailing comment on Put
+
+  // List streams items to the client.
+  rpc List(Filter) returns (stream Item) {
+    option idempotency_level = IDEMPOTENT;
+  }
+
+  // Sync is a bidirectional stream.
+  rpc Sync(stream Item) returns (stream Item);
+
+  // Remove is deprecated.
+  rpc Remove(Item) returns (google.protobuf.Empty) {
+    option deprecated = true;
+  }
+}

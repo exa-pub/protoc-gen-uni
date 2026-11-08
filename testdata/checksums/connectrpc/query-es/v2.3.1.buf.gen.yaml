@@ -1,0 +1,47 @@
+# Golden config for connectrpc/query-es v2.3.1: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Groups: target=ts; target=js+dts with the registry option import_extension=js; legacy_commonjs
+# with ts_nocheck; rewrite_imports with keep_empty_files; errors: an invalid target, an unknown option.
+# Regenerate: scripts/gen-testdata.sh connectrpc/query-es v2.3.1
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/editions2023
+  - directory: testdata/proto/editions2024
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-case
+  - directory: testdata/proto/services-editions
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/services-connect
+  - directory: testdata/proto/services-editions2024
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+  - directory: testdata/proto/real-protovalidate-editions
+plugins:
+  - remote: buf.build/connectrpc/query-es:v2.3.1
+    out: ts
+    opt: [target=ts]
+  - remote: buf.build/connectrpc/query-es:v2.3.1
+    out: js-dts
+    opt: [target=js+dts, import_extension=js]
+  - remote: buf.build/connectrpc/query-es:v2.3.1
+    out: cjs
+    opt: [target=ts, js_import_style=legacy_commonjs, ts_nocheck=true]
+  - remote: buf.build/connectrpc/query-es:v2.3.1
+    out: rewrite
+    opt: [target=ts, rewrite_imports=./**/*_pb.js:@scope/pkg, keep_empty_files=true]
+  - remote: buf.build/connectrpc/query-es:v2.3.1
+    out: error-target
+    opt: [target=java]
+  - remote: buf.build/connectrpc/query-es:v2.3.1
+    out: error-unknown
+    opt: [target=ts, foo=bar]

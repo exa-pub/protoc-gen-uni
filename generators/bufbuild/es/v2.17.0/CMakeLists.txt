@@ -1,0 +1,1 @@
+uni_generator(LIBRARIES uni_es_protoplugin)

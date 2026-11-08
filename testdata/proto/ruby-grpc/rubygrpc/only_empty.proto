@@ -1,0 +1,6 @@
+// Only a service without methods: the modules without services.
+syntax = "proto3";
+
+package _private.pkg2_x;
+
+service Nothing {}

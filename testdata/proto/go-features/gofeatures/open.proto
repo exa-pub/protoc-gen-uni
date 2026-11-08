@@ -1,0 +1,73 @@
+// Test: Go-specific editions features (google/protobuf/go_features.proto).
+//
+// open.proto / hybrid.proto / opaque.proto are edition 2023 files with
+// features.(pb.go).api_level = API_OPEN / API_HYBRID / API_OPAQUE at file
+// level, each overriding it at message level, plus
+// features.(pb.go).legacy_unmarshal_json_enum at file and enum level.
+// strip.proto is edition 2024 because features.(pb.go).strip_enum_prefix is
+// only available from edition 2024 (KEEP / GENERATE_BOTH / STRIP at file,
+// enum and enum value level). go_features' optimize_mode (2024) is not used:
+// protoc-gen-go v1.36.12 does not know it.
+edition = "2023";
+
+package test.gofeatures;
+
+import "google/protobuf/go_features.proto";
+
+option features.(pb.go).api_level = API_OPEN;
+option features.(pb.go).legacy_unmarshal_json_enum = true;
+
+enum OpenEnum {
+  OPEN_ENUM_UNSPECIFIED = 0;
+  OPEN_ENUM_ONE = 1;
+}
+
+enum NoLegacyJson {
+  option features.(pb.go).legacy_unmarshal_json_enum = false;
+  NO_LEGACY_JSON_UNSPECIFIED = 0;
+}
+
+enum ClosedLegacy {
+  option features.enum_type = CLOSED;
+  CLOSED_LEGACY_ONE = 1;
+  CLOSED_LEGACY_TWO = 2;
+}
+
+message OpenMessage {
+  int32 id = 1;
+  string name = 2 [features.field_presence = IMPLICIT];
+  OpenEnum kind = 3;
+  repeated int32 values = 4;
+  map<string, OpenMessage> children = 5;
+  oneof choice {
+    string text = 6;
+    OpenMessage nested = 7;
+  }
+  ClosedLegacy closed = 8;
+  bytes data = 9;
+  OpenMessage lazy = 10 [lazy = true];
+}
+
+message HybridInOpen {
+  option features.(pb.go).api_level = API_HYBRID;
+  int32 id = 1;
+  OpenMessage open = 2;
+  oneof choice {
+    int32 a = 3;
+    string b = 4;
+  }
+}
+
+message OpaqueInOpen {
+  option features.(pb.go).api_level = API_OPAQUE;
+  int32 id = 1;
+  string name = 2 [features.field_presence = IMPLICIT];
+  repeated OpenMessage items = 3;
+  OpenMessage lazy = 4 [lazy = true];
+
+  // Nested messages inherit api_level from the parent message.
+  message Nested {
+    int32 x = 1;
+  }
+  Nested nested = 5;
+}

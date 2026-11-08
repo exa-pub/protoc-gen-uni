@@ -1,0 +1,47 @@
+# Golden config for community/scalapb-zio-grpc v0.6.4: inputs = tests (testdata/proto/<test>),
+# one plugin entry = one option group (out: <group>).
+# Groups: default; flat_package; scala3_sources with java_conversions; the other ScalaPB options
+# (grpc, single_line_to_proto_string, ascii_format_to_string, no_lenses, retain_source_code_info);
+# error: an unknown option. scala-options is the ScalaPB-specific input (ScalaPB options with a
+# vendored scalapb.proto). Files without services produce no output.
+# Inputs left out: editions2023, editions2024, services-editions, services-editions2024,
+# real-protovalidate-editions (the plugin declares no editions support, buf rejects them);
+# scala-proto2 (no services).
+# Regenerate: scripts/gen-testdata.sh community/scalapb-zio-grpc v0.6.4
+version: v2
+inputs:
+  - directory: testdata/proto/proto2
+  - directory: testdata/proto/proto3
+  - directory: testdata/proto/wkt
+  - directory: testdata/proto/services
+  - directory: testdata/proto/imports
+  - directory: testdata/proto/comments
+  - directory: testdata/proto/naming
+  - directory: testdata/proto/custom-options
+  - directory: testdata/proto/empty
+  - directory: testdata/proto/services-naming
+  - directory: testdata/proto/services-case
+  - directory: testdata/proto/services-generic
+  - directory: testdata/proto/services-connect
+  - directory: testdata/proto/http-gateway
+  - directory: testdata/proto/http-gateway-delete-body
+  - directory: testdata/proto/http-gateway-scalar-body
+  - directory: testdata/proto/scala-options
+  - directory: testdata/proto/real-googleapis
+  - directory: testdata/proto/real-otel
+  - directory: testdata/proto/real-protovalidate
+plugins:
+  - remote: buf.build/community/scalapb-zio-grpc:v0.6.4
+    out: default
+  - remote: buf.build/community/scalapb-zio-grpc:v0.6.4
+    out: flat
+    opt: [flat_package]
+  - remote: buf.build/community/scalapb-zio-grpc:v0.6.4
+    out: scala3
+    opt: [scala3_sources, java_conversions]
+  - remote: buf.build/community/scalapb-zio-grpc:v0.6.4
+    out: options
+    opt: [grpc, single_line_to_proto_string, ascii_format_to_string, no_lenses, retain_source_code_info]
+  - remote: buf.build/community/scalapb-zio-grpc:v0.6.4
+    out: error-unknown
+    opt: [foo=bar]

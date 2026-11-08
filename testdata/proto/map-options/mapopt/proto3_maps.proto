@@ -1,0 +1,57 @@
+// Custom options whose values contain map fields (proto3: the entry fields have implicit
+// presence, but map entries are always written with both key and value).
+syntax = "proto3";
+
+package mapopt.p3;
+
+import "google/protobuf/descriptor.proto";
+
+enum Level {
+  LEVEL_UNSPECIFIED = 0;
+  LEVEL_HIGH = 1;
+}
+
+message Inner {
+  string s = 1;
+}
+
+message Rules {
+  map<string, string> labels = 1;
+  map<uint64, bool> bits = 2;
+  map<sint32, double> weights = 3;
+  map<fixed64, Inner> inner = 4;
+  map<string, Level> levels = 5;
+  map<int64, float> ratios = 6;
+  map<sfixed32, bytes> blobs = 7;
+}
+
+extend google.protobuf.FileOptions {
+  Rules file_rules = 50103;
+}
+
+extend google.protobuf.ServiceOptions {
+  Rules service_rules = 50104;
+}
+
+option (file_rules) = {
+  labels: [
+    {key: "z" value: "1"},
+    {key: "" value: ""},
+    {key: "a" value: "2"},
+    {key: "z" value: ""}
+  ]
+  bits: [{key: 0 value: false}, {key: 5 value: true}, {key: 1}]
+  weights: [{key: 0 value: 0}, {key: -1 value: -0.5}, {key: 2}]
+  inner: [{key: 0}, {key: 9 value: {}}, {key: 3 value: {s: "s"}}]
+  levels: [{key: "" value: LEVEL_UNSPECIFIED}, {key: "high" value: LEVEL_HIGH}]
+  ratios: [{key: 0 value: 0}, {key: -7 value: 1.5}]
+  blobs: [{key: 0 value: ""}, {key: -1 value: "b"}]
+};
+
+message Empty {}
+
+service Svc {
+  option (service_rules) = {labels: {key: "" value: ""}};
+
+  rpc Call(Empty) returns (Empty);
+}

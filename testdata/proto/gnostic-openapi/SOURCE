@@ -1,0 +1,2 @@
+https://github.com/google/gnostic v0.7.1 (39aedcfe9f00c4336420c8ed927fb0f803f921f2)
+openapiv3/annotations.proto and openapiv3/OpenAPIv3.proto, unmodified (the extensions protoc-gen-openapi reads); gnostic/v1/ is a test written for this repository.
